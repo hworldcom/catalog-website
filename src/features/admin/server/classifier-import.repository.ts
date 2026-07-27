@@ -1,0 +1,74 @@
+import type {
+  ApprovedGroup,
+  ClassifierImportGroupOutcome,
+  ClassifierImportRun,
+} from "./classifier-import.types";
+
+export type CreateImportRunInput = {
+  classifierOrganizationId: string;
+  classifierBatchId: string;
+  sellerId: string;
+  requestedByUserId: string | null;
+};
+
+export type CreateImportRunResult = {
+  run: ClassifierImportRun;
+  created: boolean;
+};
+
+export type EligibleDestinationSeller = {
+  id: string;
+  name: string;
+};
+
+export type PreparedImportGroup =
+  | { result: "prepared"; productDraftId: string }
+  | { result: "category_not_mapped" | "product_draft_source_conflict" }
+  | { result: "claim_lost" };
+
+export type RetryImportResult = "requeued" | "noop" | "not_found" | "not_allowed";
+export type ReconcileImportResult = "requeued" | "not_found" | "not_allowed";
+
+export interface ClassifierImportRepository {
+  getRunBySource(
+    classifierOrganizationId: string,
+    classifierBatchId: string,
+  ): Promise<ClassifierImportRun | null>;
+  createOrGetRun(input: CreateImportRunInput): Promise<CreateImportRunResult>;
+  getRun(importId: string): Promise<ClassifierImportRun | null>;
+  getSellerName(sellerId: string): Promise<string | null>;
+  getEligibleSeller(sellerId: string): Promise<EligibleDestinationSeller | null>;
+  listGroupOutcomes(importId: string): Promise<ClassifierImportGroupOutcome[]>;
+  retryImport(importId: string, includeNonRetryable: boolean): Promise<RetryImportResult>;
+  reconcileImport(importId: string): Promise<ReconcileImportResult>;
+
+  claimRun(importId: string, leaseTimeoutSeconds: number): Promise<ClassifierImportRun | null>;
+  claimNextRun(leaseTimeoutSeconds: number): Promise<ClassifierImportRun | null>;
+  heartbeat(importId: string, attemptToken: string): Promise<boolean>;
+  setPipelineVersion(
+    importId: string,
+    attemptToken: string,
+    pipelineVersion: string,
+  ): Promise<boolean>;
+  isSellerEligible(sellerId: string): Promise<boolean>;
+  prepareGroup(
+    importId: string,
+    attemptToken: string,
+    group: ApprovedGroup,
+  ): Promise<PreparedImportGroup>;
+  setGroupResult(
+    importId: string,
+    attemptToken: string,
+    groupId: string,
+    result:
+      | { status: "pending" | "processing" | "complete"; errorCode?: null }
+      | { status: "failed"; errorCode: string; retryable: boolean },
+  ): Promise<boolean>;
+  finalizeRun(
+    importId: string,
+    attemptToken: string,
+    result:
+      | { status: "completed" | "completed_with_errors"; errorCode?: null }
+      | { status: "failed"; errorCode: string; retryable: boolean },
+  ): Promise<boolean>;
+}

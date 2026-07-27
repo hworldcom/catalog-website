@@ -1,0 +1,1651 @@
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5";
+  };
+  public: {
+    Tables: {
+      classifier_import_group_outcomes: {
+        Row: {
+          approved_category_slug: string;
+          classifier_group_id: string;
+          classifier_import_run_id: string;
+          created_at: string;
+          error_code: string | null;
+          product_draft_id: string | null;
+          retryable: boolean;
+          source_cover_classifier_image_id: string;
+          status: Database["public"]["Enums"]["classifier_import_group_status"];
+          updated_at: string;
+        };
+        Insert: {
+          approved_category_slug: string;
+          classifier_group_id: string;
+          classifier_import_run_id: string;
+          created_at?: string;
+          error_code?: string | null;
+          product_draft_id?: string | null;
+          retryable?: boolean;
+          source_cover_classifier_image_id: string;
+          status?: Database["public"]["Enums"]["classifier_import_group_status"];
+          updated_at?: string;
+        };
+        Update: {
+          approved_category_slug?: string;
+          classifier_group_id?: string;
+          classifier_import_run_id?: string;
+          created_at?: string;
+          error_code?: string | null;
+          product_draft_id?: string | null;
+          retryable?: boolean;
+          source_cover_classifier_image_id?: string;
+          status?: Database["public"]["Enums"]["classifier_import_group_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "classifier_import_group_outcomes_classifier_import_run_id_fkey";
+            columns: ["classifier_import_run_id"];
+            isOneToOne: false;
+            referencedRelation: "classifier_import_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "classifier_import_group_outcomes_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      classifier_import_runs: {
+        Row: {
+          attempt_count: number;
+          attempt_token: string | null;
+          claim_started_at: string | null;
+          classifier_batch_id: string;
+          classifier_organization_id: string;
+          completed_at: string | null;
+          created_at: string;
+          error_code: string | null;
+          id: string;
+          last_heartbeat_at: string | null;
+          operation_kind: Database["public"]["Enums"]["classifier_import_operation_kind"];
+          pipeline_version: string | null;
+          requested_by_user_id: string | null;
+          retry_policy: Database["public"]["Enums"]["classifier_import_retry_policy"];
+          retryable: boolean;
+          seller_id: string;
+          status: Database["public"]["Enums"]["classifier_import_status"];
+          updated_at: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          classifier_batch_id: string;
+          classifier_organization_id: string;
+          completed_at?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          last_heartbeat_at?: string | null;
+          operation_kind?: Database["public"]["Enums"]["classifier_import_operation_kind"];
+          pipeline_version?: string | null;
+          requested_by_user_id?: string | null;
+          retry_policy?: Database["public"]["Enums"]["classifier_import_retry_policy"];
+          retryable?: boolean;
+          seller_id: string;
+          status?: Database["public"]["Enums"]["classifier_import_status"];
+          updated_at?: string;
+        };
+        Update: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          classifier_batch_id?: string;
+          classifier_organization_id?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          last_heartbeat_at?: string | null;
+          operation_kind?: Database["public"]["Enums"]["classifier_import_operation_kind"];
+          pipeline_version?: string | null;
+          requested_by_user_id?: string | null;
+          retry_policy?: Database["public"]["Enums"]["classifier_import_retry_policy"];
+          retryable?: boolean;
+          seller_id?: string;
+          status?: Database["public"]["Enums"]["classifier_import_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "classifier_import_runs_seller_id_fkey";
+            columns: ["seller_id"];
+            isOneToOne: false;
+            referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      categories: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          slug: string;
+          sort_order: number;
+          tagline: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          slug: string;
+          sort_order?: number;
+          tagline?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          slug?: string;
+          sort_order?: number;
+          tagline?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      leads: {
+        Row: {
+          buyer_country: string | null;
+          buyer_email: string | null;
+          buyer_name: string | null;
+          buyer_phone: string | null;
+          created_at: string;
+          id: string;
+          message: string | null;
+          product_id: string | null;
+          seller_id: string | null;
+          source: Database["public"]["Enums"]["lead_source"];
+        };
+        Insert: {
+          buyer_country?: string | null;
+          buyer_email?: string | null;
+          buyer_name?: string | null;
+          buyer_phone?: string | null;
+          created_at?: string;
+          id?: string;
+          message?: string | null;
+          product_id?: string | null;
+          seller_id?: string | null;
+          source?: Database["public"]["Enums"]["lead_source"];
+        };
+        Update: {
+          buyer_country?: string | null;
+          buyer_email?: string | null;
+          buyer_name?: string | null;
+          buyer_phone?: string | null;
+          created_at?: string;
+          id?: string;
+          message?: string | null;
+          product_id?: string | null;
+          seller_id?: string | null;
+          source?: Database["public"]["Enums"]["lead_source"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "leads_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "leads_seller_id_fkey";
+            columns: ["seller_id"];
+            isOneToOne: false;
+            referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_draft_facts: {
+        Row: {
+          created_at: string;
+          facts_json: Json;
+          facts_revision: number;
+          product_draft_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          facts_json?: Json;
+          facts_revision?: number;
+          product_draft_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          facts_json?: Json;
+          facts_revision?: number;
+          product_draft_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_draft_facts_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: true;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_draft_descriptions: {
+        Row: {
+          backfilled_from_legacy: boolean;
+          created_at: string;
+          description_text: string;
+          facts_revision: number | null;
+          generated_at: string | null;
+          language: string;
+          model: string | null;
+          pipeline_version: string | null;
+          product_draft_id: string;
+          provider: string | null;
+          source: string;
+          updated_at: string;
+        };
+        Insert: {
+          backfilled_from_legacy?: boolean;
+          created_at?: string;
+          description_text: string;
+          facts_revision?: number | null;
+          generated_at?: string | null;
+          language: string;
+          model?: string | null;
+          pipeline_version?: string | null;
+          product_draft_id: string;
+          provider?: string | null;
+          source: string;
+          updated_at?: string;
+        };
+        Update: {
+          backfilled_from_legacy?: boolean;
+          created_at?: string;
+          description_text?: string;
+          facts_revision?: number | null;
+          generated_at?: string | null;
+          language?: string;
+          model?: string | null;
+          pipeline_version?: string | null;
+          product_draft_id?: string;
+          provider?: string | null;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_draft_descriptions_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_draft_image_promotions: {
+        Row: {
+          attempt_count: number;
+          attempt_token: string | null;
+          claim_started_at: string | null;
+          classifier_batch_id: string;
+          classifier_group_id: string;
+          classifier_image_id: string;
+          classifier_organization_id: string;
+          created_at: string;
+          destination_size_bytes: number | null;
+          error_code: string | null;
+          id: string;
+          is_source_cover: boolean;
+          last_attempt_at: string | null;
+          product_draft_id: string;
+          product_draft_image_id: string;
+          promoted_at: string | null;
+          retryable: boolean;
+          source_content_length: number | null;
+          status: Database["public"]["Enums"]["product_draft_image_promotion_status"];
+          updated_at: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          classifier_batch_id: string;
+          classifier_group_id: string;
+          classifier_image_id: string;
+          classifier_organization_id: string;
+          created_at?: string;
+          destination_size_bytes?: number | null;
+          error_code?: string | null;
+          id?: string;
+          is_source_cover: boolean;
+          last_attempt_at?: string | null;
+          product_draft_id: string;
+          product_draft_image_id: string;
+          promoted_at?: string | null;
+          retryable?: boolean;
+          source_content_length?: number | null;
+          status?: Database["public"]["Enums"]["product_draft_image_promotion_status"];
+          updated_at?: string;
+        };
+        Update: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          classifier_batch_id?: string;
+          classifier_group_id?: string;
+          classifier_image_id?: string;
+          classifier_organization_id?: string;
+          created_at?: string;
+          destination_size_bytes?: number | null;
+          error_code?: string | null;
+          id?: string;
+          is_source_cover?: boolean;
+          last_attempt_at?: string | null;
+          product_draft_id?: string;
+          product_draft_image_id?: string;
+          promoted_at?: string | null;
+          retryable?: boolean;
+          source_content_length?: number | null;
+          status?: Database["public"]["Enums"]["product_draft_image_promotion_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_draft_image_promotions_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_draft_image_promotions_product_draft_image_id_fkey";
+            columns: ["product_draft_image_id"];
+            isOneToOne: true;
+            referencedRelation: "product_draft_images";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_draft_image_storage_cutovers: {
+        Row: {
+          attempt_count: number;
+          attempt_token: string | null;
+          claim_started_at: string | null;
+          completed_at: string | null;
+          completed_count: number;
+          created_at: string;
+          error_code: string | null;
+          failed_count: number;
+          last_attempt_at: string | null;
+          pending_count: number;
+          release_blocking_count: number;
+          scan_cursor: string | null;
+          scan_phase: Database["public"]["Enums"]["product_draft_image_storage_cutover_scan_phase"];
+          started_at: string | null;
+          started_count: number;
+          status: Database["public"]["Enums"]["product_draft_image_storage_cutover_status"];
+          updated_at: string;
+          version: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          completed_at?: string | null;
+          completed_count?: number;
+          created_at?: string;
+          error_code?: string | null;
+          failed_count?: number;
+          last_attempt_at?: string | null;
+          pending_count?: number;
+          release_blocking_count?: number;
+          scan_cursor?: string | null;
+          scan_phase?: Database["public"]["Enums"]["product_draft_image_storage_cutover_scan_phase"];
+          started_at?: string | null;
+          started_count?: number;
+          status?: Database["public"]["Enums"]["product_draft_image_storage_cutover_status"];
+          updated_at?: string;
+          version: string;
+        };
+        Update: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          completed_at?: string | null;
+          completed_count?: number;
+          created_at?: string;
+          error_code?: string | null;
+          failed_count?: number;
+          last_attempt_at?: string | null;
+          pending_count?: number;
+          release_blocking_count?: number;
+          scan_cursor?: string | null;
+          scan_phase?: Database["public"]["Enums"]["product_draft_image_storage_cutover_scan_phase"];
+          started_at?: string | null;
+          started_count?: number;
+          status?: Database["public"]["Enums"]["product_draft_image_storage_cutover_status"];
+          updated_at?: string;
+          version?: string;
+        };
+        Relationships: [];
+      };
+      product_draft_image_storage_reconciliations: {
+        Row: {
+          attempt_count: number;
+          attempt_token: string | null;
+          claim_started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          destination_key: string;
+          error_code: string | null;
+          last_attempt_at: string | null;
+          product_draft_image_id: string | null;
+          public_object_state: Database["public"]["Enums"]["product_draft_image_public_object_state"];
+          release_blocking: boolean;
+          retryable: boolean;
+          status: Database["public"]["Enums"]["product_draft_image_storage_reconciliation_status"];
+          updated_at: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          destination_key: string;
+          error_code?: string | null;
+          last_attempt_at?: string | null;
+          product_draft_image_id?: string | null;
+          public_object_state?: Database["public"]["Enums"]["product_draft_image_public_object_state"];
+          release_blocking?: boolean;
+          retryable?: boolean;
+          status?: Database["public"]["Enums"]["product_draft_image_storage_reconciliation_status"];
+          updated_at?: string;
+        };
+        Update: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          destination_key?: string;
+          error_code?: string | null;
+          last_attempt_at?: string | null;
+          product_draft_image_id?: string | null;
+          public_object_state?: Database["public"]["Enums"]["product_draft_image_public_object_state"];
+          release_blocking?: boolean;
+          retryable?: boolean;
+          status?: Database["public"]["Enums"]["product_draft_image_storage_reconciliation_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_draft_image_storage_reconciliations_product_draft_image_id_fkey";
+            columns: ["product_draft_image_id"];
+            isOneToOne: true;
+            referencedRelation: "product_draft_images";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_draft_images: {
+        Row: {
+          classifier_image_id: string;
+          content_type: string | null;
+          created_at: string;
+          destination_key: string;
+          id: string;
+          product_draft_id: string;
+          size_bytes: number | null;
+          source_position: number;
+          status: Database["public"]["Enums"]["product_draft_image_status"];
+          storage_bucket: string;
+          updated_at: string;
+        };
+        Insert: {
+          classifier_image_id: string;
+          content_type?: string | null;
+          created_at?: string;
+          destination_key: string;
+          id?: string;
+          product_draft_id: string;
+          size_bytes?: number | null;
+          source_position: number;
+          status?: Database["public"]["Enums"]["product_draft_image_status"];
+          storage_bucket?: string;
+          updated_at?: string;
+        };
+        Update: {
+          classifier_image_id?: string;
+          content_type?: string | null;
+          created_at?: string;
+          destination_key?: string;
+          id?: string;
+          product_draft_id?: string;
+          size_bytes?: number | null;
+          source_position?: number;
+          status?: Database["public"]["Enums"]["product_draft_image_status"];
+          storage_bucket?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_draft_images_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_draft_source_memberships: {
+        Row: {
+          classifier_batch_id: string;
+          classifier_group_id: string;
+          classifier_image_id: string;
+          classifier_organization_id: string;
+          created_at: string;
+          duplicate_of_classifier_image_id: string | null;
+          is_duplicate: boolean;
+          product_draft_id: string;
+          promotion_required: boolean;
+          source_position: number;
+          updated_at: string;
+        };
+        Insert: {
+          classifier_batch_id: string;
+          classifier_group_id: string;
+          classifier_image_id: string;
+          classifier_organization_id: string;
+          created_at?: string;
+          duplicate_of_classifier_image_id?: string | null;
+          is_duplicate: boolean;
+          product_draft_id: string;
+          promotion_required: boolean;
+          source_position: number;
+          updated_at?: string;
+        };
+        Update: {
+          classifier_batch_id?: string;
+          classifier_group_id?: string;
+          classifier_image_id?: string;
+          classifier_organization_id?: string;
+          created_at?: string;
+          duplicate_of_classifier_image_id?: string | null;
+          is_duplicate?: boolean;
+          product_draft_id?: string;
+          promotion_required?: boolean;
+          source_position?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_draft_source_memberships_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_image_publication_cutover_changes: {
+        Row: {
+          cover_changed: boolean;
+          previous_cover_image_url: string | null;
+          previous_status: Database["public"]["Enums"]["product_status"];
+          product_draft_id: string;
+          recorded_at: string;
+          status_changed: boolean;
+        };
+        Insert: {
+          cover_changed: boolean;
+          previous_cover_image_url?: string | null;
+          previous_status: Database["public"]["Enums"]["product_status"];
+          product_draft_id: string;
+          recorded_at?: string;
+          status_changed: boolean;
+        };
+        Update: {
+          cover_changed?: boolean;
+          previous_cover_image_url?: string | null;
+          previous_status?: Database["public"]["Enums"]["product_status"];
+          product_draft_id?: string;
+          recorded_at?: string;
+          status_changed?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_image_publication_cutover_changes_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: true;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_image_publication_items: {
+        Row: {
+          attempt_token: string | null;
+          created_at: string;
+          destination_key: string;
+          error_code: string | null;
+          expected_content_type: string;
+          expected_source_size_bytes: number;
+          is_cover: boolean;
+          object_created_by_attempt_token: string | null;
+          product_draft_id: string;
+          product_draft_image_id: string;
+          public_etag: string | null;
+          public_sha256: string | null;
+          public_size_bytes: number | null;
+          public_url: string | null;
+          publication_order: number;
+          source_bucket: string;
+          source_object_key: string;
+          source_position: number;
+          source_sha256: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempt_token?: string | null;
+          created_at?: string;
+          destination_key: string;
+          error_code?: string | null;
+          expected_content_type: string;
+          expected_source_size_bytes: number;
+          is_cover: boolean;
+          object_created_by_attempt_token?: string | null;
+          product_draft_id: string;
+          product_draft_image_id: string;
+          public_etag?: string | null;
+          public_sha256?: string | null;
+          public_size_bytes?: number | null;
+          public_url?: string | null;
+          publication_order: number;
+          source_bucket: string;
+          source_object_key: string;
+          source_position: number;
+          source_sha256?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempt_token?: string | null;
+          created_at?: string;
+          destination_key?: string;
+          error_code?: string | null;
+          expected_content_type?: string;
+          expected_source_size_bytes?: number;
+          is_cover?: boolean;
+          object_created_by_attempt_token?: string | null;
+          product_draft_id?: string;
+          product_draft_image_id?: string;
+          public_etag?: string | null;
+          public_sha256?: string | null;
+          public_size_bytes?: number | null;
+          public_url?: string | null;
+          publication_order?: number;
+          source_bucket?: string;
+          source_object_key?: string;
+          source_position?: number;
+          source_sha256?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_image_publication_items_run_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: false;
+            referencedRelation: "product_image_publication_runs";
+            referencedColumns: ["product_draft_id"];
+          },
+          {
+            foreignKeyName: "product_image_publication_items_source_fkey";
+            columns: ["product_draft_id", "product_draft_image_id"];
+            isOneToOne: true;
+            referencedRelation: "product_draft_images";
+            referencedColumns: ["product_draft_id", "id"];
+          },
+        ];
+      };
+      product_image_publication_runs: {
+        Row: {
+          attempt_count: number;
+          attempt_token: string | null;
+          claim_started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          error_code: string | null;
+          product_draft_id: string;
+          seller_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          product_draft_id: string;
+          seller_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          product_draft_id?: string;
+          seller_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_image_publication_runs_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: true;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_image_publication_runs_seller_id_fkey";
+            columns: ["seller_id"];
+            isOneToOne: false;
+            referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_images: {
+        Row: {
+          created_at: string;
+          id: string;
+          product_id: string;
+          sort_order: number;
+          source_product_draft_image_id: string | null;
+          url: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          product_id: string;
+          sort_order?: number;
+          source_product_draft_image_id?: string | null;
+          url: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          product_id?: string;
+          sort_order?: number;
+          source_product_draft_image_id?: string | null;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_images_source_product_draft_image_id_fkey";
+            columns: ["source_product_draft_image_id"];
+            isOneToOne: true;
+            referencedRelation: "product_draft_images";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      products: {
+        Row: {
+          category_id: string | null;
+          classifier_group_id: string | null;
+          classifier_organization_id: string | null;
+          cover_image_id: string | null;
+          cover_image_url: string | null;
+          created_at: string;
+          currency: string;
+          description: string | null;
+          id: string;
+          moq: number | null;
+          pack_size: string | null;
+          price: number | null;
+          seller_id: string;
+          status: Database["public"]["Enums"]["product_status"];
+          stock: Database["public"]["Enums"]["stock_status"];
+          title: string;
+          title_source: string | null;
+          trending: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          category_id?: string | null;
+          classifier_group_id?: string | null;
+          classifier_organization_id?: string | null;
+          cover_image_id?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string;
+          currency?: string;
+          description?: string | null;
+          id?: string;
+          moq?: number | null;
+          pack_size?: string | null;
+          price?: number | null;
+          seller_id: string;
+          status?: Database["public"]["Enums"]["product_status"];
+          stock?: Database["public"]["Enums"]["stock_status"];
+          title: string;
+          title_source?: string | null;
+          trending?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          category_id?: string | null;
+          classifier_group_id?: string | null;
+          classifier_organization_id?: string | null;
+          cover_image_id?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string;
+          currency?: string;
+          description?: string | null;
+          id?: string;
+          moq?: number | null;
+          pack_size?: string | null;
+          price?: number | null;
+          seller_id?: string;
+          status?: Database["public"]["Enums"]["product_status"];
+          stock?: Database["public"]["Enums"]["stock_status"];
+          title?: string;
+          title_source?: string | null;
+          trending?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "products_cover_draft_image_fkey";
+            columns: ["id", "cover_image_id"];
+            isOneToOne: false;
+            referencedRelation: "product_draft_images";
+            referencedColumns: ["product_draft_id", "id"];
+          },
+          {
+            foreignKeyName: "products_seller_id_fkey";
+            columns: ["seller_id"];
+            isOneToOne: false;
+            referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      sellers: {
+        Row: {
+          about: string | null;
+          city: string | null;
+          country: string | null;
+          cover_image_url: string | null;
+          created_at: string;
+          email: string | null;
+          established_year: number | null;
+          id: string;
+          logo_url: string | null;
+          name: string;
+          owner_id: string | null;
+          primary_category_id: string | null;
+          published: boolean;
+          slug: string;
+          updated_at: string;
+          verified: boolean;
+          whatsapp: string | null;
+        };
+        Insert: {
+          about?: string | null;
+          city?: string | null;
+          country?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string;
+          email?: string | null;
+          established_year?: number | null;
+          id?: string;
+          logo_url?: string | null;
+          name: string;
+          owner_id?: string | null;
+          primary_category_id?: string | null;
+          published?: boolean;
+          slug: string;
+          updated_at?: string;
+          verified?: boolean;
+          whatsapp?: string | null;
+        };
+        Update: {
+          about?: string | null;
+          city?: string | null;
+          country?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string;
+          email?: string | null;
+          established_year?: number | null;
+          id?: string;
+          logo_url?: string | null;
+          name?: string;
+          owner_id?: string | null;
+          primary_category_id?: string | null;
+          published?: boolean;
+          slug?: string;
+          updated_at?: string;
+          verified?: boolean;
+          whatsapp?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sellers_primary_category_id_fkey";
+            columns: ["primary_category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      user_roles: {
+        Row: {
+          created_at: string;
+          id: string;
+          role: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          role: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      begin_product_draft_image_storage_cutover_scan_phase: {
+        Args: {
+          p_attempt_token: string;
+          p_expected_phase: Database["public"]["Enums"]["product_draft_image_storage_cutover_scan_phase"];
+          p_next_phase: Database["public"]["Enums"]["product_draft_image_storage_cutover_scan_phase"];
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      claim_next_product_draft_image_storage_reconciliation: {
+        Args: {
+          p_claim_timeout_seconds: number;
+          p_cutover_attempt_token: string;
+          p_version: string;
+        };
+        Returns: {
+          attempt_count: number;
+          attempt_token: string;
+          classifier_batch_id: string | null;
+          classifier_group_id: string | null;
+          classifier_image_id: string | null;
+          classifier_organization_id: string | null;
+          content_type: string | null;
+          destination_key: string;
+          image_status: Database["public"]["Enums"]["product_draft_image_status"] | null;
+          product_draft_image_id: string | null;
+          public_object_state: Database["public"]["Enums"]["product_draft_image_public_object_state"];
+          reconciliation_status: Database["public"]["Enums"]["product_draft_image_storage_reconciliation_status"];
+          size_bytes: number | null;
+          source_content_length: number | null;
+          storage_bucket: string | null;
+        }[];
+      };
+      claim_product_draft_image_storage_cutover: {
+        Args: {
+          p_claim_timeout_seconds: number;
+          p_version: string;
+        };
+        Returns: Database["public"]["Tables"]["product_draft_image_storage_cutovers"]["Row"][];
+      };
+      complete_product_draft_image_storage_cutover: {
+        Args: {
+          p_attempt_token: string;
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      fail_product_draft_image_storage_cutover: {
+        Args: {
+          p_attempt_token: string;
+          p_error_code: string;
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      finalize_product_draft_image_storage_reconciliation: {
+        Args: {
+          p_cutover_attempt_token: string;
+          p_destination_key: string;
+          p_error_code: string | null;
+          p_public_object_state: Database["public"]["Enums"]["product_draft_image_public_object_state"];
+          p_reconciliation_attempt_token: string;
+          p_release_blocking: boolean;
+          p_retryable: boolean;
+          p_set_private_bucket: boolean;
+          p_status: Database["public"]["Enums"]["product_draft_image_storage_reconciliation_status"];
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      heartbeat_product_draft_image_storage_cutover: {
+        Args: {
+          p_attempt_token: string;
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      list_legacy_product_draft_public_object_keys: {
+        Args: {
+          p_cursor: string | null;
+          p_limit: number;
+        };
+        Returns: {
+          destination_key: string;
+        }[];
+      };
+      record_product_draft_image_storage_scan_object: {
+        Args: {
+          p_cutover_attempt_token: string;
+          p_destination_key: string;
+          p_version: string;
+        };
+        Returns: string;
+      };
+      retry_product_draft_image_storage_reconciliation: {
+        Args: {
+          p_destination_key: string;
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      set_product_draft_image_storage_cutover_scan_progress: {
+        Args: {
+          p_attempt_token: string;
+          p_expected_cursor: string | null;
+          p_next_cursor: string | null;
+          p_scan_phase: Database["public"]["Enums"]["product_draft_image_storage_cutover_scan_phase"];
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      verify_product_draft_image_storage_reconciliation_claim: {
+        Args: {
+          p_cutover_attempt_token: string;
+          p_destination_key: string;
+          p_reconciliation_attempt_token: string;
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      apply_product_draft_facts_patch: {
+        Args: {
+          p_expected_seller_id?: string | null;
+          p_normalized_patch: Json;
+          p_product_draft_id: string;
+        };
+        Returns: {
+          facts_json: Json | null;
+          facts_revision: number | null;
+          product_draft_id: string | null;
+          product_status: Database["public"]["Enums"]["product_status"] | null;
+          result: string;
+          updated_at: string | null;
+        }[];
+      };
+      apply_product_draft_description_patch: {
+        Args: {
+          p_de_description: string | null;
+          p_de_patch_present: boolean;
+          p_en_description: string | null;
+          p_en_patch_present: boolean;
+          p_pl_description: string | null;
+          p_pl_patch_present: boolean;
+          p_product_draft_id: string;
+          p_vi_description: string | null;
+          p_vi_patch_present: boolean;
+        };
+        Returns: {
+          result: string;
+          snapshot: Json | null;
+        }[];
+      };
+      save_seller_product_with_description: {
+        Args: {
+          p_category_id: string | null;
+          p_cover_image_url: string | null;
+          p_cover_image_url_patch_present: boolean;
+          p_currency: string;
+          p_description: string | null;
+          p_description_patch_present: boolean;
+          p_moq: number | null;
+          p_pack_size: string | null;
+          p_price: number | null;
+          p_product_draft_id: string | null;
+          p_seller_id: string;
+          p_status: Database["public"]["Enums"]["product_status"];
+          p_stock: Database["public"]["Enums"]["stock_status"];
+          p_title: string | null;
+          p_title_patch_present: boolean;
+          p_trending: boolean;
+        };
+        Returns: {
+          english_description: string | null;
+          product_draft_id: string | null;
+          product_status: Database["public"]["Enums"]["product_status"] | null;
+          result: string;
+          title: string | null;
+          title_source: string | null;
+        }[];
+      };
+      authorize_seller_product_publication: {
+        Args: {
+          p_category_id: string | null;
+          p_cover_image_url: string | null;
+          p_cover_image_url_patch_present: boolean;
+          p_currency: string;
+          p_description: string | null;
+          p_description_patch_present: boolean;
+          p_moq: number | null;
+          p_pack_size: string | null;
+          p_price: number | null;
+          p_product_draft_id: string;
+          p_seller_id: string;
+          p_stock: Database["public"]["Enums"]["stock_status"];
+          p_title: string | null;
+          p_title_patch_present: boolean;
+          p_trending: boolean;
+        };
+        Returns: {
+          product_draft_id: string | null;
+          publication_status: string | null;
+          result: string;
+        }[];
+      };
+      claim_product_image_publication: {
+        Args: {
+          p_claim_timeout_seconds: number;
+          p_product_draft_id: string;
+        };
+        Returns: Database["public"]["Tables"]["product_image_publication_runs"]["Row"][];
+      };
+      clear_product_image_publication_object_ownership: {
+        Args: {
+          p_attempt_token: string;
+          p_created_attempt_token: string;
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+        };
+        Returns: boolean;
+      };
+      complete_product_image_publication_cleanup: {
+        Args: {
+          p_created_attempt_token: string;
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+        };
+        Returns: boolean;
+      };
+      fail_product_image_publication_attempt: {
+        Args: {
+          p_attempt_token: string;
+          p_error_code: string;
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+        };
+        Returns: boolean;
+      };
+      fail_claimed_product_image_publication: {
+        Args: {
+          p_attempt_token: string;
+          p_error_code: string;
+          p_product_draft_id: string;
+        };
+        Returns: boolean;
+      };
+      finalize_product_image_publication_cleanup: {
+        Args: {
+          p_product_draft_id: string;
+        };
+        Returns: boolean;
+      };
+      finalize_seller_product_publication: {
+        Args: {
+          p_attempt_token: string;
+          p_product_draft_id: string;
+          p_seller_id: string;
+        };
+        Returns: string;
+      };
+      mark_product_image_publication_dispatch_failed: {
+        Args: {
+          p_product_draft_id: string;
+        };
+        Returns: boolean;
+      };
+      record_product_image_publication_object_created: {
+        Args: {
+          p_attempt_token: string;
+          p_public_url: string;
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+          p_source_sha256: string;
+        };
+        Returns: boolean;
+      };
+      retry_product_image_publication: {
+        Args: {
+          p_product_draft_id: string;
+          p_seller_id: string;
+        };
+        Returns: string;
+      };
+      verify_product_image_publication_item: {
+        Args: {
+          p_attempt_token: string;
+          p_created_by_current_attempt: boolean;
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+          p_public_etag: string | null;
+          p_public_sha256: string;
+          p_public_size_bytes: number;
+          p_public_url: string;
+          p_source_sha256: string;
+        };
+        Returns: boolean;
+      };
+      claim_classifier_import_run: {
+        Args: {
+          p_import_id: string;
+          p_lease_timeout_seconds: number;
+        };
+        Returns: Database["public"]["Tables"]["classifier_import_runs"]["Row"][];
+      };
+      claim_next_classifier_import_run: {
+        Args: {
+          p_lease_timeout_seconds: number;
+        };
+        Returns: Database["public"]["Tables"]["classifier_import_runs"]["Row"][];
+      };
+      classifier_import_image_action_state: {
+        Args: {
+          p_import_id: string;
+        };
+        Returns: {
+          has_any_failures: boolean;
+          has_promoted_images: boolean;
+          has_retryable_failures: boolean;
+        }[];
+      };
+      classifier_import_reset_failed_promotions: {
+        Args: {
+          p_import_id: string;
+          p_include_non_retryable: boolean;
+        };
+        Returns: string[];
+      };
+      claim_classifier_image_promotion: {
+        Args: {
+          p_claim_timeout_seconds: number;
+          p_import_id: string;
+          p_promotion_id: string;
+          p_run_attempt_token: string;
+        };
+        Returns: Database["public"]["Tables"]["product_draft_image_promotions"]["Row"][];
+      };
+      finalize_classifier_import_run: {
+        Args: {
+          p_attempt_token: string;
+          p_error_code: string | null;
+          p_import_id: string;
+          p_retryable: boolean;
+          p_status: Database["public"]["Enums"]["classifier_import_status"];
+        };
+        Returns: boolean;
+      };
+      finalize_classifier_image_promotion_failure: {
+        Args: {
+          p_error_code: string;
+          p_import_id: string;
+          p_promotion_attempt_token: string;
+          p_promotion_id: string;
+          p_retryable: boolean;
+          p_run_attempt_token: string;
+        };
+        Returns: boolean;
+      };
+      finalize_classifier_image_promotion_success: {
+        Args: {
+          p_destination_size_bytes: number;
+          p_import_id: string;
+          p_promotion_attempt_token: string;
+          p_promotion_id: string;
+          p_run_attempt_token: string;
+        };
+        Returns: boolean;
+      };
+      get_classifier_import_action_state: {
+        Args: {
+          p_import_id: string;
+        };
+        Returns: {
+          can_reconcile: boolean;
+          can_retry_all: boolean;
+          can_retry_temporary: boolean;
+        }[];
+      };
+      heartbeat_classifier_import_run: {
+        Args: {
+          p_attempt_token: string;
+          p_import_id: string;
+        };
+        Returns: boolean;
+      };
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"];
+          _user_id: string;
+        };
+        Returns: boolean;
+      };
+      reconcile_classifier_import: {
+        Args: {
+          p_import_id: string;
+        };
+        Returns: string;
+      };
+      prepare_classifier_import_group: {
+        Args: {
+          p_approved_category_slug: string;
+          p_attempt_token: string;
+          p_classifier_group_id: string;
+          p_import_id: string;
+          p_source_cover_classifier_image_id: string;
+        };
+        Returns: {
+          product_draft_id: string | null;
+          result: string;
+        }[];
+      };
+      prepare_classifier_import_group_images: {
+        Args: {
+          p_classifier_group_id: string;
+          p_cover_classifier_image_id: string;
+          p_import_id: string;
+          p_memberships: Json;
+          p_run_attempt_token: string;
+        };
+        Returns: {
+          product_draft_id: string | null;
+          result: string;
+        }[];
+      };
+      retry_classifier_import: {
+        Args: {
+          p_import_id: string;
+          p_include_non_retryable: boolean;
+        };
+        Returns: string;
+      };
+      mark_classifier_image_promotion_conflict: {
+        Args: {
+          p_import_id: string;
+          p_promotion_id: string;
+          p_run_attempt_token: string;
+        };
+        Returns: boolean;
+      };
+      reset_missing_classifier_image_promotion: {
+        Args: {
+          p_import_id: string;
+          p_promotion_id: string;
+          p_run_attempt_token: string;
+        };
+        Returns: boolean;
+      };
+      set_classifier_import_group_result: {
+        Args: {
+          p_attempt_token: string;
+          p_classifier_group_id: string;
+          p_error_code: string | null;
+          p_import_id: string;
+          p_retryable: boolean;
+          p_status: Database["public"]["Enums"]["classifier_import_group_status"];
+        };
+        Returns: boolean;
+      };
+      set_classifier_import_pipeline_version: {
+        Args: {
+          p_attempt_token: string;
+          p_import_id: string;
+          p_pipeline_version: string;
+        };
+        Returns: boolean;
+      };
+      set_classifier_image_promotion_source_length: {
+        Args: {
+          p_import_id: string;
+          p_promotion_attempt_token: string;
+          p_promotion_id: string;
+          p_run_attempt_token: string;
+          p_source_content_length: number;
+        };
+        Returns: boolean;
+      };
+      verify_classifier_image_promotion_claim: {
+        Args: {
+          p_import_id: string;
+          p_promotion_attempt_token: string;
+          p_promotion_id: string;
+          p_run_attempt_token: string;
+        };
+        Returns: boolean;
+      };
+    };
+    Enums: {
+      app_role: "seller" | "admin";
+      classifier_import_group_status: "pending" | "processing" | "complete" | "failed";
+      classifier_import_operation_kind: "import" | "reconcile";
+      classifier_import_retry_policy: "retryable_only" | "include_non_retryable";
+      classifier_import_status:
+        "pending" | "running" | "completed" | "completed_with_errors" | "failed";
+      lead_source: "form" | "whatsapp";
+      product_status: "draft" | "published" | "archived";
+      product_draft_image_public_object_state: "unchecked" | "absent" | "deleted" | "unresolved";
+      product_draft_image_promotion_status: "pending" | "started" | "promoted" | "failed";
+      product_draft_image_status: "pending" | "available" | "failed";
+      product_draft_image_storage_cutover_scan_phase: "reconciliation" | "discovery" | "confirming";
+      product_draft_image_storage_cutover_status: "pending" | "running" | "completed" | "failed";
+      product_draft_image_storage_reconciliation_status:
+        "pending" | "started" | "completed" | "failed";
+      stock_status: "in_stock" | "low_stock" | "out_of_stock" | "made_to_order";
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
+};
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R;
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
+      }
+      ? R
+      : never
+    : never;
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I;
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I;
+      }
+      ? I
+      : never
+    : never;
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U;
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U;
+      }
+      ? U
+      : never
+    : never;
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never;
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never;
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["seller", "admin"],
+      classifier_import_group_status: ["pending", "processing", "complete", "failed"],
+      classifier_import_operation_kind: ["import", "reconcile"],
+      classifier_import_retry_policy: ["retryable_only", "include_non_retryable"],
+      classifier_import_status: [
+        "pending",
+        "running",
+        "completed",
+        "completed_with_errors",
+        "failed",
+      ],
+      lead_source: ["form", "whatsapp"],
+      product_status: ["draft", "published", "archived"],
+      product_draft_image_promotion_status: ["pending", "started", "promoted", "failed"],
+      product_draft_image_status: ["pending", "available", "failed"],
+      stock_status: ["in_stock", "low_stock", "out_of_stock", "made_to_order"],
+    },
+  },
+} as const;

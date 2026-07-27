@@ -1,0 +1,44 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database } from "@/lib/supabase/types";
+
+import type {
+  SellerProductPublicationProduct,
+  SellerProductPublicationRepository,
+} from "./seller-product-publication.repository";
+
+type AdminClient = SupabaseClient<Database>;
+
+export class SupabaseSellerProductPublicationRepository implements SellerProductPublicationRepository {
+  constructor(private readonly database: AdminClient) {}
+
+  async findOwnedProduct(
+    productDraftId: string,
+    sellerId: string,
+  ): Promise<SellerProductPublicationProduct | null> {
+    const product = await this.database
+      .from("products")
+      .select("id,seller_id,status,cover_image_url")
+      .eq("id", productDraftId)
+      .eq("seller_id", sellerId)
+      .maybeSingle();
+    if (product.error) throw new Error("Seller product publication lookup failed.");
+    if (!product.data) return null;
+
+    const membership = await this.database
+      .from("product_draft_source_memberships")
+      .select("product_draft_id")
+      .eq("product_draft_id", productDraftId)
+      .limit(1)
+      .maybeSingle();
+    if (membership.error) throw new Error("Seller product publication provenance lookup failed.");
+
+    return {
+      productDraftId: product.data.id,
+      sellerId: product.data.seller_id,
+      productStatus: product.data.status,
+      coverImageUrl: product.data.cover_image_url,
+      imagePublicationMode: membership.data ? "imported" : "direct",
+    };
+  }
+}

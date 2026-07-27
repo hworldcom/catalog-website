@@ -1,0 +1,50 @@
+# Admin Feature
+
+Owns internal admin workflows.
+
+Current status:
+
+- durable classifier-import coordination and `ProductDraft` source identity are
+  implemented server-side;
+- the browser-facing inbox is available at `/v1/admin/classifier-batches`, with
+  start, status, retry, and reconciliation endpoints under
+  `/v1/admin/classifier-imports`;
+- promoted classifier images are copied into Bazoria-owned storage by the
+  import worker, with new and retried ProductDraft images written to the
+  private `product-draft-images` bucket;
+- administrator authorization immediately dispatches the exact durable import
+  through the local backend; and
+- an authenticated approved-batch inbox, explicit import authorization, and
+  durable status pages are available under `/admin/classifier-imports`;
+- an allowlisted cross-seller ProductDraft index is available at
+  `/admin/product-drafts`, with stable filters, cursor pagination, immutable
+  classifier source context, and private signed previews;
+- the unified ProductDraft review includes shared title and structured-facts
+  editors, with published and archived records rendered read-only; and
+- every raw classifier-import administrator endpoint validates the Supabase
+  bearer token and the server-only prototype-administrator allowlist before
+  constructing its service-role runtime.
+
+Boundaries:
+
+- Seller-facing workflows stay in `src/features/seller`.
+- Buyer/account workflows stay in `src/features/account`.
+- Catalog-classifier ingestion, grouping, image processing, and review semantics
+  remain owned by the classifier service unless a specific admin integration
+  ticket says otherwise.
+- Classifier-approved groups must become `ProductDraft` records through an
+  explicit server-side import first, never public products automatically.
+- Classifier import configuration and service-role database access remain
+  server-only.
+- Browser polling only reads progress; backend dispatch initiates worker
+  execution.
+- Cross-seller prototype administrator operations require membership in
+  `BAZORIA_PROTOTYPE_ADMIN_USER_IDS`.
+- ProductDraft index and review reads remain disabled until
+  `BAZORIA_ADMIN_PRODUCT_DRAFTS_ENABLED=true` and the durable private-image
+  cutover is complete.
+- ProductDraft preview URLs are short-lived opaque capabilities. Browser code
+  keeps them only in the current snapshot and never persists them in route
+  search parameters.
+- This allowlist is temporary prototype authorization. Production role
+  assignment through `public.user_roles` remains separate work.
