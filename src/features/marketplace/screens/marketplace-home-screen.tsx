@@ -146,6 +146,7 @@ const H = {
 
 export function MarketplaceHomeScreen() {
   const { data } = useSuspenseQuery(marketplaceQueryOptions());
+  const hasCategories = data.categories.length > 0;
   const catBySeller = new Map(data.categories.map((c) => [c.id, c]));
 
   return (
@@ -162,7 +163,7 @@ export function MarketplaceHomeScreen() {
           <p className="mt-5 max-w-2xl text-sm text-muted-foreground sm:text-base">{tr(H.lead)}</p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a
-              href="#categories"
+              href={hasCategories ? "#categories" : "#products"}
               className="inline-flex items-center bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               {tr(H.browseCta)}
@@ -178,30 +179,34 @@ export function MarketplaceHomeScreen() {
         </div>
       </section>
 
-      <section id="categories" />
+      {hasCategories ? (
+        <>
+          <section id="categories" />
 
-      <Section title={tr(H.catsTitle)} subtitle={tr(H.catsSub)}>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.categories.map((c) => (
-            <Link
-              key={c.id}
-              to="/c/$category"
-              params={{ category: c.slug }}
-              className="group flex flex-col justify-between border border-border/60 bg-card/40 p-5 transition-colors hover:border-primary/70 hover:bg-card/70"
-            >
-              <div className="font-display text-lg font-semibold text-foreground">{c.name}</div>
-              {c.tagline ? (
-                <div className="mt-2 text-sm text-muted-foreground">{c.tagline}</div>
-              ) : null}
-              <div className="mt-4 text-xs uppercase tracking-widest text-primary/80 group-hover:text-primary">
-                {tr(H.viewCatalog)}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </Section>
+          <Section title={tr(H.catsTitle)} subtitle={tr(H.catsSub)}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {data.categories.map((c) => (
+                <Link
+                  key={c.id}
+                  to="/c/$category"
+                  params={{ category: c.slug }}
+                  className="group flex flex-col justify-between border border-border/60 bg-card/40 p-5 transition-colors hover:border-primary/70 hover:bg-card/70"
+                >
+                  <div className="font-display text-lg font-semibold text-foreground">{c.name}</div>
+                  {c.tagline ? (
+                    <div className="mt-2 text-sm text-muted-foreground">{c.tagline}</div>
+                  ) : null}
+                  <div className="mt-4 text-xs uppercase tracking-widest text-primary/80 group-hover:text-primary">
+                    {tr(H.viewCatalog)}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Section>
+        </>
+      ) : null}
 
-      <Section title={tr(H.trendingTitle)} subtitle={tr(H.trendingSub)}>
+      <Section id="products" title={tr(H.trendingTitle)} subtitle={tr(H.trendingSub)}>
         {data.trending.length === 0 ? (
           <EmptyBox>{tr(H.trendingEmpty)}</EmptyBox>
         ) : (
@@ -218,41 +223,44 @@ export function MarketplaceHomeScreen() {
           <EmptyBox>{tr(H.suppliersEmpty)}</EmptyBox>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.sellers.map((s) => (
-              <Link
-                key={s.id}
-                to="/s/$sellerSlug"
-                params={{ sellerSlug: s.slug }}
-                className="group overflow-hidden border border-border/60 bg-card/40 transition-colors hover:border-primary/70"
-              >
-                <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-                  {s.cover_image_url ? (
-                    <img
-                      src={s.cover_image_url}
-                      alt={s.name}
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  ) : null}
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="font-display text-base font-semibold">{s.name}</div>
-                    {s.verified ? (
-                      <span className="border border-primary/60 px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-primary">
-                        {tr(H.verified)}
-                      </span>
+            {data.sellers.map((s) => {
+              const categoryName = s.primary_category_id
+                ? catBySeller.get(s.primary_category_id)?.name
+                : null;
+              return (
+                <Link
+                  key={s.id}
+                  to="/s/$sellerSlug"
+                  params={{ sellerSlug: s.slug }}
+                  className="group overflow-hidden border border-border/60 bg-card/40 transition-colors hover:border-primary/70"
+                >
+                  <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                    {s.cover_image_url ? (
+                      <img
+                        src={s.cover_image_url}
+                        alt={s.name}
+                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                        loading="lazy"
+                      />
                     ) : null}
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {[s.city, s.country].filter(Boolean).join(", ")}
-                    {s.primary_category_id && catBySeller.get(s.primary_category_id)
-                      ? ` · ${catBySeller.get(s.primary_category_id)!.name}`
-                      : ""}
+                  <div className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="font-display text-base font-semibold">{s.name}</div>
+                      {s.verified ? (
+                        <span className="border border-primary/60 px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-primary">
+                          {tr(H.verified)}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {[s.city, s.country].filter(Boolean).join(", ")}
+                      {categoryName ? ` · ${categoryName}` : ""}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </Section>
@@ -299,16 +307,18 @@ export function MarketplaceHomeScreen() {
 }
 
 function Section({
+  id,
   title,
   subtitle,
   children,
 }: {
+  id?: string;
   title: string;
   subtitle?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-12">
+    <section id={id} className="mx-auto max-w-6xl px-6 py-12">
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
           <h2 className="font-display text-2xl font-semibold tracking-tight">{title}</h2>

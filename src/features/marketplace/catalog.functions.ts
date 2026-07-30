@@ -17,6 +17,15 @@ export type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 export type SellerRow = Database["public"]["Tables"]["sellers"]["Row"];
 export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 
+const HOME_EXCLUDED_CATEGORY_SLUGS = new Set([
+  "textiles",
+  "home-decor",
+  "fashion",
+  "beauty",
+  "food",
+  "electronics",
+]);
+
 export const listMarketplace = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicClient();
   const [cats, trending, sellers] = await Promise.all([
@@ -37,7 +46,9 @@ export const listMarketplace = createServerFn({ method: "GET" }).handler(async (
   if (trending.error) throw trending.error;
   if (sellers.error) throw sellers.error;
   return {
-    categories: cats.data ?? [],
+    categories: (cats.data ?? []).filter((category) => {
+      return !HOME_EXCLUDED_CATEGORY_SLUGS.has(category.slug);
+    }),
     trending: trending.data ?? [],
     sellers: sellers.data ?? [],
   };
