@@ -25,17 +25,26 @@ import { Route as V1AdminClassifierBatchesRouteImport } from './routes/v1.admin.
 import { Route as AuthenticatedSellerStorefrontRouteImport } from './routes/_authenticated/seller.storefront'
 import { Route as AuthenticatedSellerProductsRouteImport } from './routes/_authenticated/seller.products'
 import { Route as AuthenticatedSellerLeadsRouteImport } from './routes/_authenticated/seller.leads'
+import { Route as AuthenticatedSellerClassifierBatchesRouteImport } from './routes/_authenticated/seller.classifier-batches'
 import { Route as AuthenticatedAdminProductDraftsRouteImport } from './routes/_authenticated/admin.product-drafts'
 import { Route as AuthenticatedAdminClassifierImportsRouteImport } from './routes/_authenticated/admin.classifier-imports'
 import { Route as V1AdminClassifierImportsImportIdRouteImport } from './routes/v1.admin.classifier-imports.$importId'
 import { Route as AuthenticatedSellerProductsNewRouteImport } from './routes/_authenticated/seller.products_.new'
 import { Route as AuthenticatedSellerProductsIdRouteImport } from './routes/_authenticated/seller.products_.$id'
+import { Route as AuthenticatedSellerClassifierBatchesNewRouteImport } from './routes/_authenticated/seller.classifier-batches_.new'
 import { Route as AuthenticatedAdminProductDraftsProductDraftIdRouteImport } from './routes/_authenticated/admin.product-drafts_.$productDraftId'
+import { Route as AuthenticatedAdminClassifierUploadsNewRouteImport } from './routes/_authenticated/admin.classifier-uploads_.new'
+import { Route as AuthenticatedAdminClassifierUploadsWorkflowIdRouteImport } from './routes/_authenticated/admin.classifier-uploads_.$workflowId'
 import { Route as AuthenticatedAdminClassifierImportsImportIdRouteImport } from './routes/_authenticated/admin.classifier-imports_.$importId'
 import { Route as V1AdminClassifierImportsImportIdRetryRouteImport } from './routes/v1.admin.classifier-imports.$importId.retry'
 import { Route as V1AdminClassifierImportsImportIdReconcileRouteImport } from './routes/v1.admin.classifier-imports.$importId.reconcile'
 import { Route as V1AdminClassifierImportsImportIdDispatchRouteImport } from './routes/v1.admin.classifier-imports.$importId.dispatch'
+import { Route as AuthenticatedSellerClassifierBatchesWorkflowIdUploadRouteImport } from './routes/_authenticated/seller.classifier-batches_.$workflowId.upload'
+import { Route as AuthenticatedSellerClassifierBatchesWorkflowIdReviewRouteImport } from './routes/_authenticated/seller.classifier-batches_.$workflowId.review'
+import { Route as AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRouteImport } from './routes/_authenticated/seller.classifier-batches_.$workflowId.processing'
+import { Route as AuthenticatedSellerClassifierBatchesWorkflowIdImportRouteImport } from './routes/_authenticated/seller.classifier-batches_.$workflowId.import'
 import { Route as AuthenticatedAdminProductDraftsProductDraftIdFactsRouteImport } from './routes/_authenticated/admin.product-drafts_.$productDraftId.facts'
+import { Route as V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRouteImport } from './routes/v1.seller.classifier-batches.$workflowId.images.$imageId.thumbnail'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -123,6 +132,12 @@ const AuthenticatedSellerLeadsRoute =
     path: '/leads',
     getParentRoute: () => AuthenticatedSellerRoute,
   } as any)
+const AuthenticatedSellerClassifierBatchesRoute =
+  AuthenticatedSellerClassifierBatchesRouteImport.update({
+    id: '/classifier-batches',
+    path: '/classifier-batches',
+    getParentRoute: () => AuthenticatedSellerRoute,
+  } as any)
 const AuthenticatedAdminProductDraftsRoute =
   AuthenticatedAdminProductDraftsRouteImport.update({
     id: '/admin/product-drafts',
@@ -153,10 +168,28 @@ const AuthenticatedSellerProductsIdRoute =
     path: '/products/$id',
     getParentRoute: () => AuthenticatedSellerRoute,
   } as any)
+const AuthenticatedSellerClassifierBatchesNewRoute =
+  AuthenticatedSellerClassifierBatchesNewRouteImport.update({
+    id: '/classifier-batches_/new',
+    path: '/classifier-batches/new',
+    getParentRoute: () => AuthenticatedSellerRoute,
+  } as any)
 const AuthenticatedAdminProductDraftsProductDraftIdRoute =
   AuthenticatedAdminProductDraftsProductDraftIdRouteImport.update({
     id: '/admin/product-drafts_/$productDraftId',
     path: '/admin/product-drafts/$productDraftId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminClassifierUploadsNewRoute =
+  AuthenticatedAdminClassifierUploadsNewRouteImport.update({
+    id: '/admin/classifier-uploads_/new',
+    path: '/admin/classifier-uploads/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminClassifierUploadsWorkflowIdRoute =
+  AuthenticatedAdminClassifierUploadsWorkflowIdRouteImport.update({
+    id: '/admin/classifier-uploads_/$workflowId',
+    path: '/admin/classifier-uploads/$workflowId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminClassifierImportsImportIdRoute =
@@ -183,11 +216,41 @@ const V1AdminClassifierImportsImportIdDispatchRoute =
     path: '/dispatch',
     getParentRoute: () => V1AdminClassifierImportsImportIdRoute,
   } as any)
+const AuthenticatedSellerClassifierBatchesWorkflowIdUploadRoute =
+  AuthenticatedSellerClassifierBatchesWorkflowIdUploadRouteImport.update({
+    id: '/classifier-batches_/$workflowId/upload',
+    path: '/classifier-batches/$workflowId/upload',
+    getParentRoute: () => AuthenticatedSellerRoute,
+  } as any)
+const AuthenticatedSellerClassifierBatchesWorkflowIdReviewRoute =
+  AuthenticatedSellerClassifierBatchesWorkflowIdReviewRouteImport.update({
+    id: '/classifier-batches_/$workflowId/review',
+    path: '/classifier-batches/$workflowId/review',
+    getParentRoute: () => AuthenticatedSellerRoute,
+  } as any)
+const AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRoute =
+  AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRouteImport.update({
+    id: '/classifier-batches_/$workflowId/processing',
+    path: '/classifier-batches/$workflowId/processing',
+    getParentRoute: () => AuthenticatedSellerRoute,
+  } as any)
+const AuthenticatedSellerClassifierBatchesWorkflowIdImportRoute =
+  AuthenticatedSellerClassifierBatchesWorkflowIdImportRouteImport.update({
+    id: '/classifier-batches_/$workflowId/import',
+    path: '/classifier-batches/$workflowId/import',
+    getParentRoute: () => AuthenticatedSellerRoute,
+  } as any)
 const AuthenticatedAdminProductDraftsProductDraftIdFactsRoute =
   AuthenticatedAdminProductDraftsProductDraftIdFactsRouteImport.update({
     id: '/facts',
     path: '/facts',
     getParentRoute: () => AuthenticatedAdminProductDraftsProductDraftIdRoute,
+  } as any)
+const V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute =
+  V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRouteImport.update({
+    id: '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail',
+    path: '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -201,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/s/$sellerSlug': typeof SSellerSlugRoute
   '/admin/classifier-imports': typeof AuthenticatedAdminClassifierImportsRoute
   '/admin/product-drafts': typeof AuthenticatedAdminProductDraftsRoute
+  '/seller/classifier-batches': typeof AuthenticatedSellerClassifierBatchesRoute
   '/seller/leads': typeof AuthenticatedSellerLeadsRoute
   '/seller/products': typeof AuthenticatedSellerProductsRoute
   '/seller/storefront': typeof AuthenticatedSellerStorefrontRoute
@@ -209,14 +273,22 @@ export interface FileRoutesByFullPath {
   '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
   '/seller/': typeof AuthenticatedSellerIndexRoute
   '/admin/classifier-imports/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
+  '/admin/classifier-uploads/$workflowId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdRoute
+  '/admin/classifier-uploads/new': typeof AuthenticatedAdminClassifierUploadsNewRoute
   '/admin/product-drafts/$productDraftId': typeof AuthenticatedAdminProductDraftsProductDraftIdRouteWithChildren
+  '/seller/classifier-batches/new': typeof AuthenticatedSellerClassifierBatchesNewRoute
   '/seller/products/$id': typeof AuthenticatedSellerProductsIdRoute
   '/seller/products/new': typeof AuthenticatedSellerProductsNewRoute
   '/v1/admin/classifier-imports/$importId': typeof V1AdminClassifierImportsImportIdRouteWithChildren
   '/admin/product-drafts/$productDraftId/facts': typeof AuthenticatedAdminProductDraftsProductDraftIdFactsRoute
+  '/seller/classifier-batches/$workflowId/import': typeof AuthenticatedSellerClassifierBatchesWorkflowIdImportRoute
+  '/seller/classifier-batches/$workflowId/processing': typeof AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRoute
+  '/seller/classifier-batches/$workflowId/review': typeof AuthenticatedSellerClassifierBatchesWorkflowIdReviewRoute
+  '/seller/classifier-batches/$workflowId/upload': typeof AuthenticatedSellerClassifierBatchesWorkflowIdUploadRoute
   '/v1/admin/classifier-imports/$importId/dispatch': typeof V1AdminClassifierImportsImportIdDispatchRoute
   '/v1/admin/classifier-imports/$importId/reconcile': typeof V1AdminClassifierImportsImportIdReconcileRoute
   '/v1/admin/classifier-imports/$importId/retry': typeof V1AdminClassifierImportsImportIdRetryRoute
+  '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail': typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -228,6 +300,7 @@ export interface FileRoutesByTo {
   '/s/$sellerSlug': typeof SSellerSlugRoute
   '/admin/classifier-imports': typeof AuthenticatedAdminClassifierImportsRoute
   '/admin/product-drafts': typeof AuthenticatedAdminProductDraftsRoute
+  '/seller/classifier-batches': typeof AuthenticatedSellerClassifierBatchesRoute
   '/seller/leads': typeof AuthenticatedSellerLeadsRoute
   '/seller/products': typeof AuthenticatedSellerProductsRoute
   '/seller/storefront': typeof AuthenticatedSellerStorefrontRoute
@@ -236,14 +309,22 @@ export interface FileRoutesByTo {
   '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
   '/seller': typeof AuthenticatedSellerIndexRoute
   '/admin/classifier-imports/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
+  '/admin/classifier-uploads/$workflowId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdRoute
+  '/admin/classifier-uploads/new': typeof AuthenticatedAdminClassifierUploadsNewRoute
   '/admin/product-drafts/$productDraftId': typeof AuthenticatedAdminProductDraftsProductDraftIdRouteWithChildren
+  '/seller/classifier-batches/new': typeof AuthenticatedSellerClassifierBatchesNewRoute
   '/seller/products/$id': typeof AuthenticatedSellerProductsIdRoute
   '/seller/products/new': typeof AuthenticatedSellerProductsNewRoute
   '/v1/admin/classifier-imports/$importId': typeof V1AdminClassifierImportsImportIdRouteWithChildren
   '/admin/product-drafts/$productDraftId/facts': typeof AuthenticatedAdminProductDraftsProductDraftIdFactsRoute
+  '/seller/classifier-batches/$workflowId/import': typeof AuthenticatedSellerClassifierBatchesWorkflowIdImportRoute
+  '/seller/classifier-batches/$workflowId/processing': typeof AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRoute
+  '/seller/classifier-batches/$workflowId/review': typeof AuthenticatedSellerClassifierBatchesWorkflowIdReviewRoute
+  '/seller/classifier-batches/$workflowId/upload': typeof AuthenticatedSellerClassifierBatchesWorkflowIdUploadRoute
   '/v1/admin/classifier-imports/$importId/dispatch': typeof V1AdminClassifierImportsImportIdDispatchRoute
   '/v1/admin/classifier-imports/$importId/reconcile': typeof V1AdminClassifierImportsImportIdReconcileRoute
   '/v1/admin/classifier-imports/$importId/retry': typeof V1AdminClassifierImportsImportIdRetryRoute
+  '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail': typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -258,6 +339,7 @@ export interface FileRoutesById {
   '/s/$sellerSlug': typeof SSellerSlugRoute
   '/_authenticated/admin/classifier-imports': typeof AuthenticatedAdminClassifierImportsRoute
   '/_authenticated/admin/product-drafts': typeof AuthenticatedAdminProductDraftsRoute
+  '/_authenticated/seller/classifier-batches': typeof AuthenticatedSellerClassifierBatchesRoute
   '/_authenticated/seller/leads': typeof AuthenticatedSellerLeadsRoute
   '/_authenticated/seller/products': typeof AuthenticatedSellerProductsRoute
   '/_authenticated/seller/storefront': typeof AuthenticatedSellerStorefrontRoute
@@ -266,14 +348,22 @@ export interface FileRoutesById {
   '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
   '/_authenticated/seller/': typeof AuthenticatedSellerIndexRoute
   '/_authenticated/admin/classifier-imports_/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
+  '/_authenticated/admin/classifier-uploads_/$workflowId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdRoute
+  '/_authenticated/admin/classifier-uploads_/new': typeof AuthenticatedAdminClassifierUploadsNewRoute
   '/_authenticated/admin/product-drafts_/$productDraftId': typeof AuthenticatedAdminProductDraftsProductDraftIdRouteWithChildren
+  '/_authenticated/seller/classifier-batches_/new': typeof AuthenticatedSellerClassifierBatchesNewRoute
   '/_authenticated/seller/products_/$id': typeof AuthenticatedSellerProductsIdRoute
   '/_authenticated/seller/products_/new': typeof AuthenticatedSellerProductsNewRoute
   '/v1/admin/classifier-imports/$importId': typeof V1AdminClassifierImportsImportIdRouteWithChildren
   '/_authenticated/admin/product-drafts_/$productDraftId/facts': typeof AuthenticatedAdminProductDraftsProductDraftIdFactsRoute
+  '/_authenticated/seller/classifier-batches_/$workflowId/import': typeof AuthenticatedSellerClassifierBatchesWorkflowIdImportRoute
+  '/_authenticated/seller/classifier-batches_/$workflowId/processing': typeof AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRoute
+  '/_authenticated/seller/classifier-batches_/$workflowId/review': typeof AuthenticatedSellerClassifierBatchesWorkflowIdReviewRoute
+  '/_authenticated/seller/classifier-batches_/$workflowId/upload': typeof AuthenticatedSellerClassifierBatchesWorkflowIdUploadRoute
   '/v1/admin/classifier-imports/$importId/dispatch': typeof V1AdminClassifierImportsImportIdDispatchRoute
   '/v1/admin/classifier-imports/$importId/reconcile': typeof V1AdminClassifierImportsImportIdReconcileRoute
   '/v1/admin/classifier-imports/$importId/retry': typeof V1AdminClassifierImportsImportIdRetryRoute
+  '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail': typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -288,6 +378,7 @@ export interface FileRouteTypes {
     | '/s/$sellerSlug'
     | '/admin/classifier-imports'
     | '/admin/product-drafts'
+    | '/seller/classifier-batches'
     | '/seller/leads'
     | '/seller/products'
     | '/seller/storefront'
@@ -296,14 +387,22 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-imports'
     | '/seller/'
     | '/admin/classifier-imports/$importId'
+    | '/admin/classifier-uploads/$workflowId'
+    | '/admin/classifier-uploads/new'
     | '/admin/product-drafts/$productDraftId'
+    | '/seller/classifier-batches/new'
     | '/seller/products/$id'
     | '/seller/products/new'
     | '/v1/admin/classifier-imports/$importId'
     | '/admin/product-drafts/$productDraftId/facts'
+    | '/seller/classifier-batches/$workflowId/import'
+    | '/seller/classifier-batches/$workflowId/processing'
+    | '/seller/classifier-batches/$workflowId/review'
+    | '/seller/classifier-batches/$workflowId/upload'
     | '/v1/admin/classifier-imports/$importId/dispatch'
     | '/v1/admin/classifier-imports/$importId/reconcile'
     | '/v1/admin/classifier-imports/$importId/retry'
+    | '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -315,6 +414,7 @@ export interface FileRouteTypes {
     | '/s/$sellerSlug'
     | '/admin/classifier-imports'
     | '/admin/product-drafts'
+    | '/seller/classifier-batches'
     | '/seller/leads'
     | '/seller/products'
     | '/seller/storefront'
@@ -323,14 +423,22 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-imports'
     | '/seller'
     | '/admin/classifier-imports/$importId'
+    | '/admin/classifier-uploads/$workflowId'
+    | '/admin/classifier-uploads/new'
     | '/admin/product-drafts/$productDraftId'
+    | '/seller/classifier-batches/new'
     | '/seller/products/$id'
     | '/seller/products/new'
     | '/v1/admin/classifier-imports/$importId'
     | '/admin/product-drafts/$productDraftId/facts'
+    | '/seller/classifier-batches/$workflowId/import'
+    | '/seller/classifier-batches/$workflowId/processing'
+    | '/seller/classifier-batches/$workflowId/review'
+    | '/seller/classifier-batches/$workflowId/upload'
     | '/v1/admin/classifier-imports/$importId/dispatch'
     | '/v1/admin/classifier-imports/$importId/reconcile'
     | '/v1/admin/classifier-imports/$importId/retry'
+    | '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
   id:
     | '__root__'
     | '/'
@@ -344,6 +452,7 @@ export interface FileRouteTypes {
     | '/s/$sellerSlug'
     | '/_authenticated/admin/classifier-imports'
     | '/_authenticated/admin/product-drafts'
+    | '/_authenticated/seller/classifier-batches'
     | '/_authenticated/seller/leads'
     | '/_authenticated/seller/products'
     | '/_authenticated/seller/storefront'
@@ -352,14 +461,22 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-imports'
     | '/_authenticated/seller/'
     | '/_authenticated/admin/classifier-imports_/$importId'
+    | '/_authenticated/admin/classifier-uploads_/$workflowId'
+    | '/_authenticated/admin/classifier-uploads_/new'
     | '/_authenticated/admin/product-drafts_/$productDraftId'
+    | '/_authenticated/seller/classifier-batches_/new'
     | '/_authenticated/seller/products_/$id'
     | '/_authenticated/seller/products_/new'
     | '/v1/admin/classifier-imports/$importId'
     | '/_authenticated/admin/product-drafts_/$productDraftId/facts'
+    | '/_authenticated/seller/classifier-batches_/$workflowId/import'
+    | '/_authenticated/seller/classifier-batches_/$workflowId/processing'
+    | '/_authenticated/seller/classifier-batches_/$workflowId/review'
+    | '/_authenticated/seller/classifier-batches_/$workflowId/upload'
     | '/v1/admin/classifier-imports/$importId/dispatch'
     | '/v1/admin/classifier-imports/$importId/reconcile'
     | '/v1/admin/classifier-imports/$importId/retry'
+    | '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -374,6 +491,7 @@ export interface RootRouteChildren {
   V1AdminClassifierBatchesRoute: typeof V1AdminClassifierBatchesRoute
   V1AdminClassifierImportDestinationRoute: typeof V1AdminClassifierImportDestinationRoute
   V1AdminClassifierImportsRoute: typeof V1AdminClassifierImportsRouteWithChildren
+  V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute: typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -490,6 +608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSellerLeadsRouteImport
       parentRoute: typeof AuthenticatedSellerRoute
     }
+    '/_authenticated/seller/classifier-batches': {
+      id: '/_authenticated/seller/classifier-batches'
+      path: '/classifier-batches'
+      fullPath: '/seller/classifier-batches'
+      preLoaderRoute: typeof AuthenticatedSellerClassifierBatchesRouteImport
+      parentRoute: typeof AuthenticatedSellerRoute
+    }
     '/_authenticated/admin/product-drafts': {
       id: '/_authenticated/admin/product-drafts'
       path: '/admin/product-drafts'
@@ -525,11 +650,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSellerProductsIdRouteImport
       parentRoute: typeof AuthenticatedSellerRoute
     }
+    '/_authenticated/seller/classifier-batches_/new': {
+      id: '/_authenticated/seller/classifier-batches_/new'
+      path: '/classifier-batches/new'
+      fullPath: '/seller/classifier-batches/new'
+      preLoaderRoute: typeof AuthenticatedSellerClassifierBatchesNewRouteImport
+      parentRoute: typeof AuthenticatedSellerRoute
+    }
     '/_authenticated/admin/product-drafts_/$productDraftId': {
       id: '/_authenticated/admin/product-drafts_/$productDraftId'
       path: '/admin/product-drafts/$productDraftId'
       fullPath: '/admin/product-drafts/$productDraftId'
       preLoaderRoute: typeof AuthenticatedAdminProductDraftsProductDraftIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/classifier-uploads_/new': {
+      id: '/_authenticated/admin/classifier-uploads_/new'
+      path: '/admin/classifier-uploads/new'
+      fullPath: '/admin/classifier-uploads/new'
+      preLoaderRoute: typeof AuthenticatedAdminClassifierUploadsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/classifier-uploads_/$workflowId': {
+      id: '/_authenticated/admin/classifier-uploads_/$workflowId'
+      path: '/admin/classifier-uploads/$workflowId'
+      fullPath: '/admin/classifier-uploads/$workflowId'
+      preLoaderRoute: typeof AuthenticatedAdminClassifierUploadsWorkflowIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/classifier-imports_/$importId': {
@@ -560,6 +706,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1AdminClassifierImportsImportIdDispatchRouteImport
       parentRoute: typeof V1AdminClassifierImportsImportIdRoute
     }
+    '/_authenticated/seller/classifier-batches_/$workflowId/upload': {
+      id: '/_authenticated/seller/classifier-batches_/$workflowId/upload'
+      path: '/classifier-batches/$workflowId/upload'
+      fullPath: '/seller/classifier-batches/$workflowId/upload'
+      preLoaderRoute: typeof AuthenticatedSellerClassifierBatchesWorkflowIdUploadRouteImport
+      parentRoute: typeof AuthenticatedSellerRoute
+    }
+    '/_authenticated/seller/classifier-batches_/$workflowId/review': {
+      id: '/_authenticated/seller/classifier-batches_/$workflowId/review'
+      path: '/classifier-batches/$workflowId/review'
+      fullPath: '/seller/classifier-batches/$workflowId/review'
+      preLoaderRoute: typeof AuthenticatedSellerClassifierBatchesWorkflowIdReviewRouteImport
+      parentRoute: typeof AuthenticatedSellerRoute
+    }
+    '/_authenticated/seller/classifier-batches_/$workflowId/processing': {
+      id: '/_authenticated/seller/classifier-batches_/$workflowId/processing'
+      path: '/classifier-batches/$workflowId/processing'
+      fullPath: '/seller/classifier-batches/$workflowId/processing'
+      preLoaderRoute: typeof AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRouteImport
+      parentRoute: typeof AuthenticatedSellerRoute
+    }
+    '/_authenticated/seller/classifier-batches_/$workflowId/import': {
+      id: '/_authenticated/seller/classifier-batches_/$workflowId/import'
+      path: '/classifier-batches/$workflowId/import'
+      fullPath: '/seller/classifier-batches/$workflowId/import'
+      preLoaderRoute: typeof AuthenticatedSellerClassifierBatchesWorkflowIdImportRouteImport
+      parentRoute: typeof AuthenticatedSellerRoute
+    }
     '/_authenticated/admin/product-drafts_/$productDraftId/facts': {
       id: '/_authenticated/admin/product-drafts_/$productDraftId/facts'
       path: '/facts'
@@ -567,25 +741,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminProductDraftsProductDraftIdFactsRouteImport
       parentRoute: typeof AuthenticatedAdminProductDraftsProductDraftIdRoute
     }
+    '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail': {
+      id: '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
+      path: '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
+      fullPath: '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
+      preLoaderRoute: typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedSellerRouteChildren {
+  AuthenticatedSellerClassifierBatchesRoute: typeof AuthenticatedSellerClassifierBatchesRoute
   AuthenticatedSellerLeadsRoute: typeof AuthenticatedSellerLeadsRoute
   AuthenticatedSellerProductsRoute: typeof AuthenticatedSellerProductsRoute
   AuthenticatedSellerStorefrontRoute: typeof AuthenticatedSellerStorefrontRoute
   AuthenticatedSellerIndexRoute: typeof AuthenticatedSellerIndexRoute
+  AuthenticatedSellerClassifierBatchesNewRoute: typeof AuthenticatedSellerClassifierBatchesNewRoute
   AuthenticatedSellerProductsIdRoute: typeof AuthenticatedSellerProductsIdRoute
   AuthenticatedSellerProductsNewRoute: typeof AuthenticatedSellerProductsNewRoute
+  AuthenticatedSellerClassifierBatchesWorkflowIdImportRoute: typeof AuthenticatedSellerClassifierBatchesWorkflowIdImportRoute
+  AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRoute: typeof AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRoute
+  AuthenticatedSellerClassifierBatchesWorkflowIdReviewRoute: typeof AuthenticatedSellerClassifierBatchesWorkflowIdReviewRoute
+  AuthenticatedSellerClassifierBatchesWorkflowIdUploadRoute: typeof AuthenticatedSellerClassifierBatchesWorkflowIdUploadRoute
 }
 
 const AuthenticatedSellerRouteChildren: AuthenticatedSellerRouteChildren = {
+  AuthenticatedSellerClassifierBatchesRoute:
+    AuthenticatedSellerClassifierBatchesRoute,
   AuthenticatedSellerLeadsRoute: AuthenticatedSellerLeadsRoute,
   AuthenticatedSellerProductsRoute: AuthenticatedSellerProductsRoute,
   AuthenticatedSellerStorefrontRoute: AuthenticatedSellerStorefrontRoute,
   AuthenticatedSellerIndexRoute: AuthenticatedSellerIndexRoute,
+  AuthenticatedSellerClassifierBatchesNewRoute:
+    AuthenticatedSellerClassifierBatchesNewRoute,
   AuthenticatedSellerProductsIdRoute: AuthenticatedSellerProductsIdRoute,
   AuthenticatedSellerProductsNewRoute: AuthenticatedSellerProductsNewRoute,
+  AuthenticatedSellerClassifierBatchesWorkflowIdImportRoute:
+    AuthenticatedSellerClassifierBatchesWorkflowIdImportRoute,
+  AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRoute:
+    AuthenticatedSellerClassifierBatchesWorkflowIdProcessingRoute,
+  AuthenticatedSellerClassifierBatchesWorkflowIdReviewRoute:
+    AuthenticatedSellerClassifierBatchesWorkflowIdReviewRoute,
+  AuthenticatedSellerClassifierBatchesWorkflowIdUploadRoute:
+    AuthenticatedSellerClassifierBatchesWorkflowIdUploadRoute,
 }
 
 const AuthenticatedSellerRouteWithChildren =
@@ -611,6 +810,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminClassifierImportsRoute: typeof AuthenticatedAdminClassifierImportsRoute
   AuthenticatedAdminProductDraftsRoute: typeof AuthenticatedAdminProductDraftsRoute
   AuthenticatedAdminClassifierImportsImportIdRoute: typeof AuthenticatedAdminClassifierImportsImportIdRoute
+  AuthenticatedAdminClassifierUploadsWorkflowIdRoute: typeof AuthenticatedAdminClassifierUploadsWorkflowIdRoute
+  AuthenticatedAdminClassifierUploadsNewRoute: typeof AuthenticatedAdminClassifierUploadsNewRoute
   AuthenticatedAdminProductDraftsProductDraftIdRoute: typeof AuthenticatedAdminProductDraftsProductDraftIdRouteWithChildren
 }
 
@@ -621,6 +822,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminProductDraftsRoute: AuthenticatedAdminProductDraftsRoute,
   AuthenticatedAdminClassifierImportsImportIdRoute:
     AuthenticatedAdminClassifierImportsImportIdRoute,
+  AuthenticatedAdminClassifierUploadsWorkflowIdRoute:
+    AuthenticatedAdminClassifierUploadsWorkflowIdRoute,
+  AuthenticatedAdminClassifierUploadsNewRoute:
+    AuthenticatedAdminClassifierUploadsNewRoute,
   AuthenticatedAdminProductDraftsProductDraftIdRoute:
     AuthenticatedAdminProductDraftsProductDraftIdRouteWithChildren,
 }
@@ -677,6 +882,8 @@ const rootRouteChildren: RootRouteChildren = {
   V1AdminClassifierImportDestinationRoute:
     V1AdminClassifierImportDestinationRoute,
   V1AdminClassifierImportsRoute: V1AdminClassifierImportsRouteWithChildren,
+  V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute:
+    V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -206,21 +206,33 @@ export class SupabaseClassifierImportRepository implements ClassifierImportRepos
     return result.data;
   }
 
-  async isSellerEligible(sellerId: string): Promise<boolean> {
-    return (await this.getEligibleSeller(sellerId)) !== null;
+  async isRunSellerEligible(run: ClassifierImportRun): Promise<boolean> {
+    if (!run.seller_classifier_workflow_id) {
+      return (await this.getEligibleSeller(run.seller_id)) !== null;
+    }
+
+    const result = await this.database
+      .from("sellers")
+      .select("id")
+      .eq("id", run.seller_id)
+      .maybeSingle();
+    if (result.error) throwDatabaseError(result.error);
+    return result.data !== null;
   }
 
   async prepareGroup(
     importId: string,
     attemptToken: string,
     group: ApprovedGroup,
+    sourceGroupPosition: number,
   ): Promise<PreparedImportGroup> {
-    const response = await this.database.rpc("prepare_classifier_import_group", {
+    const response = await this.database.rpc("prepare_classifier_import_group_at_position", {
       p_import_id: importId,
       p_attempt_token: attemptToken,
       p_classifier_group_id: group.groupId,
       p_approved_category_slug: group.approvedCategorySlug,
       p_source_cover_classifier_image_id: group.coverImageId,
+      p_source_group_position: sourceGroupPosition,
     });
     if (response.error) throwDatabaseError(response.error);
     const row = response.data?.[0];

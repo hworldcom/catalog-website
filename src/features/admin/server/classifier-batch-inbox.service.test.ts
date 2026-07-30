@@ -50,6 +50,7 @@ function run(overrides: Partial<ClassifierImportRun> = {}): ClassifierImportRun 
     last_heartbeat_at: null,
     error_code: null,
     retryable: false,
+    seller_classifier_workflow_id: null,
     retry_policy: "retryable_only",
     created_at: "2026-07-22T10:10:00Z",
     completed_at: "2026-07-22T10:12:00Z",

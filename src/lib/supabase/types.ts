@@ -18,6 +18,7 @@ export type Database = {
           product_draft_id: string | null;
           retryable: boolean;
           source_cover_classifier_image_id: string;
+          source_group_position: number | null;
           status: Database["public"]["Enums"]["classifier_import_group_status"];
           updated_at: string;
         };
@@ -30,6 +31,7 @@ export type Database = {
           product_draft_id?: string | null;
           retryable?: boolean;
           source_cover_classifier_image_id: string;
+          source_group_position?: number | null;
           status?: Database["public"]["Enums"]["classifier_import_group_status"];
           updated_at?: string;
         };
@@ -42,6 +44,7 @@ export type Database = {
           product_draft_id?: string | null;
           retryable?: boolean;
           source_cover_classifier_image_id?: string;
+          source_group_position?: number | null;
           status?: Database["public"]["Enums"]["classifier_import_group_status"];
           updated_at?: string;
         };
@@ -79,6 +82,7 @@ export type Database = {
           requested_by_user_id: string | null;
           retry_policy: Database["public"]["Enums"]["classifier_import_retry_policy"];
           retryable: boolean;
+          seller_classifier_workflow_id: string | null;
           seller_id: string;
           status: Database["public"]["Enums"]["classifier_import_status"];
           updated_at: string;
@@ -99,6 +103,7 @@ export type Database = {
           requested_by_user_id?: string | null;
           retry_policy?: Database["public"]["Enums"]["classifier_import_retry_policy"];
           retryable?: boolean;
+          seller_classifier_workflow_id?: string | null;
           seller_id: string;
           status?: Database["public"]["Enums"]["classifier_import_status"];
           updated_at?: string;
@@ -119,11 +124,19 @@ export type Database = {
           requested_by_user_id?: string | null;
           retry_policy?: Database["public"]["Enums"]["classifier_import_retry_policy"];
           retryable?: boolean;
+          seller_classifier_workflow_id?: string | null;
           seller_id?: string;
           status?: Database["public"]["Enums"]["classifier_import_status"];
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "classifier_import_runs_seller_classifier_workflow_id_fkey";
+            columns: ["seller_classifier_workflow_id"];
+            isOneToOne: true;
+            referencedRelation: "seller_classifier_batches";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "classifier_import_runs_seller_id_fkey";
             columns: ["seller_id"];
@@ -982,6 +995,80 @@ export type Database = {
           },
         ];
       };
+      seller_classifier_batches: {
+        Row: {
+          classifier_batch_id: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at: string;
+          error_code: string | null;
+          group_count: number;
+          id: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage: string;
+          max_file_size_bytes: number | null;
+          max_files: number | null;
+          original_file_count: number;
+          processed_file_count: number;
+          product_draft_count: number;
+          provisioning_status: string;
+          retryable: boolean;
+          seller_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          classifier_batch_id?: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at?: string;
+          error_code?: string | null;
+          group_count?: number;
+          id?: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage?: string;
+          max_file_size_bytes?: number | null;
+          max_files?: number | null;
+          original_file_count?: number;
+          processed_file_count?: number;
+          product_draft_count?: number;
+          provisioning_status?: string;
+          retryable?: boolean;
+          seller_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          classifier_batch_id?: string | null;
+          classifier_organization_id?: string;
+          client_request_id?: string;
+          created_at?: string;
+          error_code?: string | null;
+          group_count?: number;
+          id?: string;
+          initiated_by_user_id?: string;
+          initiator_kind?: string;
+          last_known_stage?: string;
+          max_file_size_bytes?: number | null;
+          max_files?: number | null;
+          original_file_count?: number;
+          processed_file_count?: number;
+          product_draft_count?: number;
+          provisioning_status?: string;
+          retryable?: boolean;
+          seller_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "seller_classifier_batches_seller_id_fkey";
+            columns: ["seller_id"];
+            isOneToOne: false;
+            referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_roles: {
         Row: {
           created_at: string;
@@ -1039,6 +1126,229 @@ export type Database = {
           size_bytes: number | null;
           source_content_length: number | null;
           storage_bucket: string | null;
+        }[];
+      };
+      claim_seller_classifier_batch_provisioning_retry: {
+        Args: {
+          p_seller_id: string;
+          p_workflow_id: string;
+        };
+        Returns: {
+          classifier_batch_id: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at: string;
+          error_code: string | null;
+          group_count: number;
+          id: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage: string;
+          max_file_size_bytes: number | null;
+          max_files: number | null;
+          operation_result: string;
+          original_file_count: number;
+          processed_file_count: number;
+          product_draft_count: number;
+          provisioning_status: string;
+          retryable: boolean;
+          seller_id: string;
+          updated_at: string;
+        }[];
+      };
+      complete_seller_classifier_batch_provisioning: {
+        Args: {
+          p_classifier_batch_id: string;
+          p_max_file_size_bytes: number;
+          p_max_files: number;
+          p_workflow_id: string;
+        };
+        Returns: {
+          classifier_batch_id: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at: string;
+          error_code: string | null;
+          group_count: number;
+          id: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage: string;
+          max_file_size_bytes: number | null;
+          max_files: number | null;
+          operation_result: string;
+          original_file_count: number;
+          processed_file_count: number;
+          product_draft_count: number;
+          provisioning_status: string;
+          retryable: boolean;
+          seller_id: string;
+          updated_at: string;
+        }[];
+      };
+      create_or_get_seller_classifier_batch: {
+        Args: {
+          p_classifier_organization_id: string;
+          p_client_request_id: string;
+          p_initiated_by_user_id: string;
+          p_initiator_kind: string;
+          p_seller_id: string;
+        };
+        Returns: {
+          classifier_batch_id: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at: string;
+          error_code: string | null;
+          group_count: number;
+          id: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage: string;
+          max_file_size_bytes: number | null;
+          max_files: number | null;
+          operation_result: string;
+          original_file_count: number;
+          processed_file_count: number;
+          product_draft_count: number;
+          provisioning_status: string;
+          retryable: boolean;
+          seller_id: string;
+          updated_at: string;
+        }[];
+      };
+      fail_seller_classifier_batch_provisioning: {
+        Args: {
+          p_error_code: string;
+          p_retryable: boolean;
+          p_workflow_id: string;
+        };
+        Returns: {
+          classifier_batch_id: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at: string;
+          error_code: string | null;
+          group_count: number;
+          id: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage: string;
+          max_file_size_bytes: number | null;
+          max_files: number | null;
+          operation_result: string;
+          original_file_count: number;
+          processed_file_count: number;
+          product_draft_count: number;
+          provisioning_status: string;
+          retryable: boolean;
+          seller_id: string;
+          updated_at: string;
+        }[];
+      };
+      record_seller_classifier_batch_observation: {
+        Args: {
+          p_error_code: string | null;
+          p_observation_kind: string;
+          p_original_file_count: number;
+          p_processed_file_count: number;
+          p_retryable: boolean;
+          p_seller_id: string;
+          p_stage: string;
+          p_workflow_id: string;
+        };
+        Returns: {
+          classifier_batch_id: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at: string;
+          error_code: string | null;
+          group_count: number;
+          id: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage: string;
+          max_file_size_bytes: number | null;
+          max_files: number | null;
+          operation_result: string;
+          original_file_count: number;
+          processed_file_count: number;
+          product_draft_count: number;
+          provisioning_status: string;
+          retryable: boolean;
+          seller_id: string;
+          updated_at: string;
+        }[];
+      };
+      record_seller_classifier_review_observation: {
+        Args: {
+          p_group_count: number;
+          p_seller_id: string;
+          p_stage: string;
+          p_workflow_id: string;
+        };
+        Returns: {
+          classifier_batch_id: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at: string;
+          error_code: string | null;
+          group_count: number;
+          id: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage: string;
+          max_file_size_bytes: number | null;
+          max_files: number | null;
+          operation_result: string;
+          original_file_count: number;
+          processed_file_count: number;
+          product_draft_count: number;
+          provisioning_status: string;
+          retryable: boolean;
+          seller_id: string;
+          updated_at: string;
+        }[];
+      };
+      record_seller_classifier_batch_approved: {
+        Args: {
+          p_group_count: number;
+          p_seller_id: string;
+          p_workflow_id: string;
+        };
+        Returns: {
+          classifier_batch_id: string | null;
+          classifier_organization_id: string;
+          client_request_id: string;
+          created_at: string;
+          error_code: string | null;
+          group_count: number;
+          id: string;
+          initiated_by_user_id: string;
+          initiator_kind: string;
+          last_known_stage: string;
+          max_file_size_bytes: number | null;
+          max_files: number | null;
+          operation_result: string;
+          original_file_count: number;
+          processed_file_count: number;
+          product_draft_count: number;
+          provisioning_status: string;
+          retryable: boolean;
+          seller_id: string;
+          updated_at: string;
+        }[];
+      };
+      search_delegated_upload_sellers: {
+        Args: {
+          p_limit: number;
+          p_query: string;
+        };
+        Returns: {
+          name: string;
+          published: boolean;
+          seller_id: string;
+          slug: string;
         }[];
       };
       claim_product_draft_image_storage_cutover: {
@@ -1311,6 +1621,44 @@ export type Database = {
         };
         Returns: Database["public"]["Tables"]["classifier_import_runs"]["Row"][];
       };
+      create_or_get_owned_classifier_import: {
+        Args: {
+          p_classifier_batch_id: string;
+          p_classifier_organization_id: string;
+          p_requested_by_user_id: string;
+          p_seller_id: string;
+          p_workflow_id: string;
+        };
+        Returns: {
+          attempt_count: number | null;
+          attempt_token: string | null;
+          claim_started_at: string | null;
+          classifier_batch_id: string | null;
+          classifier_organization_id: string | null;
+          completed_at: string | null;
+          created_at: string | null;
+          error_code: string | null;
+          id: string | null;
+          last_heartbeat_at: string | null;
+          operation_kind: Database["public"]["Enums"]["classifier_import_operation_kind"] | null;
+          operation_result: string;
+          pipeline_version: string | null;
+          requested_by_user_id: string | null;
+          retry_policy: Database["public"]["Enums"]["classifier_import_retry_policy"] | null;
+          retryable: boolean | null;
+          seller_classifier_workflow_id: string | null;
+          seller_id: string | null;
+          status: Database["public"]["Enums"]["classifier_import_status"] | null;
+          updated_at: string | null;
+        }[];
+      };
+      get_owned_seller_classifier_import: {
+        Args: {
+          p_seller_id: string;
+          p_workflow_id: string;
+        };
+        Returns: Database["public"]["Tables"]["classifier_import_runs"]["Row"][];
+      };
       claim_next_classifier_import_run: {
         Args: {
           p_lease_timeout_seconds: number;
@@ -1416,6 +1764,26 @@ export type Database = {
           product_draft_id: string | null;
           result: string;
         }[];
+      };
+      prepare_classifier_import_group_at_position: {
+        Args: {
+          p_approved_category_slug: string;
+          p_attempt_token: string;
+          p_classifier_group_id: string;
+          p_import_id: string;
+          p_source_cover_classifier_image_id: string;
+          p_source_group_position: number;
+        };
+        Returns: {
+          product_draft_id: string | null;
+          result: string;
+        }[];
+      };
+      project_classifier_import_to_seller_workflow: {
+        Args: {
+          p_import_id: string;
+        };
+        Returns: boolean;
       };
       prepare_classifier_import_group_images: {
         Args: {

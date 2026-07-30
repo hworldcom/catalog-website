@@ -1,0 +1,51 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+.output
+.vinxi
+.tanstack/**
+.nitro
+*.local
+.lovable
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Deployment output and local platform state
+.vercel/
+supabase/.temp/
+supabase/.branches/
+
+# Test and tool caches
+coverage/
+*.lcov
+*.tsbuildinfo
+.eslintcache
+.vite/
+vite.config.*.timestamp-*
+
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -69,7 +69,7 @@ export class ClassifierImportWorker {
         );
       }
 
-      if (!(await this.repository.isSellerEligible(run.seller_id))) {
+      if (!(await this.repository.isRunSellerEligible(run))) {
         return await this.failTopLevel(
           run,
           attemptToken,
@@ -114,12 +114,12 @@ export class ClassifierImportWorker {
       ]),
     );
 
-    for (const group of snapshot.groups) {
+    for (const [sourceGroupPosition, group] of snapshot.groups.entries()) {
       const existing = existingOutcomes.get(group.groupId);
       if (existing?.status === "complete" || existing?.status === "failed") {
         continue;
       }
-      await this.processGroup(run, attemptToken, group);
+      await this.processGroup(run, attemptToken, group, sourceGroupPosition);
       await this.requireHeartbeat(run.id, attemptToken);
     }
 
@@ -145,13 +145,18 @@ export class ClassifierImportWorker {
       return this.result(run, { status: "completed" });
     }
 
-    const groupsById = new Map(snapshot.groups.map((group) => [group.groupId, group]));
+    const groupsById = new Map(
+      snapshot.groups.map((group, sourceGroupPosition) => [
+        group.groupId,
+        { group, sourceGroupPosition },
+      ]),
+    );
     for (const groupId of result.missingGroupIds) {
-      const group = groupsById.get(groupId);
-      if (!group) {
+      const entry = groupsById.get(groupId);
+      if (!entry) {
         throw new ClassifierImportError("approved_groups_response_invalid", false);
       }
-      await this.processGroup(run, attemptToken, group);
+      await this.processGroup(run, attemptToken, entry.group, entry.sourceGroupPosition);
       await this.requireHeartbeat(run.id, attemptToken);
     }
 
@@ -174,8 +179,14 @@ export class ClassifierImportWorker {
     run: ClassifierImportRun,
     attemptToken: string,
     group: ApprovedGroup,
+    sourceGroupPosition: number,
   ): Promise<void> {
-    const preparation = await this.repository.prepareGroup(run.id, attemptToken, group);
+    const preparation = await this.repository.prepareGroup(
+      run.id,
+      attemptToken,
+      group,
+      sourceGroupPosition,
+    );
     if (preparation.result === "claim_lost") throw new ClaimLostError();
     if (preparation.result !== "prepared") return;
 

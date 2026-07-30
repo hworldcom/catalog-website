@@ -50,11 +50,12 @@ export interface ClassifierImportRepository {
     attemptToken: string,
     pipelineVersion: string,
   ): Promise<boolean>;
-  isSellerEligible(sellerId: string): Promise<boolean>;
+  isRunSellerEligible(run: ClassifierImportRun): Promise<boolean>;
   prepareGroup(
     importId: string,
     attemptToken: string,
     group: ApprovedGroup,
+    sourceGroupPosition: number,
   ): Promise<PreparedImportGroup>;
   setGroupResult(
     importId: string,

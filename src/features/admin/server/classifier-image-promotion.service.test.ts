@@ -57,6 +57,7 @@ const run: ClassifierImportRun = {
   last_heartbeat_at: "2026-07-19T00:00:00Z",
   error_code: null,
   retryable: false,
+  seller_classifier_workflow_id: null,
   retry_policy: "retryable_only",
   created_at: "2026-07-19T00:00:00Z",
   completed_at: null,

@@ -11,6 +11,12 @@ const S = {
     "Nhập từ bộ phân loại",
   ),
   productDrafts: t("ProductDrafts", "Szkice produktów", "Produktentwürfe", "Bản nháp sản phẩm"),
+  delegatedUpload: t(
+    "Upload for seller",
+    "Prześlij dla sprzedawcy",
+    "Für Verkäufer hochladen",
+    "Tải lên cho nhà bán",
+  ),
   internalOperations: t(
     "Internal catalog operations",
     "Wewnętrzne operacje katalogowe",
@@ -30,6 +36,12 @@ export function ClassifierImportShell({ children }: { children: ReactNode }) {
             <div className="text-xs text-muted-foreground">{tr(S.internalOperations)}</div>
           </Link>
           <nav className="flex items-center gap-3 text-sm">
+            <Link
+              to="/admin/classifier-uploads/new"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              {tr(S.delegatedUpload)}
+            </Link>
             <Link
               to="/admin/product-drafts"
               search={{ limit: 25 }}

@@ -56,6 +56,7 @@ function claimedRun(overrides: Partial<ClassifierImportRun> = {}): ClassifierImp
     last_heartbeat_at: "2026-07-19T00:00:00Z",
     error_code: null,
     retryable: false,
+    seller_classifier_workflow_id: null,
     retry_policy: "retryable_only",
     created_at: "2026-07-19T00:00:00Z",
     completed_at: null,
@@ -178,8 +179,8 @@ class MemoryRepository implements ClassifierImportRepository {
     return this.heartbeatAllowed;
   }
 
-  async isSellerEligible(candidateSellerId: string): Promise<boolean> {
-    this.eligibleSellerId = candidateSellerId;
+  async isRunSellerEligible(candidateRun: ClassifierImportRun): Promise<boolean> {
+    this.eligibleSellerId = candidateRun.seller_id;
     return this.sellerEligible;
   }
 
@@ -258,6 +259,7 @@ function groupOutcome(
     status: "pending",
     error_code: null,
     retryable: false,
+    source_group_position: null,
     created_at: "2026-07-19T00:00:00Z",
     updated_at: "2026-07-19T00:00:00Z",
     ...overrides,
