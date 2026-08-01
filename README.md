@@ -2,8 +2,8 @@
 
 Bazoria Web is the authenticated storefront, seller dashboard, and delegated
 administrator interface for the catalog-classifier workflow. Browser features
-belong in this repository. The deprecated standalone classifier frontend under
-`catalog-classifier/apps/web` is not a supported development target.
+belong in this repository. Ticket `0032d` removed the deprecated standalone
+classifier frontend from the classifier repository.
 
 The cross-repository startup sequence is documented in
 [`catalog-classifier/docs/local-start.md`](../catalog-classifier/docs/local-start.md).
