@@ -406,6 +406,12 @@ const S = {
     "Status des multimodalen Vergleichs wird geprüft…",
     "Đang kiểm tra trạng thái so sánh đa phương thức…",
   ),
+  comparisonPending: t(
+    "Waiting for the multimodal comparison worker.",
+    "Oczekiwanie na proces porównania multimodalnego.",
+    "Warten auf den Worker für den multimodalen Vergleich.",
+    "Đang chờ tiến trình so sánh đa phương thức.",
+  ),
   comparisonRunning: t(
     "Multimodal comparison is running. This may take several minutes.",
     "Trwa porównanie multimodalne. Może to potrwać kilka minut.",
@@ -1194,7 +1200,11 @@ export function SellerClassifierReviewScreenView({
 
             {comparisonIsActive ? (
               <Alert role="status">
-                <AlertDescription>{tr(S.comparisonRunning)}</AlertDescription>
+                <AlertDescription>
+                  {comparisonStatus?.status === "pending"
+                    ? tr(S.comparisonPending)
+                    : tr(S.comparisonRunning)}
+                </AlertDescription>
               </Alert>
             ) : null}
 

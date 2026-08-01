@@ -83,7 +83,7 @@ describe("SellerClassifierReviewScreenView", () => {
 
     expect(comparison.dispatchComparison).toHaveBeenCalledTimes(1);
     expect(comparison.dispatchComparison).toHaveBeenCalledWith(workflowId);
-    expect(await screen.findByText(/comparison is running/i)).toBeVisible();
+    expect(await screen.findByText(/waiting for the multimodal comparison worker/i)).toBeVisible();
     expect(screen.getByRole("button", { name: "Create group" })).toBeDisabled();
     for (const button of screen.getAllByRole("button", { name: "Approve group" })) {
       expect(button).toBeDisabled();
@@ -162,7 +162,7 @@ describe("SellerClassifierReviewScreenView", () => {
       within(screen.getByRole("alertdialog")).getByRole("button", { name: "Run comparison" }),
     );
 
-    expect(await screen.findByText(/comparison is running/i)).toBeVisible();
+    expect(await screen.findByText(/waiting for the multimodal comparison worker/i)).toBeVisible();
     expect(comparison.getComparisonStatus).toHaveBeenCalledTimes(2);
     expect(
       screen.queryByText("Multimodal comparison could not be started."),
@@ -185,6 +185,17 @@ describe("SellerClassifierReviewScreenView", () => {
     await waitFor(() => expect(comparison.getComparisonStatus).toHaveBeenCalledTimes(2));
     expect(comparison.dispatchComparison).not.toHaveBeenCalled();
     expect(await screen.findByRole("button", { name: "Run multimodal comparison" })).toBeEnabled();
+  });
+
+  it("distinguishes a claimed comparison from one waiting for a worker", async () => {
+    const comparison = comparisonClient({ status: comparisonSnapshot("running", 1) });
+
+    renderReview(reviewClient(), thumbnailDependencies(), { comparisonClient: comparison });
+
+    expect(await screen.findByText(/comparison is running/i)).toBeVisible();
+    expect(
+      screen.queryByText(/waiting for the multimodal comparison worker/i),
+    ).not.toBeInTheDocument();
   });
 
   it("shows an explicitly confirmed retry only for a retryable failed status", async () => {
