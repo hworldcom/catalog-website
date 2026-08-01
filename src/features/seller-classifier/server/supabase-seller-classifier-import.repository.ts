@@ -15,6 +15,11 @@ import type {
   SellerClassifierImportActionState,
   SellerClassifierImportRepository,
 } from "./seller-classifier-import.repository";
+import {
+  listOwnedClassifierImportProducts,
+  type OwnedClassifierImportProduct,
+  OwnedClassifierImportProductsError,
+} from "./supabase-owned-classifier-import-products";
 
 type AdminClient = SupabaseClient<Database>;
 type BindingRow =
@@ -96,14 +101,19 @@ export class SupabaseSellerClassifierImportRepository implements SellerClassifie
     importId: string,
     sellerId: string,
   ): Promise<SellerClassifierProductDraftSummary[]> {
-    const outcomes = await this.listGroupOutcomes(importId);
-    const productDraftIds = unique(
-      outcomes.flatMap((outcome) => (outcome.product_draft_id ? [outcome.product_draft_id] : [])),
-    );
+    let products: OwnedClassifierImportProduct[];
+    try {
+      products = await listOwnedClassifierImportProducts(this.database, sellerId, [importId]);
+    } catch (error) {
+      if (error instanceof OwnedClassifierImportProductsError) {
+        throw databaseError(error);
+      }
+      throw error;
+    }
+    const productDraftIds = products.map((product) => product.productDraftId);
     if (productDraftIds.length === 0) return [];
 
-    const [productsResponse, membershipsResponse, imagesResponse] = await Promise.all([
-      this.database.from("products").select("id,title,status,seller_id").in("id", productDraftIds),
+    const [membershipsResponse, imagesResponse] = await Promise.all([
       this.database
         .from("product_draft_source_memberships")
         .select("product_draft_id,classifier_image_id,promotion_required")
@@ -114,11 +124,9 @@ export class SupabaseSellerClassifierImportRepository implements SellerClassifie
         .select("product_draft_id,classifier_image_id,status")
         .in("product_draft_id", productDraftIds),
     ]);
-    if (productsResponse.error) throw databaseError(productsResponse.error);
     if (membershipsResponse.error) throw databaseError(membershipsResponse.error);
     if (imagesResponse.error) throw databaseError(imagesResponse.error);
 
-    const products = new Map((productsResponse.data ?? []).map((product) => [product.id, product]));
     const memberships = membershipsResponse.data ?? [];
     const imageStatuses = new Map(
       (imagesResponse.data ?? []).map((image) => [
@@ -127,11 +135,8 @@ export class SupabaseSellerClassifierImportRepository implements SellerClassifie
       ]),
     );
 
-    return productDraftIds.map((productDraftId) => {
-      const product = products.get(productDraftId);
-      if (!product || product.seller_id !== sellerId) {
-        throw new Error("Owned classifier import contains an invalid ProductDraft.");
-      }
+    return products.map((product) => {
+      const productDraftId = product.productDraftId;
       const required = memberships.filter(
         (membership) => membership.product_draft_id === productDraftId,
       );
@@ -234,10 +239,6 @@ function summarizeImageStatus(
   if (available > 0) return "partially_available";
   if (statuses.some((status) => status === "failed")) return "failed";
   return "pending";
-}
-
-function unique(values: string[]): string[] {
-  return [...new Set(values)];
 }
 
 function databaseError(error: { message: string }): Error {

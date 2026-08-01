@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import {
+  ProductDraftTitleError,
+  type ProductDraftTitleSnapshot,
+} from "@/features/product-draft-title/product-draft-title.types";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import type { Database } from "@/lib/supabase/types";
 
@@ -12,6 +16,7 @@ import {
   parseSellerProductListRequest,
 } from "./seller-product-list.types";
 import { sellerProductIdSchema, sellerProductSaveSchema } from "./seller-product-write.types";
+import { SellerProductPublicationError } from "./seller-product-publication.types";
 
 export const listMyProducts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -118,14 +123,35 @@ export const saveMyProduct = createServerFn({ method: "POST" })
 
     const { createProductDraftTitlePersistenceService } =
       await import("@/features/product-draft-title/server/product-draft-title.runtime");
-    const saved = await (
-      await createProductDraftTitlePersistenceService()
-    ).saveSellerProduct({
-      productDraftId: data.id,
-      sellerId,
-      title: data.title,
-      productFields,
-    });
+    let saved: ProductDraftTitleSnapshot;
+    try {
+      saved = await (
+        await createProductDraftTitlePersistenceService()
+      ).saveSellerProduct({
+        productDraftId: data.id,
+        sellerId,
+        title: data.title,
+        productFields,
+      });
+    } catch (error) {
+      if (data.publish && error instanceof ProductDraftTitleError) {
+        if (error.code === "product_draft_title_required") {
+          throw new SellerProductPublicationError(
+            409,
+            "product_publication_title_required",
+            "A product title is required before publication.",
+          );
+        }
+        if (error.code === "product_draft_title_invalid") {
+          throw new SellerProductPublicationError(
+            400,
+            "product_publication_title_invalid",
+            "The product title must contain at most 120 characters.",
+          );
+        }
+      }
+      throw error;
+    }
 
     return {
       id: saved.productDraftId,

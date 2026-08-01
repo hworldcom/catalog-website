@@ -1,3 +1,5 @@
+import type { ProductPublicationFailureReasonCode } from "./server/product-publication.types";
+
 export type SellerProductImagePublicationMode = "imported" | "direct";
 
 export type SellerProductPublicationStatus =
@@ -14,7 +16,7 @@ export type SellerProductPublicationSnapshot = {
   productStatus: "draft" | "published" | "archived";
   publicationStatus: SellerProductPublicationStatus;
   attemptCount: number;
-  errorCode: string | null;
+  failureReasonCode: ProductPublicationFailureReasonCode | null;
   retryAllowed: boolean;
   publicProductUrl: string | null;
 };
@@ -23,6 +25,9 @@ export type SellerProductPublicationErrorCode =
   | "product_publication_invalid"
   | "authentication_required"
   | "product_not_found"
+  | "product_publication_title_required"
+  | "product_publication_title_invalid"
+  | "product_publication_category_required"
   | "product_publication_image_required"
   | "product_publication_images_not_ready"
   | "product_publication_in_progress"

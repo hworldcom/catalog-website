@@ -8,6 +8,7 @@ import type {
 import { ProductDraftDescriptionService } from "./product-draft-descriptions.service";
 
 const productDraftId = "00000000-0000-4000-8000-000000000001";
+const access = { mode: "prototype_administrator" } as const;
 
 class MemoryRepository implements ProductDraftDescriptionRepository {
   record: ProductDraftDescriptionRecord = descriptionRecord();
@@ -29,7 +30,7 @@ describe("ProductDraftDescriptionService", () => {
   it("returns content eligibility and all language entries", async () => {
     const service = new ProductDraftDescriptionService(new MemoryRepository());
 
-    await expect(service.get(productDraftId)).resolves.toMatchObject({
+    await expect(service.get(productDraftId, access)).resolves.toMatchObject({
       productDraftId,
       currentFactsRevision: 4,
       generationEligibility: { eligible: true, reason: null },
@@ -47,13 +48,13 @@ describe("ProductDraftDescriptionService", () => {
     const service = new ProductDraftDescriptionService(repository);
 
     repository.patchResult = { result: "not_editable" };
-    await expect(service.update(productDraftId, { en: "Updated" })).rejects.toMatchObject({
+    await expect(service.update(productDraftId, { en: "Updated" }, access)).rejects.toMatchObject({
       statusCode: 409,
       code: "product_draft_description_not_editable",
     });
 
     repository.patchResult = { result: "facts_missing" };
-    await expect(service.update(productDraftId, { en: "Updated" })).rejects.toMatchObject({
+    await expect(service.update(productDraftId, { en: "Updated" }, access)).rejects.toMatchObject({
       statusCode: 500,
       code: "product_draft_facts_missing",
     });
@@ -66,7 +67,7 @@ describe("ProductDraftDescriptionService", () => {
     };
     const service = new ProductDraftDescriptionService(repository);
 
-    await expect(service.get(productDraftId)).rejects.toMatchObject({
+    await expect(service.get(productDraftId, access)).rejects.toMatchObject({
       statusCode: 500,
       code: "product_draft_description_unavailable",
     });

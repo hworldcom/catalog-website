@@ -4,13 +4,23 @@ import type {
 } from "./product-draft-descriptions.types";
 import { ProductDraftDescriptionError } from "./product-draft-descriptions.types";
 import type { ProductDraftDescriptionRepository } from "./product-draft-descriptions.repository";
+import {
+  expectedProductDraftSellerId,
+  type ProductDraftAccess,
+} from "@/features/product-draft-access";
 
 export class ProductDraftDescriptionService {
   constructor(private readonly repository: ProductDraftDescriptionRepository) {}
 
-  async get(productDraftId: string): Promise<ProductDraftDescriptionSnapshot> {
+  async get(
+    productDraftId: string,
+    access: ProductDraftAccess,
+  ): Promise<ProductDraftDescriptionSnapshot> {
     try {
-      const record = await this.repository.get(productDraftId);
+      const record = await this.repository.get(
+        productDraftId,
+        expectedProductDraftSellerId(access),
+      );
       if (!record) throw productDraftNotFound();
       if (record.currentFactsRevision === null) throw productDraftFactsMissing();
       return snapshot(record);
@@ -22,9 +32,14 @@ export class ProductDraftDescriptionService {
   async update(
     productDraftId: string,
     patch: ProductDraftDescriptionPatch,
+    access: ProductDraftAccess,
   ): Promise<ProductDraftDescriptionSnapshot> {
     try {
-      const result = await this.repository.applyPatch(productDraftId, patch);
+      const result = await this.repository.applyPatch(
+        productDraftId,
+        patch,
+        expectedProductDraftSellerId(access),
+      );
       if (result.result === "applied") {
         return snapshot(result.snapshot);
       }

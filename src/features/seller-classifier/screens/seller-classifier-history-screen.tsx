@@ -131,6 +131,24 @@ const S = {
   continueImport: t("Continue import", "Kontynuuj import", "Import fortsetzen", "Tiếp tục nhập"),
   viewImport: t("View import", "Wyświetl import", "Import anzeigen", "Xem nhập"),
   openDrafts: t("Open drafts", "Otwórz szkice", "Entwürfe öffnen", "Mở bản nháp"),
+  openProductDrafts: t(
+    "Open product drafts",
+    "Otwórz szkice produktów",
+    "Produktentwürfe öffnen",
+    "Mở bản nháp sản phẩm",
+  ),
+  manageProducts: t(
+    "Manage products",
+    "Zarządzaj produktami",
+    "Produkte verwalten",
+    "Quản lý sản phẩm",
+  ),
+  noDraftsCreated: t(
+    "No product drafts were created.",
+    "Nie utworzono żadnych szkiców produktów.",
+    "Es wurden keine Produktentwürfe erstellt.",
+    "Không có bản nháp sản phẩm nào được tạo.",
+  ),
   retryPreparation: t(
     "Retry preparation",
     "Ponów przygotowanie",
@@ -496,7 +514,13 @@ function HistoryCard({
     action: Exclude<SellerClassifierHistoryPrimaryAction, "none" | "retry_provisioning">,
   ): void;
 }) {
-  const safeError = item.errorSummaryCode ? errorSummaryLabel(item.errorSummaryCode) : null;
+  const safeError = item.errorSummaryCode
+    ? errorSummaryLabel(item.errorSummaryCode, item.counts.productDrafts)
+    : null;
+  const failedImportWithoutDrafts =
+    item.stage === "failed" &&
+    item.primaryAction === "open_import" &&
+    item.counts.productDrafts === 0;
   return (
     <Card>
       <CardHeader className="gap-3">
@@ -538,16 +562,29 @@ function HistoryCard({
           </p>
         ) : null}
         {actionMessage ? <p className="text-sm text-destructive">{actionMessage}</p> : null}
-
-        {item.primaryAction === "retry_provisioning" ? (
-          <Button type="button" disabled={retrying} onClick={onRetry}>
-            {retrying ? tr(S.retrying) : tr(S.retryPreparation)}
-          </Button>
-        ) : isOpenAction(item.primaryAction) ? (
-          <Button type="button" onClick={() => openHistoryItem(item, onOpen)}>
-            {actionLabel(item)}
-          </Button>
+        {failedImportWithoutDrafts ? (
+          <p className="text-sm text-muted-foreground">{tr(S.noDraftsCreated)}</p>
         ) : null}
+
+        <div className="flex flex-wrap gap-2">
+          {item.primaryAction === "retry_provisioning" ? (
+            <Button type="button" disabled={retrying} onClick={onRetry}>
+              {retrying ? tr(S.retrying) : tr(S.retryPreparation)}
+            </Button>
+          ) : isOpenAction(item.primaryAction) ? (
+            <Button type="button" onClick={() => openHistoryItem(item, onOpen)}>
+              {actionLabel(item)}
+            </Button>
+          ) : null}
+          {item.productAccessAction === "open_products" ? (
+            <a
+              href={localizedHref("/seller/products", lang)}
+              className="inline-flex h-9 items-center justify-center border border-input bg-background px-4 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+            >
+              {tr(S.manageProducts)}
+            </a>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
@@ -635,13 +672,17 @@ function stageLabel(stage: SellerClassifierHistoryItem["stage"]): string {
   }
 }
 
-function errorSummaryLabel(code: SellerClassifierHistoryErrorSummaryCode): string {
+function errorSummaryLabel(
+  code: SellerClassifierHistoryErrorSummaryCode,
+  productDraftCount: number | null,
+): string {
   switch (code) {
     case "provisioning_failed":
       return tr(S.provisioningFailed);
     case "processing_failed":
       return tr(S.processingFailed);
     case "import_incomplete":
+      if (productDraftCount === 0) return tr(S.importFailed);
       return tr(S.importIncomplete);
     case "import_failed":
       return tr(S.importFailed);
@@ -661,6 +702,9 @@ function actionLabel(item: SellerClassifierHistoryItem): string {
     case "open_import":
       if (item.stage === "approved") return tr(S.continueImport);
       if (item.stage === "drafts_ready") return tr(S.openDrafts);
+      if (item.counts.productDrafts && item.counts.productDrafts > 0) {
+        return tr(S.openProductDrafts);
+      }
       return tr(S.viewImport);
     case "none":
     case "retry_provisioning":

@@ -4,7 +4,11 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
+import { ProductDraftFields } from "@/components/product/product-draft-fields";
+import { ProductPublicationStatus } from "@/components/product/product-publication-status";
+import { isActiveProductPublication } from "@/components/product/product-publication-status.utils";
 import type { ProductDraftFactsEditorState } from "@/features/product-draft-facts/components/product-draft-facts-editor";
+import { t, tr } from "@/lib/i18n";
 import { listCategoriesForPicker } from "@/features/seller/categories.functions";
 import {
   getMyProductPublication,
@@ -14,12 +18,244 @@ import {
 import type {
   SellerProductImagePublicationMode,
   SellerProductPublicationSnapshot,
-  SellerProductPublicationStatus,
 } from "@/features/seller/seller-product-publication.types";
 import { saveMyProduct } from "@/features/seller/products.functions";
 
 import { Field } from "./field";
 import { ImageUpload } from "./image-upload";
+
+const S = {
+  publication: t(
+    "Product publication",
+    "Publikacja produktu",
+    "Produktveröffentlichung",
+    "Xuất bản sản phẩm",
+  ),
+  publishing: t(
+    "Publishing product and images",
+    "Publikowanie produktu i zdjęć",
+    "Produkt und Bilder werden veröffentlicht",
+    "Đang xuất bản sản phẩm và hình ảnh",
+  ),
+  published: t(
+    "Product published",
+    "Produkt opublikowany",
+    "Produkt veröffentlicht",
+    "Sản phẩm đã được xuất bản",
+  ),
+  failed: t(
+    "Publication failed",
+    "Publikowanie nie powiodło się",
+    "Veröffentlichung fehlgeschlagen",
+    "Xuất bản thất bại",
+  ),
+  cleanup: t(
+    "Publication cleanup required",
+    "Wymagane czyszczenie publikacji",
+    "Bereinigung der Veröffentlichung erforderlich",
+    "Cần dọn dẹp quá trình xuất bản",
+  ),
+  pending: t(
+    "Publication is queued and will start shortly.",
+    "Publikacja jest w kolejce i rozpocznie się wkrótce.",
+    "Die Veröffentlichung ist eingereiht und beginnt in Kürze.",
+    "Quá trình xuất bản đang trong hàng đợi và sẽ sớm bắt đầu.",
+  ),
+  running: t(
+    "The public product images are being prepared.",
+    "Publiczne zdjęcia produktu są przygotowywane.",
+    "Die öffentlichen Produktbilder werden vorbereitet.",
+    "Hình ảnh công khai của sản phẩm đang được chuẩn bị.",
+  ),
+  completed: t(
+    "The product and its images are publicly available.",
+    "Produkt i jego zdjęcia są dostępne publicznie.",
+    "Das Produkt und seine Bilder sind öffentlich verfügbar.",
+    "Sản phẩm và hình ảnh hiện đã được công khai.",
+  ),
+  introduction: t(
+    "Publishing creates stable public copies of the approved imported images.",
+    "Publikowanie tworzy trwałe publiczne kopie zatwierdzonych importowanych zdjęć.",
+    "Beim Veröffentlichen werden dauerhafte öffentliche Kopien der genehmigten importierten Bilder erstellt.",
+    "Việc xuất bản tạo các bản sao công khai ổn định của hình ảnh nhập đã được phê duyệt.",
+  ),
+  cleanupGuidance: t(
+    "Temporary public-image files must be cleaned up before publication can be retried.",
+    "Tymczasowe publiczne pliki zdjęć muszą zostać usunięte przed ponowną próbą publikacji.",
+    "Temporäre öffentliche Bilddateien müssen vor einem erneuten Veröffentlichungsversuch bereinigt werden.",
+    "Các tệp hình ảnh công khai tạm thời phải được dọn dẹp trước khi có thể thử xuất bản lại.",
+  ),
+  retry: t(
+    "Retry publication",
+    "Ponów publikację",
+    "Veröffentlichung erneut versuchen",
+    "Thử xuất bản lại",
+  ),
+  publish: t("Publish", "Opublikuj", "Veröffentlichen", "Xuất bản"),
+  support: t(
+    "Contact support before trying to publish this product again.",
+    "Skontaktuj się z pomocą techniczną przed ponowną próbą publikacji tego produktu.",
+    "Wenden Sie sich an den Support, bevor Sie dieses Produkt erneut veröffentlichen.",
+    "Hãy liên hệ bộ phận hỗ trợ trước khi thử xuất bản lại sản phẩm này.",
+  ),
+  refreshFailed: t(
+    "Publication status could not be refreshed. The last known state is preserved.",
+    "Nie udało się odświeżyć stanu publikacji. Zachowano ostatni znany stan.",
+    "Der Veröffentlichungsstatus konnte nicht aktualisiert werden. Der letzte bekannte Stand bleibt erhalten.",
+    "Không thể làm mới trạng thái xuất bản. Trạng thái gần nhất vẫn được giữ lại.",
+  ),
+  refresh: t("Refresh status", "Odśwież stan", "Status aktualisieren", "Làm mới trạng thái"),
+  viewPublished: t(
+    "View published product",
+    "Zobacz opublikowany produkt",
+    "Veröffentlichtes Produkt ansehen",
+    "Xem sản phẩm đã xuất bản",
+  ),
+  publicationStarted: t(
+    "Publication started.",
+    "Publikowanie rozpoczęte.",
+    "Veröffentlichung gestartet.",
+    "Đã bắt đầu xuất bản.",
+  ),
+  publicationRetryStarted: t(
+    "Publication retry started.",
+    "Ponowne publikowanie rozpoczęte.",
+    "Erneuter Veröffentlichungsversuch gestartet.",
+    "Đã bắt đầu thử xuất bản lại.",
+  ),
+  refreshesAutomatically: t(
+    "Publication status refreshes automatically.",
+    "Stan publikacji odświeża się automatycznie.",
+    "Der Veröffentlichungsstatus wird automatisch aktualisiert.",
+    "Trạng thái xuất bản tự động làm mới.",
+  ),
+  invalid: t(
+    "Check the product fields and try again.",
+    "Sprawdź pola produktu i spróbuj ponownie.",
+    "Prüfen Sie die Produktfelder und versuchen Sie es erneut.",
+    "Kiểm tra các trường sản phẩm và thử lại.",
+  ),
+  authenticationRequired: t(
+    "Sign in again before publishing this product.",
+    "Zaloguj się ponownie przed opublikowaniem tego produktu.",
+    "Melden Sie sich erneut an, bevor Sie dieses Produkt veröffentlichen.",
+    "Đăng nhập lại trước khi xuất bản sản phẩm này.",
+  ),
+  notFound: t(
+    "The product was not found.",
+    "Nie znaleziono produktu.",
+    "Das Produkt wurde nicht gefunden.",
+    "Không tìm thấy sản phẩm.",
+  ),
+  inProgress: t(
+    "Another publication is already running. Your submitted changes were not saved.",
+    "Inna publikacja jest już w toku. Przesłane zmiany nie zostały zapisane.",
+    "Eine andere Veröffentlichung läuft bereits. Ihre übermittelten Änderungen wurden nicht gespeichert.",
+    "Một quá trình xuất bản khác đang chạy. Các thay đổi đã gửi chưa được lưu.",
+  ),
+  notAllowed: t(
+    "The product cannot be published in its current state.",
+    "Produktu nie można opublikować w jego obecnym stanie.",
+    "Das Produkt kann in seinem aktuellen Zustand nicht veröffentlicht werden.",
+    "Không thể xuất bản sản phẩm ở trạng thái hiện tại.",
+  ),
+  configurationInvalid: t(
+    "Product publication is temporarily misconfigured.",
+    "Publikacja produktu jest tymczasowo nieprawidłowo skonfigurowana.",
+    "Die Produktveröffentlichung ist vorübergehend falsch konfiguriert.",
+    "Cấu hình xuất bản sản phẩm hiện không hợp lệ.",
+  ),
+  unavailable: t(
+    "Product publication is temporarily unavailable. Try again.",
+    "Publikacja produktu jest tymczasowo niedostępna. Spróbuj ponownie.",
+    "Die Produktveröffentlichung ist vorübergehend nicht verfügbar. Versuchen Sie es erneut.",
+    "Tính năng xuất bản sản phẩm tạm thời không khả dụng. Hãy thử lại.",
+  ),
+  publishFailed: t(
+    "Product could not be published.",
+    "Nie udało się opublikować produktu.",
+    "Das Produkt konnte nicht veröffentlicht werden.",
+    "Không thể xuất bản sản phẩm.",
+  ),
+  retryFailed: t(
+    "Publication could not be retried.",
+    "Nie udało się ponowić publikacji.",
+    "Die Veröffentlichung konnte nicht erneut versucht werden.",
+    "Không thể thử xuất bản lại.",
+  ),
+  titleRequired: t(
+    "Enter and save a product title before publishing.",
+    "Wprowadź i zapisz tytuł produktu przed publikacją.",
+    "Geben Sie vor der Veröffentlichung einen Produkttitel ein und speichern Sie ihn.",
+    "Nhập và lưu tên sản phẩm trước khi xuất bản.",
+  ),
+  titleInvalid: t(
+    "Enter a product title with at most 120 characters.",
+    "Wprowadź tytuł produktu zawierający maksymalnie 120 znaków.",
+    "Geben Sie einen Produkttitel mit höchstens 120 Zeichen ein.",
+    "Nhập tên sản phẩm có tối đa 120 ký tự.",
+  ),
+  imageRequired: t(
+    "Add at least one product picture before publishing.",
+    "Dodaj co najmniej jedno zdjęcie produktu przed publikacją.",
+    "Fügen Sie vor der Veröffentlichung mindestens ein Produktbild hinzu.",
+    "Thêm ít nhất một hình ảnh sản phẩm trước khi xuất bản.",
+  ),
+  imagesNotReady: t(
+    "One or more imported product pictures are not ready yet. Try again after image recovery completes.",
+    "Co najmniej jedno importowane zdjęcie produktu nie jest jeszcze gotowe. Spróbuj ponownie po zakończeniu odzyskiwania zdjęć.",
+    "Mindestens ein importiertes Produktbild ist noch nicht bereit. Versuchen Sie es nach Abschluss der Bildwiederherstellung erneut.",
+    "Một hoặc nhiều hình ảnh sản phẩm đã nhập chưa sẵn sàng. Hãy thử lại sau khi khôi phục hình ảnh hoàn tất.",
+  ),
+  dispatchFailed: t(
+    "Publication could not be started. Try again.",
+    "Nie udało się rozpocząć publikacji. Spróbuj ponownie.",
+    "Die Veröffentlichung konnte nicht gestartet werden. Versuchen Sie es erneut.",
+    "Không thể bắt đầu xuất bản. Hãy thử lại.",
+  ),
+  sourceUnavailable: t(
+    "One or more product pictures could not be read. Try again. If the problem continues, contact support.",
+    "Nie udało się odczytać co najmniej jednego zdjęcia produktu. Spróbuj ponownie. Jeśli problem będzie się powtarzał, skontaktuj się z pomocą techniczną.",
+    "Mindestens ein Produktbild konnte nicht gelesen werden. Versuchen Sie es erneut. Wenn das Problem weiterhin besteht, wenden Sie sich an den Support.",
+    "Không thể đọc một hoặc nhiều hình ảnh sản phẩm. Hãy thử lại. Nếu sự cố tiếp diễn, hãy liên hệ bộ phận hỗ trợ.",
+  ),
+  sourceChanged: t(
+    "A product picture changed after publication was prepared. Contact support before publishing again.",
+    "Zdjęcie produktu zmieniło się po przygotowaniu publikacji. Skontaktuj się z pomocą techniczną przed ponowną publikacją.",
+    "Ein Produktbild wurde nach der Vorbereitung der Veröffentlichung geändert. Wenden Sie sich vor einer erneuten Veröffentlichung an den Support.",
+    "Một hình ảnh sản phẩm đã thay đổi sau khi chuẩn bị xuất bản. Hãy liên hệ bộ phận hỗ trợ trước khi xuất bản lại.",
+  ),
+  destinationConflict: t(
+    "A public product picture conflicts with an existing file. Contact support before publishing again.",
+    "Publiczne zdjęcie produktu koliduje z istniejącym plikiem. Skontaktuj się z pomocą techniczną przed ponowną publikacją.",
+    "Ein öffentliches Produktbild steht im Konflikt mit einer vorhandenen Datei. Wenden Sie sich vor einer erneuten Veröffentlichung an den Support.",
+    "Một hình ảnh sản phẩm công khai xung đột với tệp hiện có. Hãy liên hệ bộ phận hỗ trợ trước khi xuất bản lại.",
+  ),
+  transferFailed: t(
+    "One or more product pictures could not be copied for publication. Try again.",
+    "Nie udało się skopiować co najmniej jednego zdjęcia produktu do publikacji. Spróbuj ponownie.",
+    "Mindestens ein Produktbild konnte nicht zur Veröffentlichung kopiert werden. Versuchen Sie es erneut.",
+    "Không thể sao chép một hoặc nhiều hình ảnh sản phẩm để xuất bản. Hãy thử lại.",
+  ),
+  verificationFailed: t(
+    "A copied product picture could not be verified. Try again.",
+    "Nie udało się zweryfikować skopiowanego zdjęcia produktu. Spróbuj ponownie.",
+    "Ein kopiertes Produktbild konnte nicht überprüft werden. Versuchen Sie es erneut.",
+    "Không thể xác minh hình ảnh sản phẩm đã sao chép. Hãy thử lại.",
+  ),
+  finalizationFailed: t(
+    "The product could not be finalized after its pictures were prepared. Check the product fields, save any corrections, and try again.",
+    "Nie udało się sfinalizować produktu po przygotowaniu zdjęć. Sprawdź pola produktu, zapisz poprawki i spróbuj ponownie.",
+    "Das Produkt konnte nach der Vorbereitung seiner Bilder nicht abgeschlossen werden. Prüfen Sie die Produktfelder, speichern Sie Korrekturen und versuchen Sie es erneut.",
+    "Không thể hoàn tất sản phẩm sau khi chuẩn bị hình ảnh. Kiểm tra các trường sản phẩm, lưu chỉnh sửa và thử lại.",
+  ),
+  unknownFailure: t(
+    "Product publication encountered an unexpected problem. Try again or contact support if it continues.",
+    "Podczas publikowania produktu wystąpił nieoczekiwany problem. Spróbuj ponownie lub skontaktuj się z pomocą techniczną, jeśli problem będzie się powtarzał.",
+    "Bei der Produktveröffentlichung ist ein unerwartetes Problem aufgetreten. Versuchen Sie es erneut oder wenden Sie sich an den Support, wenn es weiterhin besteht.",
+    "Đã xảy ra sự cố không mong muốn khi xuất bản sản phẩm. Hãy thử lại hoặc liên hệ bộ phận hỗ trợ nếu sự cố tiếp diễn.",
+  ),
+};
 
 type ProductInitial = {
   id: string;
@@ -93,10 +329,10 @@ export function ProductEditor({
     enabled: Boolean(productId && isImported),
     retry: false,
     refetchInterval: (query) =>
-      isActivePublication(query.state.data?.publicationStatus) ? 2_000 : false,
+      isActiveProductPublication(query.state.data?.publicationStatus) ? 2_000 : false,
   });
   const currentPublication = publicationSnapshot ?? publicationQuery.data ?? null;
-  const publicationActive = isActivePublication(currentPublication?.publicationStatus);
+  const publicationActive = isActiveProductPublication(currentPublication?.publicationStatus);
 
   useEffect(() => {
     if (!initial) return;
@@ -172,7 +408,7 @@ export function ProductEditor({
       });
       replacePublicationSnapshot(snapshot);
       if (snapshot.publicationStatus === "pending" || snapshot.publicationStatus === "running") {
-        toast.success("Publication started.");
+        toast.success(tr(S.publicationStarted));
       }
     } catch (error) {
       const code = publicationErrorCode(error);
@@ -182,7 +418,7 @@ export function ProductEditor({
       if (code === "product_publication_not_allowed") {
         await queryClient.invalidateQueries({ queryKey: ["my-product", form.id] });
       }
-      toast.error(publicationErrorMessage(error, "Product could not be published."));
+      toast.error(publicationErrorMessage(error, tr(S.publishFailed)));
     } finally {
       setBusy(false);
     }
@@ -203,10 +439,10 @@ export function ProductEditor({
       });
       applySavedProduct(res);
       await refreshSavedProduct(queryClient, null, null, res.status);
-      toast.success("Published");
+      toast.success(tr(S.published));
       onSaved?.(res.id);
     } catch (error) {
-      toast.error(publicationErrorMessage(error, "Product could not be published."));
+      toast.error(publicationErrorMessage(error, tr(S.publishFailed)));
     } finally {
       setBusy(false);
     }
@@ -226,9 +462,9 @@ export function ProductEditor({
         data: { productDraftId: form.id },
       });
       replacePublicationSnapshot(snapshot);
-      toast.success("Publication retry started.");
+      toast.success(tr(S.publicationRetryStarted));
     } catch (error) {
-      toast.error(publicationErrorMessage(error, "Publication could not be retried."));
+      toast.error(publicationErrorMessage(error, tr(S.retryFailed)));
     } finally {
       setBusy(false);
     }
@@ -269,7 +505,7 @@ export function ProductEditor({
       </div>
 
       {initial && isImported ? (
-        <PublicationStatus
+        <ProductPublicationStatus
           snapshot={currentPublication}
           statusReadFailed={publicationQuery.isError}
           busy={busy}
@@ -286,22 +522,36 @@ export function ProductEditor({
         className="grid grid-cols-1 gap-4 md:grid-cols-2"
       >
         <div className="md:col-span-2">
-          <Field label="Title">
-            <input
-              value={form.title}
-              onChange={(event) => {
-                setForm({ ...form, title: event.target.value });
-                setTitleTouched(true);
-              }}
-              className={inputCls}
-              disabled={titleReadOnly}
-            />
-          </Field>
-          {titleSource ? (
-            <span className="mt-1 block text-xs text-muted-foreground">
-              Source: {titleSource === "human" ? "Human" : "Model suggestion"}
-            </span>
-          ) : null}
+          <ProductDraftFields
+            value={{
+              title: form.title,
+              categoryId: form.category_id,
+              minimumOrderQuantity: form.moq,
+              packSize: form.pack_size,
+              price: form.price,
+              currency: form.currency,
+              stock: form.stock,
+              trending: form.trending,
+            }}
+            categories={cats.data?.categories ?? []}
+            titleSource={titleSource}
+            disabled={publicationActive}
+            titleDisabled={titleReadOnly || publicationActive}
+            onChange={(next) => {
+              if (next.title !== form.title) setTitleTouched(true);
+              setForm({
+                ...form,
+                title: next.title,
+                category_id: next.categoryId,
+                moq: next.minimumOrderQuantity,
+                pack_size: next.packSize,
+                price: next.price,
+                currency: next.currency,
+                stock: next.stock,
+                trending: next.trending,
+              });
+            }}
+          />
         </div>
         <div className="md:col-span-2">
           <Field label="Description">
@@ -317,69 +567,6 @@ export function ProductEditor({
             />
           </Field>
         </div>
-        <Field label="Category">
-          <select
-            value={form.category_id}
-            onChange={(event) => setForm({ ...form, category_id: event.target.value })}
-            className={inputCls}
-          >
-            <option value="">— none —</option>
-            {cats.data?.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Stock">
-          <select
-            value={form.stock}
-            onChange={(event) =>
-              setForm({ ...form, stock: event.target.value as ProductForm["stock"] })
-            }
-            className={inputCls}
-          >
-            <option value="in_stock">In stock</option>
-            <option value="low_stock">Low stock</option>
-            <option value="out_of_stock">Out of stock</option>
-            <option value="made_to_order">Made to order</option>
-          </select>
-        </Field>
-        <Field label="MOQ">
-          <input
-            type="number"
-            min={0}
-            value={form.moq}
-            onChange={(event) => setForm({ ...form, moq: event.target.value })}
-            className={inputCls}
-          />
-        </Field>
-        <Field label="Pack size">
-          <input
-            value={form.pack_size}
-            onChange={(event) => setForm({ ...form, pack_size: event.target.value })}
-            className={inputCls}
-            placeholder="e.g. 12 per box"
-          />
-        </Field>
-        <Field label="Price (per unit)">
-          <input
-            type="number"
-            step="0.01"
-            min={0}
-            value={form.price}
-            onChange={(event) => setForm({ ...form, price: event.target.value })}
-            className={inputCls}
-          />
-        </Field>
-        <Field label="Currency">
-          <input
-            value={form.currency}
-            onChange={(event) => setForm({ ...form, currency: event.target.value.toUpperCase() })}
-            className={inputCls}
-            maxLength={6}
-          />
-        </Field>
         {!isImported ? (
           <div className="md:col-span-2">
             <ImageUpload
@@ -390,14 +577,6 @@ export function ProductEditor({
             />
           </div>
         ) : null}
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input
-            type="checkbox"
-            checked={form.trending}
-            onChange={(event) => setForm({ ...form, trending: event.target.checked })}
-          />
-          Mark as trending (may feature on marketplace home)
-        </label>
 
         {publishBlockedByFacts && !isPublished ? (
           <p className="text-sm text-amber-700 md:col-span-2">
@@ -420,81 +599,12 @@ export function ProductEditor({
               onClick={() => void submitPublication()}
               className="bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
-              Publish
+              {tr(S.publish)}
             </button>
           ) : null}
         </div>
       </form>
     </div>
-  );
-}
-
-function PublicationStatus({
-  snapshot,
-  statusReadFailed,
-  busy,
-  onRefresh,
-  onRetry,
-}: {
-  snapshot: SellerProductPublicationSnapshot | null;
-  statusReadFailed: boolean;
-  busy: boolean;
-  onRefresh(): void;
-  onRetry(): void;
-}) {
-  const status = snapshot?.publicationStatus;
-  const active = isActivePublication(status);
-  const failed = status === "failed" || status === "cleanup_required";
-
-  return (
-    <section className="border border-border bg-card p-4 text-sm" aria-live="polite">
-      <h2 className="font-medium">{publicationStatusTitle(status)}</h2>
-      <p className="mt-1 text-muted-foreground">
-        {publicationStatusDescription(status, snapshot?.errorCode ?? null)}
-      </p>
-      {statusReadFailed ? (
-        <div className="mt-3">
-          <p className="text-destructive">
-            Publication status could not be refreshed. The last known state is preserved.
-          </p>
-          <button
-            type="button"
-            className="mt-2 border border-border px-3 py-1.5"
-            onClick={onRefresh}
-          >
-            Refresh status
-          </button>
-        </div>
-      ) : null}
-      {failed && snapshot?.retryAllowed ? (
-        <button
-          type="button"
-          disabled={busy}
-          className="mt-3 border border-border px-3 py-1.5 disabled:opacity-60"
-          onClick={onRetry}
-        >
-          Retry publication
-        </button>
-      ) : null}
-      {failed && !snapshot?.retryAllowed ? (
-        <p className="mt-3 text-muted-foreground">
-          Contact support before trying to publish this product again.
-        </p>
-      ) : null}
-      {status === "completed" &&
-      snapshot.productStatus === "published" &&
-      snapshot.publicProductUrl ? (
-        <Link
-          to="/p/$productId"
-          params={{ productId: snapshot.productDraftId }}
-          search={(previous) => previous}
-          className="mt-3 inline-block text-primary underline"
-        >
-          View published product
-        </Link>
-      ) : null}
-      {active ? <span className="sr-only">Publication status refreshes automatically.</span> : null}
-    </section>
   );
 }
 
@@ -536,36 +646,6 @@ function productFields(
   };
 }
 
-function isActivePublication(status: SellerProductPublicationStatus | undefined): boolean {
-  return status === "pending" || status === "running";
-}
-
-function publicationStatusTitle(status: SellerProductPublicationStatus | undefined): string {
-  if (status === "pending" || status === "running") return "Publishing product and images";
-  if (status === "completed") return "Product published";
-  if (status === "failed") return "Publication failed";
-  if (status === "cleanup_required") return "Publication cleanup required";
-  return "Product publication";
-}
-
-function publicationStatusDescription(
-  status: SellerProductPublicationStatus | undefined,
-  errorCode: string | null,
-): string {
-  if (status === "pending") return "Publication is queued and will start shortly.";
-  if (status === "running") return "The public product images are being prepared.";
-  if (status === "completed") return "The product and its images are publicly available.";
-  if (status === "failed") {
-    return errorCode
-      ? `Publication stopped (${errorCode}).`
-      : "Publication stopped before it completed.";
-  }
-  if (status === "cleanup_required") {
-    return "Temporary public-image files must be cleaned up before publication can be retried.";
-  }
-  return "Publishing creates stable public copies of the approved imported images.";
-}
-
 function publicationErrorCode(error: unknown): string | null {
   if (typeof error !== "object" || error === null || !("code" in error)) return null;
   return typeof error.code === "string" ? error.code : null;
@@ -574,23 +654,27 @@ function publicationErrorCode(error: unknown): string | null {
 function publicationErrorMessage(error: unknown, fallback: string): string {
   switch (publicationErrorCode(error)) {
     case "product_publication_invalid":
-      return "Check the product fields and try again.";
+      return tr(S.invalid);
     case "authentication_required":
-      return "Sign in again before publishing this product.";
+      return tr(S.authenticationRequired);
     case "product_not_found":
-      return "The product was not found.";
+      return tr(S.notFound);
+    case "product_publication_title_required":
+      return tr(S.titleRequired);
+    case "product_publication_title_invalid":
+      return tr(S.titleInvalid);
     case "product_publication_image_required":
-      return "Add at least one product picture before publishing.";
+      return tr(S.imageRequired);
     case "product_publication_images_not_ready":
-      return "The imported product images are not ready. Recover them before trying again.";
+      return tr(S.imagesNotReady);
     case "product_publication_in_progress":
-      return "Another publication is already running. Your submitted changes were not saved.";
+      return tr(S.inProgress);
     case "product_publication_not_allowed":
-      return "The product cannot be published in its current state.";
+      return tr(S.notAllowed);
     case "product_publication_configuration_invalid":
-      return "Product publication is temporarily misconfigured.";
+      return tr(S.configurationInvalid);
     case "product_publication_unavailable":
-      return "Product publication is temporarily unavailable. Try again.";
+      return tr(S.unavailable);
     default:
       return error instanceof Error && error.message ? error.message : fallback;
   }

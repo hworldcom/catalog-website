@@ -24,7 +24,7 @@ export const getProductDraftDescriptions = createServerFn({ method: "GET" })
     const runtime = await createProductDraftDescriptionRequestContext(
       context as AuthenticatedContext,
     );
-    return runtime.service.get(data.productDraftId);
+    return runtime.service.get(data.productDraftId, runtime.access);
   });
 
 export const updateProductDraftDescriptions = createServerFn({ method: "POST" })
@@ -39,5 +39,6 @@ export const updateProductDraftDescriptions = createServerFn({ method: "POST" })
     return runtime.service.update(
       data.productDraftId,
       normalizeProductDraftDescriptionPatch(data.descriptions),
+      runtime.access,
     );
   });

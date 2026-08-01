@@ -17,6 +17,13 @@ const interfaceCorrections = readFileSync(
   ),
   "utf8",
 );
+const actionableErrors = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260730190000_actionable_product_publication_errors.sql",
+  ),
+  "utf8",
+);
 
 describe("durable product image publication migration", () => {
   it("keeps runs, manifests, and public provenance service-role only", () => {
@@ -78,12 +85,46 @@ describe("durable product image publication migration", () => {
     expect(interfaceCorrections).toContain("GRANT EXECUTE ON FUNCTION");
     expect(interfaceCorrections).toContain("TO service_role");
   });
+
+  it("validates publication titles before image work and retry mutation", () => {
+    expect(actionableErrors).toContain(
+      "CREATE FUNCTION public.validate_product_publication_title(",
+    );
+    const authorize = functionBodyFrom(actionableErrors, "authorize_seller_product_publication");
+    expect(authorize.indexOf("title_validation_result <> 'valid'")).toBeLessThan(
+      authorize.indexOf("IF image_count = 0"),
+    );
+    expect(authorize.indexOf("selected_run.status IN ('pending', 'running')")).toBeLessThan(
+      authorize.indexOf("title_validation_result <> 'valid'"),
+    );
+
+    const retry = functionBodyFrom(actionableErrors, "retry_product_image_publication");
+    expect(retry).toContain("FROM public.validate_product_publication_title");
+    expect(retry.indexOf("title_validation_result <> 'valid'")).toBeLessThan(
+      retry.indexOf("status = 'pending'"),
+    );
+  });
+
+  it("returns stable title outcomes from direct publication saves", () => {
+    const save = functionBodyFrom(actionableErrors, "save_seller_product_with_description");
+    expect(save).toContain("'title_required'::text");
+    expect(save).toContain("title_validation_result <> 'valid'");
+    expect(save.indexOf("title_validation_result <> 'valid'")).toBeLessThan(
+      save.indexOf("INSERT INTO public.products"),
+    );
+  });
 });
 
 function functionBody(name: string): string {
-  const start = migration.indexOf(`CREATE FUNCTION public.${name}(`);
+  return functionBodyFrom(migration, name);
+}
+
+function functionBodyFrom(source: string, name: string): string {
+  const create = `CREATE FUNCTION public.${name}(`;
+  const replace = `CREATE OR REPLACE FUNCTION public.${name}(`;
+  const start = Math.max(source.indexOf(create), source.indexOf(replace));
   if (start < 0) throw new Error(`Missing migration function ${name}`);
-  const end = migration.indexOf("\n$$;", start);
+  const end = source.indexOf("\n$$;", start);
   if (end < 0) throw new Error(`Unterminated migration function ${name}`);
-  return migration.slice(start, end);
+  return source.slice(start, end);
 }

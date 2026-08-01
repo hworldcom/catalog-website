@@ -20,6 +20,8 @@ export type SellerClassifierHistoryErrorSummaryCode =
 export type SellerClassifierHistoryPrimaryAction =
   "none" | "retry_provisioning" | "open_upload" | "open_processing" | "open_review" | "open_import";
 
+export type SellerClassifierHistoryProductAccessAction = "none" | "open_products";
+
 export type SellerClassifierHistoryItem = {
   workflowId: string;
   initiatorKind: "seller" | "administrator";
@@ -35,6 +37,7 @@ export type SellerClassifierHistoryItem = {
   errorSummaryCode: SellerClassifierHistoryErrorSummaryCode | null;
   supportReference: string | null;
   primaryAction: SellerClassifierHistoryPrimaryAction;
+  productAccessAction: SellerClassifierHistoryProductAccessAction;
 };
 
 export type SellerClassifierHistoryPage = {

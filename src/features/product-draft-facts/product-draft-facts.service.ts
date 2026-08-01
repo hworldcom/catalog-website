@@ -4,11 +4,12 @@ import type {
 } from "./product-draft-facts.types";
 import { ProductDraftFactsError } from "./product-draft-facts.types";
 import type { ProductDraftFactsRepository } from "./product-draft-facts.repository";
+import {
+  expectedProductDraftSellerId,
+  type ProductDraftAccess,
+} from "@/features/product-draft-access";
 
-export type ProductDraftFactsAccess = {
-  sellerId: string | null;
-  prototypeAdministrator: boolean;
-};
+export type ProductDraftFactsAccess = ProductDraftAccess;
 
 export class ProductDraftFactsService {
   constructor(private readonly repository: ProductDraftFactsRepository) {}
@@ -17,7 +18,7 @@ export class ProductDraftFactsService {
     productDraftId: string,
     access: ProductDraftFactsAccess,
   ): Promise<ProductDraftFactsSnapshot> {
-    const result = await this.repository.get(productDraftId, expectedSellerId(access));
+    const result = await this.repository.get(productDraftId, expectedProductDraftSellerId(access));
     if (!result) throw productDraftNotFound();
     if (!result.factsRecord) throw productDraftFactsMissing();
 
@@ -39,7 +40,7 @@ export class ProductDraftFactsService {
     const result = await this.repository.applyPatch(
       productDraftId,
       patch,
-      expectedSellerId(access),
+      expectedProductDraftSellerId(access),
     );
 
     if (result.result === "not_found") throw productDraftNotFound();
@@ -61,12 +62,6 @@ export class ProductDraftFactsService {
       editable: result.productStatus === "draft",
     };
   }
-}
-
-function expectedSellerId(access: ProductDraftFactsAccess): string | null {
-  if (access.prototypeAdministrator) return null;
-  if (access.sellerId) return access.sellerId;
-  throw productDraftNotFound();
 }
 
 function productDraftNotFound(): ProductDraftFactsError {

@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { t, tr } from "@/lib/i18n";
+import { Card, CardContent } from "@/components/ui/card";
+import { t, tr, useLang } from "@/lib/i18n";
 import {
   ClassifierProcessingScreenView,
   type ClassifierProcessingClient,
@@ -27,15 +27,10 @@ import {
   startDelegatedClassifierProcessing,
 } from "../delegated-classifier-upload.functions";
 import { ClassifierImportShell } from "../components/classifier-import-shell";
+import { DelegatedClassifierSellerCard } from "../components/delegated-classifier-seller-card";
+import { getDelegatedClassifierDraftImport } from "../delegated-classifier-review-import.functions";
 
 const S = {
-  seller: t("Destination seller", "Sprzedawca docelowy", "Zielverkäufer", "Nhà bán đích"),
-  owner: t(
-    "This seller owns the workflow and all resulting product drafts.",
-    "Ten sprzedawca jest właścicielem procesu i wszystkich wynikowych szkiców produktów.",
-    "Dieser Verkäufer besitzt den Ablauf und alle daraus entstehenden Produktentwürfe.",
-    "Nhà bán này sở hữu quy trình và mọi bản nháp sản phẩm được tạo.",
-  ),
   loading: t(
     "Loading delegated workflow…",
     "Ładowanie procesu…",
@@ -67,35 +62,61 @@ const S = {
     "Die Vorbereitung des Klassifikator-Uploads ist fehlgeschlagen",
     "Chuẩn bị lượt tải lên bằng bộ phân loại không thành công",
   ),
-  ready: t(
-    "Ready for seller review",
-    "Gotowe do weryfikacji przez sprzedawcę",
-    "Bereit zur Verkäuferprüfung",
-    "Sẵn sàng để nhà bán xem xét",
+  reviewReady: t(
+    "Ready for administrator review",
+    "Gotowe do weryfikacji przez administratora",
+    "Bereit zur Administratorprüfung",
+    "Sẵn sàng để quản trị viên xem xét",
   ),
-  readyDescription: t(
-    "Upload and processing are complete. The seller can continue in their classifier history.",
-    "Przesyłanie i przetwarzanie zostały zakończone. Sprzedawca może kontynuować w historii klasyfikatora.",
-    "Upload und Verarbeitung sind abgeschlossen. Der Verkäufer kann im Klassifikatorverlauf fortfahren.",
-    "Tải lên và xử lý đã hoàn tất. Nhà bán có thể tiếp tục trong lịch sử phân loại.",
+  reviewReadyDescription: t(
+    "Upload and processing are complete. Continue review for the destination seller.",
+    "Przesyłanie i przetwarzanie zostały zakończone. Kontynuuj weryfikację dla sprzedawcy docelowego.",
+    "Upload und Verarbeitung sind abgeschlossen. Setzen Sie die Prüfung für den Zielverkäufer fort.",
+    "Tải lên và xử lý đã hoàn tất. Tiếp tục xem xét cho nhà bán đích.",
   ),
-  published: t(
-    "Published storefront",
-    "Opublikowany sklep",
-    "Veröffentlichter Shop",
-    "Gian hàng đã xuất bản",
+  continueReview: t(
+    "Continue review for seller",
+    "Kontynuuj weryfikację dla sprzedawcy",
+    "Prüfung für Verkäufer fortsetzen",
+    "Tiếp tục xem xét cho nhà bán",
   ),
-  unpublished: t(
-    "Unpublished storefront",
-    "Nieopublikowany sklep",
-    "Nicht veröffentlichter Shop",
-    "Gian hàng chưa xuất bản",
+  importReady: t(
+    "Seller draft import",
+    "Import szkiców sprzedawcy",
+    "Import der Verkäuferentwürfe",
+    "Nhập bản nháp của nhà bán",
+  ),
+  importReadyDescription: t(
+    "Review is approved. Open the durable ProductDraft import progress.",
+    "Weryfikacja została zatwierdzona. Otwórz trwały postęp importu szkiców produktów.",
+    "Die Prüfung ist genehmigt. Öffnen Sie den dauerhaften Importfortschritt der Produktentwürfe.",
+    "Quá trình xem xét đã được phê duyệt. Mở tiến trình nhập bản nháp sản phẩm lâu dài.",
+  ),
+  openImport: t(
+    "Open seller draft import",
+    "Otwórz import szkiców sprzedawcy",
+    "Import der Verkäuferentwürfe öffnen",
+    "Mở nhập bản nháp của nhà bán",
+  ),
+  resolvingFailure: t(
+    "Resolving the durable recovery state…",
+    "Ustalanie trwałego stanu odzyskiwania…",
+    "Dauerhafter Wiederherstellungsstatus wird ermittelt…",
+    "Đang xác định trạng thái khôi phục lâu dài…",
+  ),
+  unknownFailure: t(
+    "This workflow stopped in an unrecognized state. Contact support with the workflow identifier.",
+    "Ten proces zatrzymał się w nierozpoznanym stanie. Skontaktuj się z pomocą techniczną, podając identyfikator procesu.",
+    "Dieser Ablauf wurde in einem unbekannten Zustand angehalten. Wenden Sie sich mit der Ablauf-ID an den Support.",
+    "Quy trình này đã dừng ở trạng thái không xác định. Hãy liên hệ hỗ trợ kèm mã quy trình.",
   ),
 };
 
 export function DelegatedClassifierUploadWorkflowScreen({ workflowId }: { workflowId: string }) {
+  const lang = useLang();
   const queryClient = useQueryClient();
   const getContext = useServerFn(getDelegatedClassifierBatch);
+  const getDraftImport = useServerFn(getDelegatedClassifierDraftImport);
   const retryProvisioning = useServerFn(retryDelegatedClassifierBatchProvisioning);
   const getUploads = useServerFn(getDelegatedClassifierUploads);
   const registerUploads = useServerFn(registerDelegatedClassifierUploads);
@@ -111,6 +132,14 @@ export function DelegatedClassifierUploadWorkflowScreen({ workflowId }: { workfl
     queryFn: () => getContext({ data: { workflowId } }),
     refetchInterval: (query) =>
       query.state.data?.workflow.provisioningStatus === "provisioning" ? 2_000 : false,
+  });
+  const failedImportQuery = useQuery({
+    queryKey: ["administrator", "delegated-classifier-failed-import", workflowId],
+    queryFn: () => getDraftImport({ data: { workflowId } }),
+    enabled:
+      contextQuery.data?.workflow.provisioningStatus === "ready" &&
+      contextQuery.data.workflow.stage === "failed",
+    retry: false,
   });
   const refetchWorkflowContext = contextQuery.refetch;
   const uploadClient = useMemo<ClassifierUploadClient>(
@@ -168,29 +197,27 @@ export function DelegatedClassifierUploadWorkflowScreen({ workflowId }: { workfl
 
   const context = contextQuery.data;
   const workflow = context.workflow;
-  const handedOff = ["review", "approved", "importing", "drafts_ready"].includes(workflow.stage);
+  const failedImportStatus = failedImportQuery.data?.draftImport.importStatus ?? null;
+  const failedImportErrorCode = errorCode(failedImportQuery.error);
+  const failedWithoutImport =
+    failedImportQuery.isSuccess ||
+    (failedImportQuery.isError && failedImportErrorCode === "delegated_review_not_allowed");
+  const processingFailure =
+    workflow.stage === "failed" &&
+    failedWithoutImport &&
+    workflow.errorCode === "seller_classifier_processing_failed";
+  const importHandoff =
+    ["approved", "importing", "drafts_ready"].includes(workflow.stage) ||
+    (workflow.stage === "failed" && failedImportStatus !== null);
+  const resolvingFailure =
+    workflow.stage === "failed" && (failedImportQuery.isPending || failedImportQuery.isFetching);
+  const unknownFailure =
+    workflow.stage === "failed" && !resolvingFailure && !processingFailure && !importHandoff;
 
   return (
     <ClassifierImportShell>
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <CardTitle>{tr(S.seller)}</CardTitle>
-                <CardDescription>{tr(S.owner)}</CardDescription>
-              </div>
-              <Badge variant={context.seller.published ? "secondary" : "outline"}>
-                {context.seller.published ? tr(S.published) : tr(S.unpublished)}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <p className="font-medium">{context.seller.name}</p>
-            <p className="text-sm text-muted-foreground">/{context.seller.slug}</p>
-            <p className="break-all text-xs text-muted-foreground">{context.seller.sellerId}</p>
-          </CardContent>
-        </Card>
+        <DelegatedClassifierSellerCard seller={context.seller} />
 
         {actionError ? (
           <Alert variant="destructive">
@@ -232,7 +259,7 @@ export function DelegatedClassifierUploadWorkflowScreen({ workflowId }: { workfl
         ) : null}
 
         {workflow.provisioningStatus === "ready" &&
-        (workflow.stage === "processing" || workflow.stage === "failed") ? (
+        (workflow.stage === "processing" || processingFailure) ? (
           <ClassifierProcessingScreenView
             workflowId={workflowId}
             client={processingClient}
@@ -242,10 +269,54 @@ export function DelegatedClassifierUploadWorkflowScreen({ workflowId }: { workfl
           />
         ) : null}
 
-        {handedOff ? (
+        {resolvingFailure ? (
+          <Card>
+            <CardContent className="pt-6 text-sm text-muted-foreground">
+              {tr(S.resolvingFailure)}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {workflow.stage === "review" ? (
           <Alert>
-            <AlertTitle>{tr(S.ready)}</AlertTitle>
-            <AlertDescription>{tr(S.readyDescription)}</AlertDescription>
+            <AlertTitle>{tr(S.reviewReady)}</AlertTitle>
+            <AlertDescription className="space-y-3">
+              <p>{tr(S.reviewReadyDescription)}</p>
+              <Button asChild>
+                <Link
+                  to="/admin/classifier-uploads/$workflowId/review"
+                  params={{ workflowId }}
+                  search={{ lang }}
+                >
+                  {tr(S.continueReview)}
+                </Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {importHandoff ? (
+          <Alert>
+            <AlertTitle>{tr(S.importReady)}</AlertTitle>
+            <AlertDescription className="space-y-3">
+              <p>{tr(S.importReadyDescription)}</p>
+              <Button asChild>
+                <Link
+                  to="/admin/classifier-uploads/$workflowId/import"
+                  params={{ workflowId }}
+                  search={{ lang }}
+                >
+                  {tr(S.openImport)}
+                </Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {unknownFailure ? (
+          <Alert variant="destructive">
+            <AlertTitle>{tr(S.unavailable)}</AlertTitle>
+            <AlertDescription>{tr(S.unknownFailure)}</AlertDescription>
           </Alert>
         ) : null}
       </div>
@@ -257,4 +328,9 @@ function errorMessage(error: unknown): string {
   return error instanceof Error && error.message.trim()
     ? error.message
     : "Delegated classifier uploads are temporarily unavailable.";
+}
+
+function errorCode(error: unknown): string | null {
+  if (typeof error !== "object" || error === null || !("code" in error)) return null;
+  return typeof error.code === "string" ? error.code : null;
 }

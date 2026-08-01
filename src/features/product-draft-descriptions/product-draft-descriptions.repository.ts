@@ -20,9 +20,13 @@ export type ProductDraftDescriptionPatchResult =
   | { result: "not_found" | "facts_missing" | "not_editable" };
 
 export interface ProductDraftDescriptionRepository {
-  get(productDraftId: string): Promise<ProductDraftDescriptionRecord>;
+  get(
+    productDraftId: string,
+    expectedSellerId: string | null,
+  ): Promise<ProductDraftDescriptionRecord>;
   applyPatch(
     productDraftId: string,
     patch: ProductDraftDescriptionPatch,
+    expectedSellerId: string | null,
   ): Promise<ProductDraftDescriptionPatchResult>;
 }

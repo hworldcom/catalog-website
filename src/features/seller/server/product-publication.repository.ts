@@ -1,4 +1,8 @@
-import type { ProductPublicationItem, ProductPublicationRun } from "./product-publication.types";
+import type {
+  ProductPublicationCorrelation,
+  ProductPublicationItem,
+  ProductPublicationRun,
+} from "./product-publication.types";
 
 export type ProductPublicationAuthorizationInput = {
   productDraftId: string;
@@ -16,6 +20,7 @@ export type ProductPublicationAuthorizationInput = {
   coverImageUrlPatchPresent: boolean;
   coverImageUrl: string | null;
   trending: boolean;
+  delegatedAction: ProductPublicationCorrelation | null;
 };
 
 export type ProductPublicationAuthorizationResult =
@@ -33,18 +38,30 @@ export type ProductPublicationAuthorizationResult =
         | "image_required"
         | "images_not_ready"
         | "not_editable"
-        | "facts_missing";
+        | "facts_missing"
+        | "title_required"
+        | "title_invalid"
+        | "category_required";
       productDraftId: string | null;
     };
 
 export type ProductPublicationRetryResult =
-  "requeued" | "noop" | "not_found" | "not_allowed" | "cleanup_required";
+  | "requeued"
+  | "noop"
+  | "not_found"
+  | "not_allowed"
+  | "cleanup_required"
+  | "title_required"
+  | "title_invalid"
+  | "category_required"
+  | "in_progress";
 
 export interface ProductPublicationRepository {
   authorize(
     input: ProductPublicationAuthorizationInput,
   ): Promise<ProductPublicationAuthorizationResult>;
   getRun(productDraftId: string): Promise<ProductPublicationRun | null>;
+  getFirstItemErrorCode(productDraftId: string): Promise<string | null>;
   claimRun(
     productDraftId: string,
     claimTimeoutSeconds: number,
@@ -98,5 +115,9 @@ export interface ProductPublicationRepository {
     attemptToken: string;
   }): Promise<"completed" | "stale_attempt" | "not_found" | "not_allowed">;
   markDispatchFailed(productDraftId: string): Promise<boolean>;
-  retry(productDraftId: string, sellerId: string): Promise<ProductPublicationRetryResult>;
+  retry(
+    productDraftId: string,
+    sellerId: string,
+    delegatedAction: ProductPublicationCorrelation | null,
+  ): Promise<ProductPublicationRetryResult>;
 }

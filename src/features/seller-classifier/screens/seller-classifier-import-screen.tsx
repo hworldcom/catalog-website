@@ -66,6 +66,12 @@ const S = {
     "Die Erstellung von Produktentwürfen ist nicht konfiguriert.",
     "Tính năng tạo bản nháp sản phẩm chưa được cấu hình.",
   ),
+  administratorRequired: t(
+    "Administrator access is required for this workflow.",
+    "Ten proces wymaga dostępu administratora.",
+    "Für diesen Ablauf ist Administratorzugriff erforderlich.",
+    "Quy trình này yêu cầu quyền quản trị viên.",
+  ),
   invalid: t(
     "The draft creation request is invalid.",
     "Żądanie utworzenia szkiców jest nieprawidłowe.",
@@ -86,6 +92,12 @@ const S = {
     "Produktentwürfe erscheinen hier, sobald Gruppen abgeschlossen sind.",
     "Bản nháp sản phẩm sẽ xuất hiện tại đây khi các nhóm hoàn tất.",
   ),
+  noDraftsCreated: t(
+    "No product drafts were created.",
+    "Nie utworzono żadnych szkiców produktów.",
+    "Es wurden keine Produktentwürfe erstellt.",
+    "Không có bản nháp sản phẩm nào được tạo.",
+  ),
   untitledDraft: t(
     "Untitled product draft",
     "Szkic produktu bez tytułu",
@@ -93,6 +105,20 @@ const S = {
     "Bản nháp sản phẩm chưa có tên",
   ),
   openDraft: t("Open draft", "Otwórz szkic", "Entwurf öffnen", "Mở bản nháp"),
+  editDraft: t("Edit draft", "Edytuj szkic", "Entwurf bearbeiten", "Chỉnh sửa bản nháp"),
+  openProduct: t("Open product", "Otwórz produkt", "Produkt öffnen", "Mở sản phẩm"),
+  productDraftId: t(
+    "Product draft identifier",
+    "Identyfikator szkicu produktu",
+    "Produktentwurf-ID",
+    "Mã bản nháp sản phẩm",
+  ),
+  readOnlyOutcome: t(
+    "This outcome is read-only in the delegated workflow.",
+    "Ten wynik jest tylko do odczytu w procesie delegowanym.",
+    "Dieses Ergebnis ist im delegierten Ablauf schreibgeschützt.",
+    "Kết quả này chỉ có thể xem trong quy trình được ủy quyền.",
+  ),
   continueImport: t("Continue import", "Kontynuuj import", "Import fortsetzen", "Tiếp tục nhập"),
   retryImport: t("Retry import", "Ponów import", "Import wiederholen", "Thử nhập lại"),
   actionRunning: t(
@@ -199,12 +225,40 @@ const S = {
     "Bilder nicht verfügbar",
     "Ảnh không khả dụng",
   ),
+  actionInProgress: t(
+    "This action is already being reconciled. Try again to check its result.",
+    "Ta czynność jest już uzgadniana. Spróbuj ponownie, aby sprawdzić wynik.",
+    "Diese Aktion wird bereits abgeglichen. Versuchen Sie es erneut, um das Ergebnis zu prüfen.",
+    "Thao tác này đang được đối soát. Hãy thử lại để kiểm tra kết quả.",
+  ),
+  actionConflict: t(
+    "This saved request belongs to a different action. Review the current action before submitting it again.",
+    "Zapisane żądanie dotyczy innej czynności. Sprawdź bieżącą czynność przed ponownym wysłaniem.",
+    "Diese gespeicherte Anfrage gehört zu einer anderen Aktion. Prüfen Sie die aktuelle Aktion vor dem erneuten Absenden.",
+    "Yêu cầu đã lưu thuộc về một thao tác khác. Hãy kiểm tra thao tác hiện tại trước khi gửi lại.",
+  ),
+  submitNewAction: t(
+    "Submit as a new action",
+    "Wyślij jako nową czynność",
+    "Als neue Aktion senden",
+    "Gửi dưới dạng thao tác mới",
+  ),
+};
+
+export type ClassifierImportActionSubmissionOptions = {
+  newRequest?: boolean;
 };
 
 export type SellerClassifierImportClient = {
   getImport(workflowId: string): Promise<SellerClassifierDraftImportSnapshot>;
-  continueImport(workflowId: string): Promise<SellerClassifierDraftImportSnapshot>;
-  retryImport(workflowId: string): Promise<SellerClassifierDraftImportSnapshot>;
+  continueImport(
+    workflowId: string,
+    options?: ClassifierImportActionSubmissionOptions,
+  ): Promise<SellerClassifierDraftImportSnapshot>;
+  retryImport(
+    workflowId: string,
+    options?: ClassifierImportActionSubmissionOptions,
+  ): Promise<SellerClassifierDraftImportSnapshot>;
 };
 
 type PageError = {
@@ -213,6 +267,13 @@ type PageError = {
 };
 
 type MutationAction = "continue" | "retry";
+
+export type SellerClassifierImportLabels = {
+  title: string;
+  description: string;
+  continueImport: string;
+  retryImport: string;
+};
 
 export function SellerClassifierImportScreen({
   workflowId,
@@ -259,12 +320,18 @@ export function SellerClassifierImportScreenView({
   client,
   onReviewRequired = () => {},
   pollIntervalMs = POLL_INTERVAL_MS,
+  productDraftHref = sellerProductDraftHref,
+  showProductDraftId = false,
+  labels,
 }: {
   workflowId: string;
   lang: Lang;
   client: SellerClassifierImportClient;
   onReviewRequired?: () => void;
   pollIntervalMs?: number;
+  productDraftHref?: ((productDraftId: string, lang: Lang) => string | null) | null;
+  showProductDraftId?: boolean;
+  labels?: Partial<SellerClassifierImportLabels>;
 }) {
   const [snapshot, setSnapshot] = useState<SellerClassifierDraftImportSnapshot | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -273,6 +340,7 @@ export function SellerClassifierImportScreenView({
   const [mutationAction, setMutationAction] = useState<MutationAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [conflictAction, setConflictAction] = useState<MutationAction | null>(null);
   const mounted = useRef(true);
   const readInFlight = useRef<Promise<SellerClassifierDraftImportSnapshot | null> | null>(null);
   const completionConfirmationAttempted = useRef(false);
@@ -369,27 +437,45 @@ export function SellerClassifierImportScreenView({
   }, [mutationAction, readSnapshot]);
 
   const runMutation = useCallback(
-    async (action: MutationAction) => {
+    async (action: MutationAction, newRequest = false) => {
       if (mutationAction || isReading) return;
       setMutationAction(action);
       setActionError(null);
       setActionSuccess(null);
+      setConflictAction(null);
       try {
         const next =
           action === "continue"
-            ? await client.continueImport(workflowId)
-            : await client.retryImport(workflowId);
+            ? newRequest
+              ? await client.continueImport(workflowId, { newRequest: true })
+              : await client.continueImport(workflowId)
+            : newRequest
+              ? await client.retryImport(workflowId, { newRequest: true })
+              : await client.retryImport(workflowId);
         setSnapshot(next);
         setReadError(null);
       } catch (error) {
         const code = importErrorCode(error);
-        if (action === "continue" && code === "seller_classifier_groups_not_approved") {
+        if (
+          action === "continue" &&
+          (code === "seller_classifier_groups_not_approved" ||
+            code === "delegated_review_not_allowed")
+        ) {
           onReviewRequired();
-        } else if (code === "seller_classifier_batch_not_found") {
+        } else if (
+          code === "seller_classifier_batch_not_found" ||
+          code === "delegated_upload_workflow_not_found"
+        ) {
           setReadError({ message: tr(S.notFound), retryable: false });
-        } else if (code === "seller_classifier_import_retry_not_allowed") {
+        } else if (
+          code === "seller_classifier_import_retry_not_allowed" ||
+          code === "delegated_import_retry_not_allowed"
+        ) {
           await readSnapshot();
           setActionSuccess(tr(S.stateChanged));
+        } else if (code === "delegated_action_request_conflict") {
+          setActionError(tr(S.actionConflict));
+          setConflictAction(action);
         } else {
           setActionError(importActionError(error));
         }
@@ -432,7 +518,12 @@ export function SellerClassifierImportScreenView({
 
   const controlsDisabled = mutationAction !== null || isReading;
   const partialSuccess = snapshot.productDrafts.length > 0 && snapshot.failedGroupCount > 0;
-  const durableError = durableErrorMessage(snapshot.errorCode);
+  const durableError = durableErrorMessage(snapshot.errorCode, snapshot.productDrafts.length);
+  const terminalWithoutDrafts =
+    snapshot.productDrafts.length === 0 &&
+    (snapshot.stage === "failed" ||
+      snapshot.importStatus === "completed_with_errors" ||
+      snapshot.importStatus === "failed");
 
   return (
     <div className="space-y-6">
@@ -445,9 +536,11 @@ export function SellerClassifierImportScreenView({
                 tabIndex={-1}
                 className="font-display text-2xl font-semibold tracking-tight outline-none"
               >
-                {tr(S.title)}
+                {labels?.title ?? tr(S.title)}
               </h1>
-              <CardDescription className="mt-2">{tr(S.description)}</CardDescription>
+              <CardDescription className="mt-2">
+                {labels?.description ?? tr(S.description)}
+              </CardDescription>
             </div>
             <Badge variant={snapshot.stage === "drafts_ready" ? "default" : "outline"}>
               {stageLabel(snapshot.stage)}
@@ -502,7 +595,18 @@ export function SellerClassifierImportScreenView({
       {actionError ? (
         <Alert variant="destructive" role="alert">
           <AlertTitle>{tr(S.unavailableTitle)}</AlertTitle>
-          <AlertDescription>{actionError}</AlertDescription>
+          <AlertDescription className="space-y-3">
+            <p>{actionError}</p>
+            {conflictAction ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void runMutation(conflictAction, true)}
+              >
+                {tr(S.submitNewAction)}
+              </Button>
+            ) : null}
+          </AlertDescription>
         </Alert>
       ) : null}
       {actionSuccess ? (
@@ -534,7 +638,7 @@ export function SellerClassifierImportScreenView({
             disabled={controlsDisabled}
             onClick={() => void runMutation("continue")}
           >
-            {tr(S.continueImport)}
+            {labels?.continueImport ?? tr(S.continueImport)}
           </Button>
         ) : null}
         {snapshot.retryAllowed ? (
@@ -543,7 +647,7 @@ export function SellerClassifierImportScreenView({
             disabled={controlsDisabled}
             onClick={() => void runMutation("retry")}
           >
-            {tr(S.retryImport)}
+            {labels?.retryImport ?? tr(S.retryImport)}
           </Button>
         ) : null}
       </div>
@@ -555,38 +659,48 @@ export function SellerClassifierImportScreenView({
         {snapshot.productDrafts.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              {tr(S.noDrafts)}
+              {terminalWithoutDrafts ? tr(S.noDraftsCreated) : tr(S.noDrafts)}
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {snapshot.productDrafts.map((draft, index) => (
-              <Card key={draft.productDraftId}>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {draft.title?.trim() || `${tr(S.untitledDraft)} ${index + 1}`}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                    <Definition
-                      label={tr(S.productDraftStatus)}
-                      value={productStatusLabel(draft.status)}
-                    />
-                    <Definition
-                      label={tr(S.imageStatus)}
-                      value={imageStatusLabel(draft.imageStatus)}
-                    />
-                  </dl>
-                  <a
-                    className="inline-flex text-sm font-medium text-primary underline underline-offset-4"
-                    href={productDraftHref(draft.productDraftId, lang)}
-                  >
-                    {tr(S.openDraft)}
-                  </a>
-                </CardContent>
-              </Card>
-            ))}
+            {snapshot.productDrafts.map((draft, index) => {
+              const href = productDraftHref?.(draft.productDraftId, lang) ?? null;
+              return (
+                <Card key={draft.productDraftId}>
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      {draft.title?.trim() || `${tr(S.untitledDraft)} ${index + 1}`}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                      <Definition
+                        label={tr(S.productDraftStatus)}
+                        value={productStatusLabel(draft.status)}
+                      />
+                      <Definition
+                        label={tr(S.imageStatus)}
+                        value={imageStatusLabel(draft.imageStatus)}
+                      />
+                      {showProductDraftId ? (
+                        <Definition label={tr(S.productDraftId)} value={draft.productDraftId} />
+                      ) : null}
+                    </dl>
+                    {href ? (
+                      <a
+                        className="inline-flex text-sm font-medium text-primary underline underline-offset-4"
+                        href={href}
+                      >
+                        {productActionLabel(draft.status)}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{tr(S.readOnlyOutcome)}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
@@ -616,9 +730,14 @@ function importPageError(error: unknown): PageError {
       return { message: tr(S.invalid), retryable: false };
     case "seller_classifier_batch_not_found":
     case "seller_not_found":
+    case "delegated_upload_workflow_not_found":
       return { message: tr(S.notFound), retryable: false };
     case "seller_classifier_configuration_invalid":
+    case "delegated_action_configuration_invalid":
+    case "prototype_administrator_configuration_invalid":
       return { message: tr(S.setupError), retryable: false };
+    case "prototype_administrator_required":
+      return { message: tr(S.administratorRequired), retryable: false };
     default:
       return { message: tr(S.unavailable), retryable: true };
   }
@@ -631,17 +750,34 @@ function importActionError(error: unknown): string {
     case "seller_classifier_import_ownership_conflict":
       return tr(S.ownershipConflict);
     case "seller_classifier_configuration_invalid":
+    case "delegated_action_configuration_invalid":
+    case "prototype_administrator_configuration_invalid":
       return tr(S.setupError);
+    case "prototype_administrator_required":
+      return tr(S.administratorRequired);
+    case "delegated_action_in_progress":
+      return tr(S.actionInProgress);
+    case "delegated_action_request_conflict":
+      return tr(S.actionConflict);
+    case "delegated_action_audit_unavailable":
+    case "delegated_import_unavailable":
+    case "delegated_classifier_unavailable":
     default:
       return tr(S.unavailable);
   }
 }
 
-function durableErrorMessage(errorCode: string | null): string | null {
+function durableErrorMessage(errorCode: string | null, productDraftCount: number): string | null {
   if (errorCode === null) return null;
-  if (errorCode === "seller_classifier_import_incomplete") return tr(S.incomplete);
+  if (errorCode === "seller_classifier_import_incomplete") {
+    return productDraftCount > 0 ? tr(S.incomplete) : tr(S.failed);
+  }
   if (errorCode === "seller_classifier_import_failed") return tr(S.failed);
   return tr(S.unexpectedFailure);
+}
+
+function productActionLabel(status: "draft" | "published" | "archived"): string {
+  return status === "draft" ? tr(S.editDraft) : tr(S.openProduct);
 }
 
 function stageLabel(stage: SellerClassifierDraftImportStage): string {
@@ -698,7 +834,7 @@ function imageStatusLabel(status: SellerClassifierProductDraftImageStatus): stri
   }
 }
 
-function productDraftHref(productDraftId: string, lang: Lang): string {
+function sellerProductDraftHref(productDraftId: string, lang: Lang): string {
   const search = new URLSearchParams({ lang });
   return `/seller/products/${encodeURIComponent(productDraftId)}?${search.toString()}`;
 }

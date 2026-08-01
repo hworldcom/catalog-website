@@ -6,11 +6,15 @@ import type {
   ProductPublicationRetryResult,
 } from "./product-publication.repository";
 import {
+  productPublicationFailureReason,
   productPublicationRetryAllowed,
+  type ProductPublicationFailureReasonCode,
+  type ProductPublicationCorrelation,
   type ProductPublicationRun,
 } from "./product-publication.types";
 
 export type ProductPublicationSnapshot = ProductPublicationRun & {
+  failureReasonCode: ProductPublicationFailureReasonCode | null;
   retryAllowed: boolean;
 };
 
@@ -51,13 +55,14 @@ export class ProductPublicationService {
   async retry(
     productDraftId: string,
     sellerId: string,
+    delegatedAction: ProductPublicationCorrelation | null = null,
   ): Promise<
     | ProductPublicationRetryResult
     | { result: "dispatch_failed"; snapshot: ProductPublicationSnapshot }
   > {
-    let result = await this.repository.retry(productDraftId, sellerId);
+    let result = await this.repository.retry(productDraftId, sellerId, delegatedAction);
     if (result === "cleanup_required" && (await this.reconcileCleanup(productDraftId))) {
-      result = await this.repository.retry(productDraftId, sellerId);
+      result = await this.repository.retry(productDraftId, sellerId, delegatedAction);
     }
     if (result === "noop") {
       const current = await this.repository.getRun(productDraftId);
@@ -79,13 +84,21 @@ export class ProductPublicationService {
 
   async get(productDraftId: string): Promise<ProductPublicationSnapshot | null> {
     const run = await this.repository.getRun(productDraftId);
-    return run
-      ? {
-          ...run,
-          retryAllowed:
-            (run.status === "failed" && productPublicationRetryAllowed(run.errorCode)) ||
-            (run.status === "cleanup_required" && this.cleanupRetryAvailable),
-        }
-      : null;
+    if (!run) return null;
+
+    const failureErrorCode =
+      run.status === "cleanup_required"
+        ? await this.repository.getFirstItemErrorCode(productDraftId)
+        : run.errorCode;
+    return {
+      ...run,
+      failureReasonCode:
+        run.status === "failed" || run.status === "cleanup_required"
+          ? productPublicationFailureReason(failureErrorCode)
+          : null,
+      retryAllowed:
+        (run.status === "failed" && productPublicationRetryAllowed(run.errorCode)) ||
+        (run.status === "cleanup_required" && this.cleanupRetryAvailable),
+    };
   }
 }

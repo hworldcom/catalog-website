@@ -27,8 +27,8 @@ const canonicalFacts: ProductDraftFacts = {
 };
 
 const ownerAccess: ProductDraftFactsAccess = {
-  sellerId,
-  prototypeAdministrator: false,
+  mode: "seller",
+  expectedSellerId: sellerId,
 };
 
 class FactsRepository implements ProductDraftFactsRepository {
@@ -97,8 +97,7 @@ describe("ProductDraftFactsService", () => {
 
     await expect(
       service.get(productDraftId, {
-        sellerId: null,
-        prototypeAdministrator: true,
+        mode: "prototype_administrator",
       }),
     ).resolves.toMatchObject({
       productStatus: "published",
@@ -107,20 +106,21 @@ describe("ProductDraftFactsService", () => {
     expect(repository.expectedSellerIds).toEqual([null]);
   });
 
-  it("hides products from authenticated users without an owning seller", async () => {
+  it("enforces the delegated administrator's immutable seller", async () => {
     const repository = new FactsRepository();
+    repository.readResult = null;
     const service = new ProductDraftFactsService(repository);
 
     await expect(
       service.get(productDraftId, {
-        sellerId: null,
-        prototypeAdministrator: false,
+        mode: "delegated_administrator",
+        expectedSellerId: sellerId,
       }),
     ).rejects.toMatchObject({
       statusCode: 404,
       code: "product_draft_not_found",
     });
-    expect(repository.expectedSellerIds).toEqual([]);
+    expect(repository.expectedSellerIds).toEqual([sellerId]);
   });
 
   it("maps foreign or missing products to the same not-found error", async () => {

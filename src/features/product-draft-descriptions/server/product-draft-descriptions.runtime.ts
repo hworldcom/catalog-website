@@ -13,12 +13,16 @@ type AuthenticatedContext = {
 
 export async function createProductDraftDescriptionRequestContext(
   context: AuthenticatedContext,
-): Promise<{ service: ProductDraftDescriptionService }> {
+): Promise<{
+  service: ProductDraftDescriptionService;
+  access: { mode: "prototype_administrator" };
+}> {
   assertPrototypeAdministrator(context.userId);
   const { supabaseAdmin } = await import("@/lib/supabase/client.server");
   return {
     service: new ProductDraftDescriptionService(
       new SupabaseProductDraftDescriptionRepository(supabaseAdmin),
     ),
+    access: { mode: "prototype_administrator" },
   };
 }

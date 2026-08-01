@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   getPublication: vi.fn(),
   publish: vi.fn(),
   retryPublication: vi.fn(),
+  toastError: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -18,6 +20,13 @@ vi.mock("@tanstack/react-start", () => ({
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: mocks.toastError,
+    success: mocks.toastSuccess,
+  },
 }));
 
 vi.mock("@/features/seller/products.functions", () => ({
@@ -171,6 +180,26 @@ describe("ProductEditor title and description behavior", () => {
     expect(mocks.save.mock.calls[1]?.[0].data).toMatchObject({ description: "" });
   });
 
+  it("preserves edited product fields after a failed draft save", async () => {
+    mocks.save.mockRejectedValueOnce(new Error("temporary save failure"));
+    renderEditor(initial);
+
+    const title = screen.getByRole("textbox", { name: "Title" });
+    const description = screen.getByRole("textbox", { name: "Description" });
+    const price = screen.getByRole("spinbutton", { name: "Price (per unit)" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "Recovered title");
+    await userEvent.type(description, "Recovered description");
+    await userEvent.type(price, "19.50");
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
+    expect(title).toHaveValue("Recovered title");
+    expect(description).toHaveValue("Recovered description");
+    expect(price).toHaveValue(19.5);
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeEnabled();
+  });
+
   it.each(["published", "archived"] as const)(
     "makes a %s ProductDraft title read-only",
     async (status) => {
@@ -224,7 +253,7 @@ describe("ProductEditor title and description behavior", () => {
   it("shows a server-approved retry for a failed durable run", async () => {
     mocks.getPublication.mockResolvedValueOnce({
       ...publication("failed"),
-      errorCode: "product_publication_transfer_failed",
+      failureReasonCode: "product_publication_transfer_failed",
       retryAllowed: true,
     });
     renderEditor({ ...initial, imagePublicationMode: "imported" });
@@ -237,6 +266,54 @@ describe("ProductEditor title and description behavior", () => {
       }),
     );
     expect(await screen.findByText("Publishing product and images")).toBeInTheDocument();
+  });
+
+  it("shows the durable root cause without rendering its raw code", async () => {
+    mocks.getPublication.mockResolvedValueOnce({
+      ...publication("failed"),
+      failureReasonCode: "product_publication_source_unavailable",
+      retryAllowed: true,
+    });
+    renderEditor({ ...initial, imagePublicationMode: "imported" });
+
+    expect(
+      await screen.findByText(
+        "One or more product pictures could not be read. Try again. If the problem continues, contact support.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("product_publication_source_unavailable")).not.toBeInTheDocument();
+  });
+
+  it("shows both the root cause and cleanup guidance", async () => {
+    mocks.getPublication.mockResolvedValueOnce({
+      ...publication("cleanup_required"),
+      failureReasonCode: "product_publication_finalization_failed",
+      retryAllowed: false,
+    });
+    renderEditor({ ...initial, imagePublicationMode: "imported" });
+
+    expect(
+      await screen.findByText(
+        "The product could not be finalized after its pictures were prepared. Check the product fields, save any corrections, and try again.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "Temporary public-image files must be cleaned up before publication can be retried.",
+      ),
+    ).toBeVisible();
+  });
+
+  it.each([
+    ["product_publication_title_required", "Enter and save a product title before publishing."],
+    ["product_publication_title_invalid", "Enter a product title with at most 120 characters."],
+  ])("shows actionable synchronous error %s", async (code, message) => {
+    mocks.publish.mockRejectedValueOnce({ code });
+    renderEditor({ ...initial, imagePublicationMode: "imported" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Publish" }));
+
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith(message));
   });
 
   it("refreshes seller queries and exposes public navigation after completion", async () => {
@@ -311,7 +388,7 @@ function publication(
     productStatus: "draft" as const,
     publicationStatus: status,
     attemptCount: 0,
-    errorCode: null,
+    failureReasonCode: null,
     retryAllowed: false,
     publicProductUrl: null,
   };

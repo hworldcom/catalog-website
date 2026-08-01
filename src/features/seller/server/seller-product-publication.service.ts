@@ -1,4 +1,7 @@
-import type { ProductDraftTitleSnapshot } from "@/features/product-draft-title/product-draft-title.types";
+import {
+  ProductDraftTitleError,
+  type ProductDraftTitleSnapshot,
+} from "@/features/product-draft-title/product-draft-title.types";
 
 import {
   SellerProductPublicationError,
@@ -6,6 +9,7 @@ import {
 } from "../seller-product-publication.types";
 import type { SellerProductPublicationInput } from "../seller-product-write.types";
 import type { ProductPublicationService } from "./product-publication.service";
+import type { ProductPublicationCorrelation } from "./product-publication.types";
 import type { SellerProductPublicationRepository } from "./seller-product-publication.repository";
 
 type DirectProductPublisher = (input: {
@@ -23,16 +27,28 @@ export class SellerProductPublicationService {
   async publish(
     sellerId: string,
     input: SellerProductPublicationInput,
+    delegatedAction: ProductPublicationCorrelation | null = null,
   ): Promise<SellerProductPublicationSnapshot> {
     const product = await this.requireOwnedProduct(input.id, sellerId);
+    if (!input.category_id) throw publicationCategoryRequired();
     if (product.imagePublicationMode === "direct") {
+      requirePublicationTitle("title" in input ? input.title : product.title);
       const cover =
         "cover_image_url" in input
           ? normalizeOptional(input.cover_image_url)
           : product.coverImageUrl;
       if (!cover) throw publicationImageRequired();
 
-      const saved = await this.publishDirectProduct({ sellerId, product: input });
+      let saved: ProductDraftTitleSnapshot;
+      try {
+        saved = await this.publishDirectProduct({ sellerId, product: input });
+      } catch (error) {
+        if (error instanceof ProductDraftTitleError) {
+          if (error.code === "product_draft_title_required") throw publicationTitleRequired();
+          if (error.code === "product_draft_title_invalid") throw publicationTitleInvalid();
+        }
+        throw error;
+      }
       return directSnapshot(saved.productDraftId, saved.productStatus);
     }
 
@@ -52,6 +68,7 @@ export class SellerProductPublicationService {
       coverImageUrlPatchPresent: "cover_image_url" in input,
       coverImageUrl: normalizeOptional(input.cover_image_url),
       trending: input.trending,
+      delegatedAction,
     });
 
     if (result.result === "in_progress") {
@@ -86,25 +103,36 @@ export class SellerProductPublicationService {
       productStatus: currentProduct.productStatus,
       publicationStatus: run.status,
       attemptCount: run.attemptCount,
-      errorCode: run.errorCode,
+      failureReasonCode: run.failureReasonCode,
       retryAllowed: run.retryAllowed,
       publicProductUrl:
         currentProduct.productStatus === "published" ? `/p/${productDraftId}` : null,
     };
   }
 
-  async retry(productDraftId: string, sellerId: string): Promise<SellerProductPublicationSnapshot> {
+  async retry(
+    productDraftId: string,
+    sellerId: string,
+    delegatedAction: ProductPublicationCorrelation | null = null,
+  ): Promise<SellerProductPublicationSnapshot> {
     const product = await this.requireOwnedProduct(productDraftId, sellerId);
     if (product.imagePublicationMode !== "imported") {
       throw publicationNotAllowed();
     }
+    if (!product.categoryId) throw publicationCategoryRequired();
 
-    const result = await this.publications.retry(productDraftId, sellerId);
+    const result = delegatedAction
+      ? await this.publications.retry(productDraftId, sellerId, delegatedAction)
+      : await this.publications.retry(productDraftId, sellerId);
     if (typeof result === "object" && result.result === "dispatch_failed") {
       throw publicationUnavailable();
     }
     if (result === "not_found") throw productNotFound();
     if (result === "not_allowed") throw publicationNotAllowed();
+    if (result === "title_required") throw publicationTitleRequired();
+    if (result === "title_invalid") throw publicationTitleInvalid();
+    if (result === "category_required") throw publicationCategoryRequired();
+    if (result === "in_progress") throw publicationInProgress();
 
     return this.requireSnapshot(productDraftId, sellerId);
   }
@@ -132,7 +160,10 @@ function authorizationError(
     | "image_required"
     | "images_not_ready"
     | "not_editable"
-    | "facts_missing",
+    | "facts_missing"
+    | "title_required"
+    | "title_invalid"
+    | "category_required",
 ): SellerProductPublicationError {
   if (result === "not_found") return productNotFound();
   if (result === "image_required") return publicationImageRequired();
@@ -143,6 +174,9 @@ function authorizationError(
       "The imported product images are not ready for publication.",
     );
   }
+  if (result === "title_required") return publicationTitleRequired();
+  if (result === "title_invalid") return publicationTitleInvalid();
+  if (result === "category_required") return publicationCategoryRequired();
   if (result === "cover_not_allowed" || result === "not_allowed" || result === "not_editable") {
     return publicationNotAllowed();
   }
@@ -161,7 +195,7 @@ function directSnapshot(
     productStatus,
     publicationStatus: "not_required",
     attemptCount: 0,
-    errorCode: null,
+    failureReasonCode: null,
     retryAllowed: false,
     publicProductUrl: productStatus === "published" ? `/p/${productDraftId}` : null,
   };
@@ -176,7 +210,7 @@ function importedNotStarted(
     productStatus,
     publicationStatus: "not_started",
     attemptCount: 0,
-    errorCode: null,
+    failureReasonCode: null,
     retryAllowed: false,
     publicProductUrl: productStatus === "published" ? `/p/${productDraftId}` : null,
   };
@@ -191,6 +225,38 @@ function publicationImageRequired(): SellerProductPublicationError {
     409,
     "product_publication_image_required",
     "At least one product picture is required before publication.",
+  );
+}
+
+export function publicationTitleRequired(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    409,
+    "product_publication_title_required",
+    "A product title is required before publication.",
+  );
+}
+
+export function publicationTitleInvalid(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    400,
+    "product_publication_title_invalid",
+    "The product title must contain at most 120 characters.",
+  );
+}
+
+export function publicationCategoryRequired(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    409,
+    "product_publication_category_required",
+    "A product category is required before publication.",
+  );
+}
+
+export function publicationInProgress(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    409,
+    "product_publication_in_progress",
+    "Another product publication is already running.",
   );
 }
 
@@ -213,4 +279,10 @@ export function publicationUnavailable(): SellerProductPublicationError {
 function normalizeOptional(value: string | null | undefined): string | null {
   const normalized = value?.trim() ?? "";
   return normalized || null;
+}
+
+function requirePublicationTitle(title: string | null | undefined): void {
+  const normalized = title?.trim().replace(/\s+/gu, " ") ?? "";
+  if (!normalized) throw publicationTitleRequired();
+  if (normalized.length > 120) throw publicationTitleInvalid();
 }

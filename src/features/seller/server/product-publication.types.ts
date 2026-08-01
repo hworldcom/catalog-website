@@ -14,6 +14,16 @@ export type ProductPublicationErrorCode =
   | "product_publication_cleanup_required"
   | "product_publication_finalization_failed";
 
+export type ProductPublicationFailureReasonCode =
+  | "product_publication_dispatch_failed"
+  | "product_publication_source_unavailable"
+  | "product_publication_source_changed"
+  | "product_publication_destination_conflict"
+  | "product_publication_transfer_failed"
+  | "product_publication_verification_failed"
+  | "product_publication_finalization_failed"
+  | "product_publication_unknown";
+
 export type ProductPublicationRun = {
   productDraftId: string;
   sellerId: string;
@@ -23,6 +33,13 @@ export type ProductPublicationRun = {
   claimStartedAt: string | null;
   errorCode: string | null;
   completedAt: string | null;
+  delegatedActionRequestId: string | null;
+  delegatedActionRequestFingerprint: string | null;
+};
+
+export type ProductPublicationCorrelation = {
+  requestId: string;
+  requestFingerprint: string;
 };
 
 export type ProductPublicationItem = {
@@ -83,4 +100,21 @@ export function productPublicationRetryAllowed(errorCode: string | null): boolea
     errorCode === "product_publication_verification_failed" ||
     errorCode === "product_publication_finalization_failed"
   );
+}
+
+export function productPublicationFailureReason(
+  errorCode: string | null,
+): ProductPublicationFailureReasonCode {
+  if (
+    errorCode === "product_publication_dispatch_failed" ||
+    errorCode === "product_publication_source_unavailable" ||
+    errorCode === "product_publication_source_changed" ||
+    errorCode === "product_publication_destination_conflict" ||
+    errorCode === "product_publication_transfer_failed" ||
+    errorCode === "product_publication_verification_failed" ||
+    errorCode === "product_publication_finalization_failed"
+  ) {
+    return errorCode;
+  }
+  return "product_publication_unknown";
 }

@@ -63,25 +63,38 @@ VALUES (
   'QA 0026e1'
 );
 
-INSERT INTO public.products (id, seller_id, title, status)
+INSERT INTO public.products (
+  id,
+  seller_id,
+  title,
+  status,
+  category_id,
+  cover_image_url
+)
 VALUES
   (
     '26000000-0000-0000-0000-000000000101',
     '26000000-0000-0000-0000-000000000001',
     'Draft product',
-    'draft'
+    'draft',
+    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+    NULL
   ),
   (
     '26000000-0000-0000-0000-000000000102',
     '26000000-0000-0000-0000-000000000001',
     'Published product',
-    'published'
+    'published',
+    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+    'https://example.test/qa-0026e1-published.jpg'
   ),
   (
     '26000000-0000-0000-0000-000000000103',
     '26000000-0000-0000-0000-000000000001',
     'Archived product',
-    'archived'
+    'archived',
+    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+    NULL
   );
 
 SELECT is(
@@ -165,7 +178,10 @@ FROM public.product_draft_facts
 WHERE product_draft_id = '26000000-0000-0000-0000-000000000104';
 
 UPDATE public.products
-SET status = 'published'
+SET
+  status = 'published',
+  category_id = (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+  cover_image_url = 'https://example.test/qa-0026e1-reviewed.jpg'
 WHERE id = '26000000-0000-0000-0000-000000000104';
 
 UPDATE public.products

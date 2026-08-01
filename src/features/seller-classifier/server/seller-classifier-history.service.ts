@@ -81,6 +81,7 @@ function toHistoryItem(record: SellerClassifierHistoryRecord): SellerClassifierH
     errorSummaryCode: errorSummary(record),
     supportReference: record.stage === "failed" && !isRetryable(record) ? record.id : null,
     primaryAction: primaryAction(record),
+    productAccessAction: record.import && record.productDraftCount > 0 ? "open_products" : "none",
   };
 }
 

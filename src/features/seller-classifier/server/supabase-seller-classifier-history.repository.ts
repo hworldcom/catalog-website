@@ -8,6 +8,11 @@ import type {
   SellerClassifierHistoryRepository,
 } from "./seller-classifier-history.repository";
 import { SellerClassifierHistoryRepositoryError } from "./seller-classifier-history.repository";
+import {
+  listOwnedClassifierImportProducts,
+  type OwnedClassifierImportProduct,
+  OwnedClassifierImportProductsError,
+} from "./supabase-owned-classifier-import-products";
 
 type DatabaseClient = SupabaseClient<Database>;
 type WorkflowRow = Pick<
@@ -27,7 +32,7 @@ type WorkflowRow = Pick<
 >;
 type ImportRow = Pick<
   Database["public"]["Tables"]["classifier_import_runs"]["Row"],
-  "seller_classifier_workflow_id" | "status" | "error_code" | "retryable"
+  "id" | "seller_classifier_workflow_id" | "status" | "error_code" | "retryable"
 >;
 
 const workflowFields =
@@ -61,7 +66,7 @@ export class SupabaseSellerClassifierHistoryRepository implements SellerClassifi
 
     const importResponse = await this.database
       .from("classifier_import_runs")
-      .select("seller_classifier_workflow_id,status,error_code,retryable")
+      .select("id,seller_classifier_workflow_id,status,error_code,retryable")
       .eq("seller_id", input.sellerId)
       .in(
         "seller_classifier_workflow_id",
@@ -78,41 +83,71 @@ export class SupabaseSellerClassifierHistoryRepository implements SellerClassifi
         );
       }
       imports.set(row.seller_classifier_workflow_id, {
+        id: row.id,
         status: row.status,
         errorCode: row.error_code,
         retryable: row.retryable,
       });
     }
 
-    return workflows.map((workflow) => ({
-      id: workflow.id,
-      initiatorKind: parseResult(workflow.initiator_kind, ["seller", "administrator"]),
-      provisioningStatus: parseResult(workflow.provisioning_status, [
-        "provisioning",
-        "ready",
-        "failed",
-      ]),
-      stage: parseResult(workflow.last_known_stage, [
-        "provisioning",
-        "upload",
-        "processing",
-        "review",
-        "approved",
-        "importing",
-        "drafts_ready",
-        "failed",
-      ]),
-      originalFileCount: workflow.original_file_count,
-      processedFileCount: workflow.processed_file_count,
-      groupCount: workflow.group_count,
-      productDraftCount: workflow.product_draft_count,
-      errorCode: workflow.error_code,
-      retryable: workflow.retryable,
-      createdAt: workflow.created_at,
-      updatedAt: workflow.updated_at,
-      import: imports.get(workflow.id) ?? null,
-    }));
+    let products: OwnedClassifierImportProduct[];
+    try {
+      products = await listOwnedClassifierImportProducts(
+        this.database,
+        input.sellerId,
+        [...imports.values()].map((record) => record.id),
+      );
+    } catch (error) {
+      if (error instanceof OwnedClassifierImportProductsError) {
+        throw databaseError(error);
+      }
+      throw error;
+    }
+    const productCounts = new Map<string, number>();
+    for (const product of products) {
+      productCounts.set(product.importId, (productCounts.get(product.importId) ?? 0) + 1);
+    }
+
+    return workflows.map((workflow) => historyRecord(workflow, imports, productCounts));
   }
+}
+
+function historyRecord(
+  workflow: WorkflowRow,
+  imports: Map<string, SellerClassifierHistoryImportRecord>,
+  productCounts: Map<string, number>,
+): SellerClassifierHistoryRecord {
+  const importRecord = imports.get(workflow.id) ?? null;
+  return {
+    id: workflow.id,
+    initiatorKind: parseResult(workflow.initiator_kind, ["seller", "administrator"]),
+    provisioningStatus: parseResult(workflow.provisioning_status, [
+      "provisioning",
+      "ready",
+      "failed",
+    ]),
+    stage: parseResult(workflow.last_known_stage, [
+      "provisioning",
+      "upload",
+      "processing",
+      "review",
+      "approved",
+      "importing",
+      "drafts_ready",
+      "failed",
+    ]),
+    originalFileCount: workflow.original_file_count,
+    processedFileCount: workflow.processed_file_count,
+    groupCount: workflow.group_count,
+    productDraftCount: importRecord
+      ? (productCounts.get(importRecord.id) ?? 0)
+      : workflow.product_draft_count,
+    errorCode: workflow.error_code,
+    retryable: workflow.retryable,
+    createdAt: workflow.created_at,
+    updatedAt: workflow.updated_at,
+    import: importRecord,
+  };
 }
 
 function quotePostgrestValue(value: string): string {

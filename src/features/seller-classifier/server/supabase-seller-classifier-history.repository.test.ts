@@ -14,6 +14,7 @@ describe("SupabaseSellerClassifierHistoryRepository", () => {
     const importQuery = query({
       data: [
         {
+          id: uuid(101),
           seller_classifier_workflow_id: uuid(1),
           status: "completed",
           error_code: null,
@@ -23,8 +24,23 @@ describe("SupabaseSellerClassifierHistoryRepository", () => {
       error: null,
     });
     const from = vi.fn().mockReturnValueOnce(workflowQuery).mockReturnValueOnce(importQuery);
+    const rpc = vi.fn().mockResolvedValue({
+      data: [
+        {
+          classifier_import_run_id: uuid(101),
+          seller_classifier_workflow_id: uuid(1),
+          product_draft_id: uuid(201),
+          classifier_group_id: uuid(301),
+          source_group_position: 0,
+          title: "Recovered draft",
+          product_status: "draft",
+        },
+      ],
+      error: null,
+    });
     const repository = new SupabaseSellerClassifierHistoryRepository({
       from,
+      rpc,
     } as unknown as SupabaseClient<Database>);
 
     const records = await repository.listOwned({
@@ -54,7 +70,13 @@ describe("SupabaseSellerClassifierHistoryRepository", () => {
       uuid(1),
       uuid(2),
     ]);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("list_owned_classifier_import_product_drafts", {
+      p_seller_id: uuid(900),
+      p_import_ids: [uuid(101)],
+    });
     expect(records[0]?.import?.status).toBe("completed");
+    expect(records[0]?.productDraftCount).toBe(1);
     expect(records[0]?.initiatorKind).toBe("seller");
     expect(records[1]?.import).toBeNull();
   });

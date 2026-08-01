@@ -33,10 +33,11 @@ describe("SupabaseProductDraftDescriptionRepository", () => {
       rpc,
     } as unknown as SupabaseClient<Database>);
 
-    const result = await repository.applyPatch(productDraftId, { en: "Updated English" });
+    const result = await repository.applyPatch(productDraftId, { en: "Updated English" }, uuid(2));
 
-    expect(rpc).toHaveBeenCalledWith("apply_product_draft_description_patch", {
+    expect(rpc).toHaveBeenCalledWith("apply_scoped_product_draft_description_patch", {
       p_product_draft_id: productDraftId,
+      p_expected_seller_id: uuid(2),
       p_pl_patch_present: false,
       p_pl_description: null,
       p_en_patch_present: true,
@@ -52,6 +53,10 @@ describe("SupabaseProductDraftDescriptionRepository", () => {
     });
   });
 });
+
+function uuid(value: number): string {
+  return `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
+}
 
 function entry(language: "en", text: string) {
   return {

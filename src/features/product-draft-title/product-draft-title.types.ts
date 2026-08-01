@@ -29,6 +29,7 @@ export class ProductDraftTitleError extends Error {
     public readonly statusCode: ProductDraftTitleErrorStatus,
     public readonly code:
       | "product_draft_title_invalid"
+      | "product_draft_title_required"
       | "product_draft_not_found"
       | "product_draft_title_not_editable"
       | "product_draft_title_unavailable",
@@ -78,6 +79,14 @@ export function invalidProductDraftTitle(): ProductDraftTitleError {
     400,
     "product_draft_title_invalid",
     "The ProductDraft title is invalid.",
+  );
+}
+
+export function requiredProductDraftTitle(): ProductDraftTitleError {
+  return new ProductDraftTitleError(
+    409,
+    "product_draft_title_required",
+    "A ProductDraft title is required before publication.",
   );
 }
 

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   finalizeUploads: vi.fn(),
   startProcessing: vi.fn(),
   getProcessing: vi.fn(),
+  getDraftImport: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -33,6 +34,10 @@ vi.mock("../delegated-classifier-upload.functions", () => ({
   getDelegatedClassifierProcessing: mocks.getProcessing,
 }));
 
+vi.mock("../delegated-classifier-review-import.functions", () => ({
+  getDelegatedClassifierDraftImport: mocks.getDraftImport,
+}));
+
 vi.mock("@/features/seller-classifier/seller-classifier-batch.functions", () => ({
   getMyClassifierBatch: vi.fn(),
   getMyClassifierUploads: vi.fn(),
@@ -50,15 +55,15 @@ describe("DelegatedClassifierUploadWorkflowScreen", () => {
     vi.clearAllMocks();
   });
 
-  it("restores seller context and stops at the seller-review handoff", async () => {
+  it("restores seller context and offers administrator review", async () => {
     mocks.getContext.mockResolvedValue(context("review"));
 
     renderScreen();
 
     expect(await screen.findByText("Kesar Textiles")).toBeInTheDocument();
     expect(screen.getByText(uuid(10))).toBeInTheDocument();
-    expect(screen.getByText("Ready for seller review")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Review groups" })).not.toBeInTheDocument();
+    expect(screen.getByText("Ready for administrator review")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continue review for seller" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /approve/i })).not.toBeInTheDocument();
   });
 
@@ -67,7 +72,7 @@ describe("DelegatedClassifierUploadWorkflowScreen", () => {
 
     renderScreen();
 
-    await screen.findByText("Ready for seller review");
+    await screen.findByText("Ready for administrator review");
     expect(mocks.getContext).toHaveBeenCalledWith({
       data: { workflowId: uuid(1) },
     });
@@ -81,9 +86,57 @@ describe("DelegatedClassifierUploadWorkflowScreen", () => {
 
     renderScreen();
 
-    expect(await screen.findByText("Ready for seller review")).toBeInTheDocument();
+    expect(await screen.findByText("Ready for administrator review")).toBeInTheDocument();
     expect(mocks.getContext).toHaveBeenCalledTimes(2);
     expect(screen.queryByText("Classifier processing")).not.toBeInTheDocument();
+  });
+
+  it("routes a failed workflow with a durable import to import recovery", async () => {
+    mocks.getContext.mockResolvedValue(context("failed"));
+    mocks.getDraftImport.mockResolvedValue({
+      seller: seller(),
+      draftImport: {
+        workflowId: uuid(1),
+        stage: "failed",
+        importStatus: "completed_with_errors",
+        continuationAllowed: false,
+        retryAllowed: true,
+        errorCode: "seller_classifier_import_incomplete",
+        pendingGroupCount: 0,
+        processingGroupCount: 0,
+        completeGroupCount: 1,
+        failedGroupCount: 1,
+        productDrafts: [],
+      },
+    });
+
+    renderScreen();
+
+    expect(await screen.findByRole("link", { name: "Open seller draft import" })).toBeVisible();
+    expect(screen.queryByText("Classifier processing")).not.toBeInTheDocument();
+  });
+
+  it("keeps a processing failure in processing recovery", async () => {
+    mocks.getContext.mockResolvedValue({
+      ...context("failed"),
+      workflow: {
+        ...context("failed").workflow,
+        errorCode: "seller_classifier_processing_failed",
+      },
+    });
+    mocks.getDraftImport.mockRejectedValue(codedError("delegated_review_not_allowed"));
+    mocks.getProcessing.mockResolvedValue({
+      ...processingSnapshot(),
+      status: "failed",
+      stage: "failed",
+    });
+
+    renderScreen();
+
+    expect(await screen.findByText("Classifier processing")).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: "Open seller draft import" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -98,14 +151,9 @@ function renderScreen() {
   );
 }
 
-function context(stage: "processing" | "review") {
+function context(stage: "processing" | "review" | "failed") {
   return {
-    seller: {
-      sellerId: uuid(10),
-      name: "Kesar Textiles",
-      slug: "kesar-textiles",
-      published: true,
-    },
+    seller: seller(),
     workflow: {
       workflowId: uuid(1),
       provisioningStatus: "ready",
@@ -117,6 +165,15 @@ function context(stage: "processing" | "review") {
       createdAt: "2026-07-30T10:00:00.000Z",
       updatedAt: "2026-07-30T10:01:00.000Z",
     },
+  };
+}
+
+function seller() {
+  return {
+    sellerId: uuid(10),
+    name: "Kesar Textiles",
+    slug: "kesar-textiles",
+    published: true,
   };
 }
 
@@ -135,4 +192,8 @@ function processingSnapshot() {
 
 function uuid(value: number): string {
   return `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
+}
+
+function codedError(code: string): Error {
+  return Object.assign(new Error("safe"), { code });
 }

@@ -8,6 +8,7 @@ import type { Database } from "@/lib/supabase/types";
 
 import type { ProductDraftFactsAccess } from "../product-draft-facts.service";
 import { ProductDraftFactsService } from "../product-draft-facts.service";
+import { ProductDraftFactsError } from "../product-draft-facts.types";
 import {
   isPrototypeAdministrator,
   readPrototypeAdministratorUserIds,
@@ -35,13 +36,19 @@ export async function createProductDraftFactsRequestContext(
         supabase: context.supabase as unknown as SellerLookupSupabase,
         userId: context.userId,
       });
+  if (!prototypeAdministrator && !sellerId) {
+    throw new ProductDraftFactsError(
+      404,
+      "product_draft_not_found",
+      "The ProductDraft was not found.",
+    );
+  }
   const { supabaseAdmin } = await import("@/lib/supabase/client.server");
 
   return {
     service: new ProductDraftFactsService(new SupabaseProductDraftFactsRepository(supabaseAdmin)),
-    access: {
-      sellerId,
-      prototypeAdministrator,
-    },
+    access: prototypeAdministrator
+      ? { mode: "prototype_administrator" }
+      : { mode: "seller", expectedSellerId: sellerId! },
   };
 }

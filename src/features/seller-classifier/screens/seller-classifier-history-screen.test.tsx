@@ -132,6 +132,68 @@ describe("SellerClassifierHistoryScreenView", () => {
     expect(await screen.findByText("Uploaded by administrator")).toBeInTheDocument();
     expect(screen.queryByText(/administrator@/i)).not.toBeInTheDocument();
   });
+
+  it("keeps failed import recovery and direct product access visible together", async () => {
+    const onOpen = vi.fn();
+    const failed = item(
+      1,
+      "failed",
+      "open_import",
+      {
+        originalFiles: 2,
+        processedFiles: 2,
+        groups: 2,
+        productDrafts: 1,
+      },
+      "import_incomplete",
+    );
+
+    render(
+      <SellerClassifierHistoryScreenView
+        lang="DE"
+        client={clientMock([page([failed])])}
+        onOpen={onOpen}
+      />,
+    );
+
+    const importAction = await screen.findByRole("button", { name: "Open product drafts" });
+    expect(screen.getByRole("link", { name: "Manage products" })).toHaveAttribute(
+      "href",
+      "/seller/products?lang=DE",
+    );
+    expect(screen.getByText(/Some product drafts were created/)).toBeVisible();
+
+    await userEvent.click(importAction);
+    expect(onOpen).toHaveBeenCalledWith(uuid(1), "open_import");
+  });
+
+  it("does not imply a draft exists for a terminal zero-draft import", async () => {
+    const failed = item(
+      1,
+      "failed",
+      "open_import",
+      {
+        originalFiles: 1,
+        processedFiles: 1,
+        groups: 1,
+        productDrafts: 0,
+      },
+      "import_incomplete",
+    );
+
+    render(
+      <SellerClassifierHistoryScreenView
+        lang="EN"
+        client={clientMock([page([failed])])}
+        onOpen={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("No product drafts were created.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "View import" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Manage products" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Some product drafts were created/)).not.toBeInTheDocument();
+  });
 });
 
 function clientMock(pages: SellerClassifierHistoryPage[]): SellerClassifierHistoryClient & {
@@ -172,6 +234,8 @@ function item(
     errorSummaryCode,
     supportReference: null,
     primaryAction,
+    productAccessAction:
+      counts.productDrafts !== null && counts.productDrafts > 0 ? "open_products" : "none",
   };
 }
 

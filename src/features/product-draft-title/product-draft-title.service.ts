@@ -6,16 +6,18 @@ import type {
   SellerProductFields,
 } from "./product-draft-title.repository";
 import {
+  expectedProductDraftSellerId,
+  type ProductDraftAccess,
+} from "@/features/product-draft-access";
+import {
   invalidProductDraftTitle,
   normalizeProductDraftTitle,
   ProductDraftTitleError,
+  requiredProductDraftTitle,
   type ProductDraftTitleSnapshot,
 } from "./product-draft-title.types";
 
-export type ProductDraftTitleAccess = {
-  sellerId: string | null;
-  prototypeAdministrator: boolean;
-};
+export type ProductDraftTitleAccess = ProductDraftAccess;
 
 export type SellerProductSave = {
   productDraftId?: string;
@@ -31,7 +33,7 @@ export class ProductDraftTitleService {
     productDraftId: string,
     access: ProductDraftTitleAccess,
   ): Promise<ProductDraftTitleSnapshot> {
-    const result = await this.repository.get(productDraftId, expectedSellerId(access));
+    const result = await this.repository.get(productDraftId, expectedProductDraftSellerId(access));
     if (!result) throw productDraftNotFound();
     return snapshot(result);
   }
@@ -43,7 +45,7 @@ export class ProductDraftTitleService {
   ): Promise<ProductDraftTitleSnapshot> {
     const result = await this.repository.updateTitle(
       productDraftId,
-      expectedSellerId(access),
+      expectedProductDraftSellerId(access),
       humanTitleWrite(title),
     );
     return updateSnapshot(result);
@@ -84,14 +86,8 @@ function rejectBlankPublication(
   status: SellerProductFields["status"],
 ) {
   if (status === "published" && titleWrite?.title === "") {
-    throw invalidProductDraftTitle();
+    throw requiredProductDraftTitle();
   }
-}
-
-function expectedSellerId(access: ProductDraftTitleAccess): string | null {
-  if (access.prototypeAdministrator) return null;
-  if (access.sellerId) return access.sellerId;
-  throw productDraftNotFound();
 }
 
 function snapshot(record: {
@@ -116,11 +112,15 @@ function updateSnapshot(result: ProductDraftTitleUpdateResult): ProductDraftTitl
       "The ProductDraft title can only be changed while the product is a draft.",
     );
   }
+  if (result.result === "title_required") throw requiredProductDraftTitle();
+  if (result.result === "title_invalid") throw invalidProductDraftTitle();
   throw invalidProductDraftTitle();
 }
 
 function createSnapshot(result: ProductDraftTitleCreateResult): ProductDraftTitleSnapshot {
   if (result.result === "created") return snapshot(result);
+  if (result.result === "title_required") throw requiredProductDraftTitle();
+  if (result.result === "title_invalid") throw invalidProductDraftTitle();
   throw invalidProductDraftTitle();
 }
 

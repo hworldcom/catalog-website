@@ -22,12 +22,16 @@ const descriptionFields =
 export class SupabaseProductDraftDescriptionRepository implements ProductDraftDescriptionRepository {
   constructor(private readonly database: AdminClient) {}
 
-  async get(productDraftId: string): Promise<ProductDraftDescriptionRecord> {
-    const productResponse = await this.database
+  async get(
+    productDraftId: string,
+    expectedSellerId: string | null,
+  ): Promise<ProductDraftDescriptionRecord> {
+    let productQuery = this.database
       .from("products")
       .select("id,status,category_id,facts:product_draft_facts(facts_revision)")
-      .eq("id", productDraftId)
-      .maybeSingle();
+      .eq("id", productDraftId);
+    if (expectedSellerId) productQuery = productQuery.eq("seller_id", expectedSellerId);
+    const productResponse = await productQuery.maybeSingle();
     if (productResponse.error) throwDatabaseError(productResponse.error);
     if (!productResponse.data) return null;
 
@@ -52,9 +56,11 @@ export class SupabaseProductDraftDescriptionRepository implements ProductDraftDe
   async applyPatch(
     productDraftId: string,
     patch: ProductDraftDescriptionPatch,
+    expectedSellerId: string | null,
   ): Promise<ProductDraftDescriptionPatchResult> {
-    const response = await this.database.rpc("apply_product_draft_description_patch", {
+    const response = await this.database.rpc("apply_scoped_product_draft_description_patch", {
       p_product_draft_id: productDraftId,
+      p_expected_seller_id: expectedSellerId,
       p_pl_patch_present: hasPatch(patch, "pl"),
       p_pl_description: patch.pl ?? null,
       p_en_patch_present: hasPatch(patch, "en"),

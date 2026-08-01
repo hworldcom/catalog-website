@@ -109,15 +109,54 @@ describe("ProductPublicationService", () => {
       claimStartedAt: null,
       errorCode: "product_publication_cleanup_required",
     });
+    vi.mocked(repository.getFirstItemErrorCode).mockResolvedValue(
+      "product_publication_transfer_failed",
+    );
 
     await expect(
       new ProductPublicationService(repository, dispatcherMock()).get(uuid(1)),
-    ).resolves.toMatchObject({ retryAllowed: false });
+    ).resolves.toMatchObject({
+      failureReasonCode: "product_publication_transfer_failed",
+      retryAllowed: false,
+    });
     await expect(
       new ProductPublicationService(repository, dispatcherMock(), async () => true, true).get(
         uuid(1),
       ),
     ).resolves.toMatchObject({ retryAllowed: true });
+  });
+
+  it("maps unknown terminal failures without exposing arbitrary errors", async () => {
+    const repository = repositoryMock();
+    vi.mocked(repository.getRun).mockResolvedValue({
+      ...run(),
+      status: "failed",
+      errorCode: "provider-stack-trace",
+    });
+
+    await expect(
+      new ProductPublicationService(repository, dispatcherMock()).get(uuid(1)),
+    ).resolves.toMatchObject({
+      failureReasonCode: "product_publication_unknown",
+    });
+    expect(repository.getFirstItemErrorCode).not.toHaveBeenCalled();
+  });
+
+  it("uses a bounded item-error read only for cleanup-required runs", async () => {
+    const repository = repositoryMock();
+    vi.mocked(repository.getRun).mockResolvedValue({
+      ...run(),
+      status: "cleanup_required",
+      errorCode: "product_publication_cleanup_required",
+    });
+    vi.mocked(repository.getFirstItemErrorCode).mockResolvedValue(null);
+
+    await expect(
+      new ProductPublicationService(repository, dispatcherMock()).get(uuid(1)),
+    ).resolves.toMatchObject({
+      failureReasonCode: "product_publication_unknown",
+    });
+    expect(repository.getFirstItemErrorCode).toHaveBeenCalledWith(uuid(1));
   });
 });
 
@@ -133,6 +172,8 @@ function repositoryMock(): ProductPublicationRepository & {
     claimStartedAt: null,
     errorCode: "product_publication_dispatch_failed",
     completedAt: null,
+    delegatedActionRequestId: null,
+    delegatedActionRequestFingerprint: null,
   };
   return {
     authorize: vi.fn(async () => ({
@@ -141,6 +182,7 @@ function repositoryMock(): ProductPublicationRepository & {
       status: "pending" as const,
     })),
     getRun: vi.fn(async () => failedRun),
+    getFirstItemErrorCode: vi.fn(async () => null),
     claimRun: vi.fn(),
     listItems: vi.fn(),
     recordObjectCreated: vi.fn(),
@@ -169,6 +211,8 @@ function run(): ProductPublicationRun {
     claimStartedAt: new Date().toISOString(),
     errorCode: null,
     completedAt: null,
+    delegatedActionRequestId: null,
+    delegatedActionRequestFingerprint: null,
   };
 }
 
@@ -197,6 +241,7 @@ function authorization(): ProductPublicationAuthorizationInput {
     coverImageUrlPatchPresent: false,
     coverImageUrl: null,
     trending: false,
+    delegatedAction: null,
   };
 }
 

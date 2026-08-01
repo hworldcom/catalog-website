@@ -16,6 +16,10 @@ Current status:
   through the local backend; and
 - an authenticated approved-batch inbox, explicit import authorization, and
   durable status pages are available under `/admin/classifier-imports`;
+- allowlisted administrators can continue administrator-created seller
+  workflows through delegated browser review and ProductDraft import, using
+  protected thumbnail delivery, immutable seller context, and durable
+  action-attempt auditing;
 - an allowlisted cross-seller ProductDraft index is available at
   `/admin/product-drafts`, with stable filters, cursor pagination, immutable
   classifier source context, and private signed previews;

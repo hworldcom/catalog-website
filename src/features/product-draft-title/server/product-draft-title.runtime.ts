@@ -8,6 +8,7 @@ import type { Database } from "@/lib/supabase/types";
 
 import type { ProductDraftTitleAccess } from "../product-draft-title.service";
 import { ProductDraftTitleService } from "../product-draft-title.service";
+import { ProductDraftTitleError } from "../product-draft-title.types";
 import {
   isPrototypeAdministrator,
   readPrototypeAdministratorUserIds,
@@ -35,13 +36,19 @@ export async function createProductDraftTitleRequestContext(
         supabase: context.supabase as unknown as SellerLookupSupabase,
         userId: context.userId,
       });
+  if (!prototypeAdministrator && !sellerId) {
+    throw new ProductDraftTitleError(
+      404,
+      "product_draft_not_found",
+      "The ProductDraft was not found.",
+    );
+  }
 
   return {
     service: await createProductDraftTitlePersistenceService(),
-    access: {
-      sellerId,
-      prototypeAdministrator,
-    },
+    access: prototypeAdministrator
+      ? { mode: "prototype_administrator" }
+      : { mode: "seller", expectedSellerId: sellerId! },
   };
 }
 

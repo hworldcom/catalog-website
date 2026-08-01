@@ -152,6 +152,24 @@ describe("ProductDraftFactsEditorView", () => {
     });
   });
 
+  it("preserves unsaved facts after a temporary save failure", async () => {
+    const update = vi.fn().mockRejectedValue(new Error("temporary database failure"));
+    render(
+      <ProductDraftFactsEditorView productDraftId={productDraftId} client={client({ update })} />,
+    );
+
+    const colors = await screen.findByLabelText("Colors");
+    const materialComposition = screen.getByLabelText("Material composition");
+    await userEvent.type(colors, "black\nred");
+    await userEvent.type(materialComposition, "cotton");
+    await userEvent.click(screen.getByRole("button", { name: "Save facts" }));
+
+    expect(await screen.findByText("Product facts are temporarily unavailable.")).toBeVisible();
+    expect(colors).toHaveValue("black\nred");
+    expect(materialComposition).toHaveValue("cotton");
+    expect(screen.getByRole("button", { name: "Save facts" })).toBeEnabled();
+  });
+
   it("disables Save again when a touched value is reverted", async () => {
     const existingFacts = { ...canonicalFacts, materialComposition: "cotton" };
     const testClient = client({

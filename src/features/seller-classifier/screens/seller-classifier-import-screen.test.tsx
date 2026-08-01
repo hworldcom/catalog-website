@@ -55,7 +55,7 @@ describe("SellerClassifierImportScreenView", () => {
     await waitFor(() => expect(heading).toHaveFocus());
     expect(screen.getByText("Product drafts are ready")).toBeVisible();
     expect(screen.getByText("Untitled product draft 1")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open draft" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Edit draft" })).toHaveAttribute(
       "href",
       `/seller/products/${productDraftId}?lang=DE`,
     );
@@ -71,7 +71,7 @@ describe("SellerClassifierImportScreenView", () => {
     expect(await screen.findByText(/Some product drafts were created/)).toBeVisible();
     expect(screen.getByText(/Some product drafts are ready/)).toBeVisible();
     expect(screen.queryByText("seller_classifier_import_incomplete")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open draft" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Edit draft" })).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Retry import" }));
 
@@ -105,9 +105,9 @@ describe("SellerClassifierImportScreenView", () => {
     const user = userEvent.setup();
     renderImport(client, { pollIntervalMs: 5 });
 
-    expect(await screen.findByRole("link", { name: "Open draft" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "Edit draft" })).toBeVisible();
     const retryRead = await screen.findByRole("button", { name: "Try again" });
-    expect(screen.getByRole("link", { name: "Open draft" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Edit draft" })).toBeVisible();
 
     await user.click(retryRead);
 
@@ -139,6 +139,68 @@ describe("SellerClassifierImportScreenView", () => {
     expect(await screen.findByText("This classifier workflow was not found.")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
   });
+
+  it("states that a terminal import created no drafts without showing partial-success copy", async () => {
+    const client = importClient({
+      ...partialSnapshot(),
+      completeGroupCount: 0,
+      productDrafts: [],
+    });
+    renderImport(client);
+
+    expect(await screen.findByText("No product drafts were created.")).toBeVisible();
+    expect(screen.queryByText(/Some product drafts were created/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Some product drafts are ready/)).not.toBeInTheDocument();
+  });
+
+  it("uses an open-product action for a published result", async () => {
+    const client = importClient({
+      ...readySnapshot(),
+      productDrafts: [
+        {
+          productDraftId,
+          title: "Published shirt",
+          status: "published",
+          imageStatus: "available",
+        },
+      ],
+    });
+    renderImport(client);
+
+    expect(await screen.findByRole("link", { name: "Open product" })).toHaveAttribute(
+      "href",
+      `/seller/products/${productDraftId}?lang=EN`,
+    );
+  });
+
+  it("renders delegated ProductDraft outcomes without links", async () => {
+    const client = importClient(readySnapshot());
+    renderImport(client, {
+      productDraftHref: null,
+      showProductDraftId: true,
+    });
+
+    expect(await screen.findByText(productDraftId)).toBeVisible();
+    expect(screen.getByText(/read-only in the delegated workflow/i)).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Edit draft" })).not.toBeInTheDocument();
+  });
+
+  it("requires confirmation before replacing a conflicting audited import retry", async () => {
+    const client = importClient(partialSnapshot());
+    client.retryImport
+      .mockRejectedValueOnce(codedError("delegated_action_request_conflict"))
+      .mockResolvedValueOnce(pendingSnapshot());
+    const user = userEvent.setup();
+    renderImport(client, { pollIntervalMs: 100_000 });
+
+    await user.click(await screen.findByRole("button", { name: "Retry import" }));
+    expect(await screen.findByText(/saved request belongs to a different action/i)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Submit as a new action" }));
+
+    expect(client.retryImport).toHaveBeenNthCalledWith(1, workflowId);
+    expect(client.retryImport).toHaveBeenNthCalledWith(2, workflowId, { newRequest: true });
+  });
 });
 
 function renderImport(
@@ -147,6 +209,8 @@ function renderImport(
     lang?: "EN" | "PL" | "DE" | "VI";
     onReviewRequired?: () => void;
     pollIntervalMs?: number;
+    productDraftHref?: ((productDraftId: string, lang: "EN" | "PL" | "DE" | "VI") => string) | null;
+    showProductDraftId?: boolean;
   } = {},
 ) {
   return render(
@@ -156,6 +220,8 @@ function renderImport(
       client={client}
       onReviewRequired={options.onReviewRequired}
       pollIntervalMs={options.pollIntervalMs}
+      productDraftHref={options.productDraftHref}
+      showProductDraftId={options.showProductDraftId}
     />,
   );
 }

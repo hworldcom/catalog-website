@@ -155,9 +155,11 @@ const emptyForm: ProductDraftFactsFormValues = {
 
 export function ProductDraftFactsEditor({
   productDraftId,
+  disabled = false,
   onStateChange,
 }: {
   productDraftId: string;
+  disabled?: boolean;
   onStateChange?: (state: ProductDraftFactsEditorState) => void;
 }) {
   const getFacts = useServerFn(getProductDraftFacts);
@@ -174,6 +176,7 @@ export function ProductDraftFactsEditor({
     <ProductDraftFactsEditorView
       productDraftId={productDraftId}
       client={client}
+      disabled={disabled}
       onStateChange={onStateChange}
     />
   );
@@ -182,10 +185,12 @@ export function ProductDraftFactsEditor({
 export function ProductDraftFactsEditorView({
   productDraftId,
   client,
+  disabled = false,
   onStateChange,
 }: {
   productDraftId: string;
   client: ProductDraftFactsEditorClient;
+  disabled?: boolean;
   onStateChange?: (state: ProductDraftFactsEditorState) => void;
 }) {
   const [snapshot, setSnapshot] = useState<ProductDraftFactsSnapshot | null>(null);
@@ -254,7 +259,7 @@ export function ProductDraftFactsEditorView({
   );
 
   async function save() {
-    if (!snapshot?.editable || !patch || saving) return;
+    if (!snapshot?.editable || disabled || !patch || saving) return;
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -305,7 +310,7 @@ export function ProductDraftFactsEditorView({
 
   if (!snapshot) return null;
 
-  const controlsDisabled = !snapshot.editable || saving;
+  const controlsDisabled = !snapshot.editable || disabled || saving;
 
   return (
     <Card>
@@ -371,7 +376,11 @@ export function ProductDraftFactsEditorView({
 
         {snapshot.editable ? (
           <div className="flex justify-end">
-            <Button type="button" disabled={!patch || saving} onClick={() => void save()}>
+            <Button
+              type="button"
+              disabled={disabled || !patch || saving}
+              onClick={() => void save()}
+            >
               {saving ? tr(S.saving) : tr(S.save)}
             </Button>
           </div>

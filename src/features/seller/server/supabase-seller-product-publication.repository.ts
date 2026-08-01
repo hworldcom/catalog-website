@@ -18,7 +18,7 @@ export class SupabaseSellerProductPublicationRepository implements SellerProduct
   ): Promise<SellerProductPublicationProduct | null> {
     const product = await this.database
       .from("products")
-      .select("id,seller_id,status,cover_image_url")
+      .select("id,seller_id,title,category_id,status,cover_image_url")
       .eq("id", productDraftId)
       .eq("seller_id", sellerId)
       .maybeSingle();
@@ -36,6 +36,8 @@ export class SupabaseSellerProductPublicationRepository implements SellerProduct
     return {
       productDraftId: product.data.id,
       sellerId: product.data.seller_id,
+      title: product.data.title,
+      categoryId: product.data.category_id,
       productStatus: product.data.status,
       coverImageUrl: product.data.cover_image_url,
       imagePublicationMode: membership.data ? "imported" : "direct",

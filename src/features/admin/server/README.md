@@ -9,6 +9,10 @@ Classifier import modules in this folder own:
 
 - strict server-only configuration validation;
 - classifier approved-group response validation;
+- delegated administrator review and import wrappers that always use the
+  workflow's immutable stored seller;
+- token-fenced administrator action attempts for group approval, batch
+  approval/import authorization, and import retry;
 - durable import start, status, retry, and reconciliation coordination;
 - immediate claim-specific local import dispatch after durable authorization;
 - attempt-token-fenced worker orchestration;
@@ -65,11 +69,19 @@ Optional positive timeout settings and their defaults:
 BAZORIA_CLASSIFIER_APPROVED_GROUPS_TIMEOUT_SECONDS=30
 BAZORIA_CLASSIFIER_IMPORT_RUN_LEASE_TIMEOUT_SECONDS=900
 BAZORIA_CLASSIFIER_IMAGE_READ_TIMEOUT_SECONDS=30
+BAZORIA_DELEGATED_ADMIN_ACTION_TIMEOUT_SECONDS=30
+BAZORIA_DELEGATED_ADMIN_ACTION_LEASE_TIMEOUT_SECONDS=120
 BAZORIA_IMAGE_STORAGE_HEAD_TIMEOUT_SECONDS=15
 BAZORIA_IMAGE_STORAGE_WRITE_TIMEOUT_SECONDS=60
 BAZORIA_IMAGE_PROMOTION_CLAIM_TIMEOUT_SECONDS=300
 BAZORIA_CLASSIFIER_IMPORT_WORKER_POLL_INTERVAL_SECONDS=5
 ```
+
+The delegated administrator action timeout is bounded from 1 through 300
+seconds. Its lease is bounded from 31 through 900 seconds and must be at least
+30 seconds longer than the action timeout. Unknown remote outcomes remain
+reclaimable; only deterministic validation or business-state failures become
+terminal audit failures.
 
 The promotion claim timeout must be at least the image-read, storage-head, and
 storage-write timeouts plus 120 seconds. Image promotion requires the

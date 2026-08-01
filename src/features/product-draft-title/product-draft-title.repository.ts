@@ -39,10 +39,15 @@ export type ProductDraftTitleUpdateResult =
       productDraftId: string;
       productStatus: ProductDraftTitleStatus;
     }
+  | { result: "title_required" }
+  | { result: "title_invalid" }
   | { result: "invalid" };
 
 export type ProductDraftTitleCreateResult =
-  ({ result: "created" } & ProductDraftTitleRecord) | { result: "invalid" };
+  | ({ result: "created" } & ProductDraftTitleRecord)
+  | { result: "title_required" }
+  | { result: "title_invalid" }
+  | { result: "invalid" };
 
 export interface ProductDraftTitleRepository {
   get(

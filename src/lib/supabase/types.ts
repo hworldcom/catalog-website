@@ -8,6 +8,72 @@ export type Database = {
   };
   public: {
     Tables: {
+      delegated_administrator_action_attempts: {
+        Row: {
+          action_type: string;
+          administrator_user_id: string;
+          attempt_count: number;
+          attempt_token: string | null;
+          claim_started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          error_code: string | null;
+          request_fingerprint: string;
+          request_id: string;
+          seller_id: string;
+          status: string;
+          target_id: string | null;
+          workflow_id: string;
+        };
+        Insert: {
+          action_type: string;
+          administrator_user_id: string;
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          request_fingerprint: string;
+          request_id: string;
+          seller_id: string;
+          status?: string;
+          target_id?: string | null;
+          workflow_id: string;
+        };
+        Update: {
+          action_type?: string;
+          administrator_user_id?: string;
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          request_fingerprint?: string;
+          request_id?: string;
+          seller_id?: string;
+          status?: string;
+          target_id?: string | null;
+          workflow_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "delegated_administrator_action_attempts_seller_id_fkey";
+            columns: ["seller_id"];
+            isOneToOne: false;
+            referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "delegated_administrator_action_attempts_workflow_id_fkey";
+            columns: ["workflow_id"];
+            isOneToOne: false;
+            referencedRelation: "seller_classifier_batches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       classifier_import_group_outcomes: {
         Row: {
           approved_category_slug: string;
@@ -750,6 +816,8 @@ export type Database = {
           claim_started_at: string | null;
           completed_at: string | null;
           created_at: string;
+          delegated_action_request_fingerprint: string | null;
+          delegated_action_request_id: string | null;
           error_code: string | null;
           product_draft_id: string;
           seller_id: string;
@@ -762,6 +830,8 @@ export type Database = {
           claim_started_at?: string | null;
           completed_at?: string | null;
           created_at?: string;
+          delegated_action_request_fingerprint?: string | null;
+          delegated_action_request_id?: string | null;
           error_code?: string | null;
           product_draft_id: string;
           seller_id: string;
@@ -774,6 +844,8 @@ export type Database = {
           claim_started_at?: string | null;
           completed_at?: string | null;
           created_at?: string;
+          delegated_action_request_fingerprint?: string | null;
+          delegated_action_request_id?: string | null;
           error_code?: string | null;
           product_draft_id?: string;
           seller_id?: string;
@@ -781,6 +853,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "product_image_publication_runs_delegated_action_fkey";
+            columns: ["delegated_action_request_id"];
+            isOneToOne: false;
+            referencedRelation: "delegated_administrator_action_attempts";
+            referencedColumns: ["request_id"];
+          },
           {
             foreignKeyName: "product_image_publication_runs_product_draft_id_fkey";
             columns: ["product_draft_id"];
@@ -1095,6 +1174,41 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      claim_delegated_administrator_action: {
+        Args: {
+          p_action_type: string;
+          p_administrator_user_id: string;
+          p_lease_timeout_seconds: number;
+          p_request_fingerprint: string;
+          p_request_id: string;
+          p_target_id: string | null;
+          p_workflow_id: string;
+        };
+        Returns: {
+          attempt_count: number;
+          attempt_token: string | null;
+          error_code: string | null;
+          operation_result: string;
+          seller_id: string | null;
+          status: string | null;
+          target_id: string | null;
+        }[];
+      };
+      finalize_delegated_administrator_action_failure: {
+        Args: {
+          p_attempt_token: string;
+          p_error_code: string;
+          p_request_id: string;
+        };
+        Returns: boolean;
+      };
+      finalize_delegated_administrator_action_success: {
+        Args: {
+          p_attempt_token: string;
+          p_request_id: string;
+        };
+        Returns: boolean;
+      };
       begin_product_draft_image_storage_cutover_scan_phase: {
         Args: {
           p_attempt_token: string;
@@ -1470,6 +1584,24 @@ export type Database = {
           snapshot: Json | null;
         }[];
       };
+      apply_scoped_product_draft_description_patch: {
+        Args: {
+          p_de_description: string | null;
+          p_de_patch_present: boolean;
+          p_en_description: string | null;
+          p_en_patch_present: boolean;
+          p_expected_seller_id: string | null;
+          p_pl_description: string | null;
+          p_pl_patch_present: boolean;
+          p_product_draft_id: string;
+          p_vi_description: string | null;
+          p_vi_patch_present: boolean;
+        };
+        Returns: {
+          result: string;
+          snapshot: Json | null;
+        }[];
+      };
       save_seller_product_with_description: {
         Args: {
           p_category_id: string | null;
@@ -1498,12 +1630,47 @@ export type Database = {
           title_source: string | null;
         }[];
       };
+      validate_product_publication_title: {
+        Args: {
+          p_title: string | null;
+        };
+        Returns: {
+          normalized_title: string;
+          result: string;
+        }[];
+      };
       authorize_seller_product_publication: {
         Args: {
           p_category_id: string | null;
           p_cover_image_url: string | null;
           p_cover_image_url_patch_present: boolean;
           p_currency: string;
+          p_description: string | null;
+          p_description_patch_present: boolean;
+          p_moq: number | null;
+          p_pack_size: string | null;
+          p_price: number | null;
+          p_product_draft_id: string;
+          p_seller_id: string;
+          p_stock: Database["public"]["Enums"]["stock_status"];
+          p_title: string | null;
+          p_title_patch_present: boolean;
+          p_trending: boolean;
+        };
+        Returns: {
+          product_draft_id: string | null;
+          publication_status: string | null;
+          result: string;
+        }[];
+      };
+      authorize_product_publication_with_correlation: {
+        Args: {
+          p_category_id: string | null;
+          p_cover_image_url: string | null;
+          p_cover_image_url_patch_present: boolean;
+          p_currency: string;
+          p_delegated_action_request_fingerprint: string | null;
+          p_delegated_action_request_id: string | null;
           p_description: string | null;
           p_description_patch_present: boolean;
           p_moq: number | null;
@@ -1600,6 +1767,15 @@ export type Database = {
         };
         Returns: string;
       };
+      retry_product_publication_with_correlation: {
+        Args: {
+          p_delegated_action_request_fingerprint: string | null;
+          p_delegated_action_request_id: string | null;
+          p_product_draft_id: string;
+          p_seller_id: string;
+        };
+        Returns: string;
+      };
       verify_product_image_publication_item: {
         Args: {
           p_attempt_token: string;
@@ -1658,6 +1834,21 @@ export type Database = {
           p_workflow_id: string;
         };
         Returns: Database["public"]["Tables"]["classifier_import_runs"]["Row"][];
+      };
+      list_owned_classifier_import_product_drafts: {
+        Args: {
+          p_import_ids: string[];
+          p_seller_id: string;
+        };
+        Returns: {
+          classifier_group_id: string;
+          classifier_import_run_id: string;
+          product_draft_id: string;
+          product_status: Database["public"]["Enums"]["product_status"];
+          seller_classifier_workflow_id: string;
+          source_group_position: number | null;
+          title: string;
+        }[];
       };
       claim_next_classifier_import_run: {
         Args: {

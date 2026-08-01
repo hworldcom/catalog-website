@@ -45,6 +45,7 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     );
     if (result.result === "not_found") return result;
     if (result.result === "not_editable") return result;
+    if (result.result === "title_required" || result.result === "title_invalid") return result;
     if (result.result === "facts_missing") {
       throw new Error("ProductDraft facts record is missing.");
     }
@@ -68,6 +69,7 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     if (result.result === "facts_missing") {
       throw new Error("ProductDraft facts record is missing.");
     }
+    if (result.result === "title_required" || result.result === "title_invalid") return result;
     return result.result === "created" ? result : { result: "invalid" };
   }
 
@@ -86,6 +88,8 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
         productStatus: "draft" | "published" | "archived";
       }
     | { result: "facts_missing" }
+    | { result: "title_required" }
+    | { result: "title_invalid" }
     | { result: "invalid" }
   > {
     const response = await this.database.rpc("save_seller_product_with_description", {
@@ -113,7 +117,12 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
 
     const result = response.data?.[0];
     if (!result) throw new Error("Seller ProductDraft save returned no result.");
-    if (result.result === "not_found" || result.result === "facts_missing") {
+    if (
+      result.result === "not_found" ||
+      result.result === "facts_missing" ||
+      result.result === "title_required" ||
+      result.result === "title_invalid"
+    ) {
       return { result: result.result };
     }
     if (result.result === "not_editable") {

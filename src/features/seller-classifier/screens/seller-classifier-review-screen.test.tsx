@@ -7,6 +7,10 @@ import type {
   SellerClassifierReviewSnapshot,
 } from "../seller-classifier-review.types";
 import type { SellerClassifierDraftImportSnapshot } from "../seller-classifier-import.types";
+import type {
+  SellerClassifierComparisonClient,
+  SellerClassifierComparisonSnapshot,
+} from "../seller-classifier-comparison.types";
 import {
   SellerClassifierReviewScreenView,
   type SellerClassifierReviewClient,
@@ -39,6 +43,9 @@ describe("SellerClassifierReviewScreenView", () => {
     }
     expect(screen.getByRole("button", { name: "Approve and create drafts" })).toBeDisabled();
     expect(screen.queryByText(/administrator/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Run multimodal comparison" }),
+    ).not.toBeInTheDocument();
 
     expect((await screen.findByRole("img", { name: "front.jpg" })).getAttribute("src")).toMatch(
       /^blob:review-/,
@@ -52,6 +59,150 @@ describe("SellerClassifierReviewScreenView", () => {
         },
       }),
     );
+  });
+
+  it("requires cost confirmation and dispatches once through the optional seller capability", async () => {
+    const api = reviewClient();
+    const comparison = comparisonClient();
+    comparison.dispatchComparison.mockResolvedValueOnce(comparisonSnapshot("pending"));
+    const user = userEvent.setup();
+    renderReview(api, thumbnailDependencies(), { comparisonClient: comparison });
+
+    const action = await screen.findByRole("button", { name: "Run multimodal comparison" });
+    await user.click(action);
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(/may incur usage costs/i);
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Cancel" }),
+    );
+    expect(comparison.dispatchComparison).not.toHaveBeenCalled();
+
+    await user.click(action);
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Run comparison" }),
+    );
+
+    expect(comparison.dispatchComparison).toHaveBeenCalledTimes(1);
+    expect(comparison.dispatchComparison).toHaveBeenCalledWith(workflowId);
+    expect(await screen.findByText(/comparison is running/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Create group" })).toBeDisabled();
+    for (const button of screen.getAllByRole("button", { name: "Approve group" })) {
+      expect(button).toBeDisabled();
+    }
+  });
+
+  it("refreshes review once for a later active job even when attempt counts repeat", async () => {
+    const api = reviewClient();
+    const comparison = comparisonClient({ status: comparisonSnapshot("completed", 1) });
+    comparison.dispatchComparison.mockResolvedValueOnce(comparisonSnapshot("pending", 0));
+    comparison.getComparisonStatus
+      .mockResolvedValueOnce(comparisonSnapshot("completed", 1))
+      .mockResolvedValueOnce(comparisonSnapshot("completed", 1));
+    const user = userEvent.setup();
+    renderReview(api, thumbnailDependencies(), {
+      comparisonClient: comparison,
+      comparisonPollIntervalMs: 10,
+    });
+
+    const action = await screen.findByRole("button", { name: "Run multimodal comparison" });
+    expect(api.getReview).toHaveBeenCalledTimes(1);
+
+    await user.click(action);
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Run comparison" }),
+    );
+
+    expect(await screen.findByText(/comparison completed/i)).toBeVisible();
+    await waitFor(() => expect(api.getReview).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(api.getReview).toHaveBeenCalledTimes(2);
+    expect(comparison.getComparisonStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes review without a status read after a direct dispatch conflict", async () => {
+    const api = reviewClient();
+    const comparison = comparisonClient();
+    comparison.dispatchComparison.mockRejectedValueOnce(
+      codedError("seller_classifier_multimodal_comparison_not_allowed"),
+    );
+    const user = userEvent.setup();
+    renderReview(api, thumbnailDependencies(), { comparisonClient: comparison });
+
+    const selection = await screen.findByRole("checkbox", { name: "Select image: front.jpg" });
+    await user.click(selection);
+    await user.click(screen.getByRole("button", { name: "Run multimodal comparison" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Run comparison" }),
+    );
+
+    expect(await screen.findByText(/review changed before comparison completed/i)).toBeVisible();
+    expect(api.getReview).toHaveBeenCalledTimes(2);
+    expect(comparison.getComparisonStatus).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Select image: front.jpg" })).not.toBeChecked(),
+    );
+    expect(
+      screen.queryByRole("button", { name: /multimodal comparison/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("performs one status recovery read after an unavailable dispatch outcome", async () => {
+    const api = reviewClient();
+    const comparison = comparisonClient();
+    comparison.dispatchComparison.mockRejectedValueOnce(
+      codedError("seller_classifier_multimodal_comparison_unavailable"),
+    );
+    comparison.getComparisonStatus
+      .mockResolvedValueOnce(comparisonSnapshot("not_started"))
+      .mockResolvedValueOnce(comparisonSnapshot("pending", 0));
+    const user = userEvent.setup();
+    renderReview(api, thumbnailDependencies(), { comparisonClient: comparison });
+
+    await user.click(await screen.findByRole("button", { name: "Run multimodal comparison" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Run comparison" }),
+    );
+
+    expect(await screen.findByText(/comparison is running/i)).toBeVisible();
+    expect(comparison.getComparisonStatus).toHaveBeenCalledTimes(2);
+    expect(
+      screen.queryByText("Multimodal comparison could not be started."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("preserves review after a status failure and refreshes status without dispatch", async () => {
+    const api = reviewClient();
+    const comparison = comparisonClient();
+    comparison.getComparisonStatus
+      .mockRejectedValueOnce(codedError("seller_classifier_multimodal_comparison_unavailable"))
+      .mockResolvedValueOnce(comparisonSnapshot("not_started"));
+    const user = userEvent.setup();
+    renderReview(api, thumbnailDependencies(), { comparisonClient: comparison });
+
+    expect(await screen.findByRole("heading", { name: "Group 1" })).toBeVisible();
+    expect(screen.getByText(/comparison status could not be loaded/i)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Refresh comparison status" }));
+
+    await waitFor(() => expect(comparison.getComparisonStatus).toHaveBeenCalledTimes(2));
+    expect(comparison.dispatchComparison).not.toHaveBeenCalled();
+    expect(await screen.findByRole("button", { name: "Run multimodal comparison" })).toBeEnabled();
+  });
+
+  it("shows an explicitly confirmed retry only for a retryable failed status", async () => {
+    const comparison = comparisonClient({
+      status: {
+        ...comparisonSnapshot("failed", 1),
+        retryable: true,
+        failureCode: "comparison_provider_unavailable",
+      },
+    });
+    const user = userEvent.setup();
+    renderReview(reviewClient(), thumbnailDependencies(), { comparisonClient: comparison });
+
+    expect(await screen.findByText(/provider is temporarily unavailable/i)).toBeVisible();
+    expect(comparison.dispatchComparison).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Retry multimodal comparison" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Retry multimodal comparison?");
+    expect(comparison.dispatchComparison).not.toHaveBeenCalled();
   });
 
   it("serializes grouping mutations and resets transient selections after success", async () => {
@@ -272,6 +423,34 @@ describe("SellerClassifierReviewScreenView", () => {
     expect(screen.getByRole("button", { name: "Approve and create drafts" })).toBeDisabled();
   });
 
+  it("requires confirmation before replacing a conflicting audited group action", async () => {
+    const api = reviewClient();
+    api.approveGroup
+      .mockRejectedValueOnce(codedError("delegated_action_request_conflict"))
+      .mockResolvedValueOnce(reviewSnapshot());
+    const user = userEvent.setup();
+    renderReview(api);
+
+    await screen.findByRole("heading", { name: "Group 1" });
+    await user.click(within(reviewGroup(1)).getByRole("button", { name: "Approve group" }));
+    expect(await screen.findByText(/saved request belongs to a different action/i)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Submit as a new action" }));
+
+    expect(api.approveGroup).toHaveBeenNthCalledWith(1, {
+      workflowId,
+      groupId: groupOneId,
+    });
+    expect(api.approveGroup).toHaveBeenNthCalledWith(
+      2,
+      {
+        workflowId,
+        groupId: groupOneId,
+      },
+      { newRequest: true },
+    );
+  });
+
   it("retries only failed thumbnails after a complete snapshot replacement", async () => {
     const attempts = new Map<string, number>();
     const fetchThumbnail = vi.fn(async (input: RequestInfo | URL) => {
@@ -304,17 +483,45 @@ function renderReview(
   options: {
     initialNotice?: "groups-not-approved";
     onImportAccepted?: () => void;
+    comparisonClient?: ReturnType<typeof comparisonClient>;
+    comparisonPollIntervalMs?: number;
   } = {},
 ) {
   return render(
     <SellerClassifierReviewScreenView
       workflowId={workflowId}
       client={client}
+      comparisonClient={options.comparisonClient}
+      comparisonPollIntervalMs={options.comparisonPollIntervalMs}
       thumbnailDependencies={thumbnails}
       initialNotice={options.initialNotice}
       onImportAccepted={options.onImportAccepted}
     />,
   );
+}
+
+function comparisonClient({
+  status = comparisonSnapshot("not_started"),
+}: {
+  status?: SellerClassifierComparisonSnapshot;
+} = {}) {
+  return {
+    dispatchComparison: vi.fn(async () => status),
+    getComparisonStatus: vi.fn(async () => status),
+  } satisfies SellerClassifierComparisonClient;
+}
+
+function comparisonSnapshot(
+  status: SellerClassifierComparisonSnapshot["status"],
+  attemptCount = 0,
+): SellerClassifierComparisonSnapshot {
+  return {
+    workflowId,
+    status,
+    attemptCount,
+    retryable: false,
+    failureCode: null,
+  };
 }
 
 function reviewClient({
@@ -339,10 +546,12 @@ function reviewClient({
   } satisfies SellerClassifierReviewClient;
 }
 
-function thumbnailDependencies(fetchImplementation = vi.fn(async () => jpegResponse())) {
+function thumbnailDependencies(
+  fetchImplementation: typeof fetch = vi.fn(async () => jpegResponse()) as unknown as typeof fetch,
+) {
   return {
     getAccessToken: vi.fn(async () => "seller-access-token"),
-    fetch: fetchImplementation as typeof fetch,
+    fetch: fetchImplementation,
   };
 }
 

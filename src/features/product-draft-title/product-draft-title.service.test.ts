@@ -24,8 +24,8 @@ const draftRecord: ProductDraftTitleRecord = {
 };
 
 const ownerAccess: ProductDraftTitleAccess = {
-  sellerId,
-  prototypeAdministrator: false,
+  mode: "seller",
+  expectedSellerId: sellerId,
 };
 
 class MemoryRepository implements ProductDraftTitleRepository {
@@ -92,24 +92,26 @@ describe("ProductDraftTitleService", () => {
     });
     await expect(
       service.get(productDraftId, {
-        sellerId: null,
-        prototypeAdministrator: true,
+        mode: "prototype_administrator",
       }),
     ).resolves.toMatchObject({ editable: true });
     expect(repository.expectedSellerIds).toEqual([sellerId, null]);
   });
 
-  it("hides products from a user without seller or administrator access", async () => {
-    const service = new ProductDraftTitleService(new MemoryRepository());
+  it("uses the delegated administrator's immutable expected seller", async () => {
+    const repository = new MemoryRepository();
+    repository.readResult = null;
+    const service = new ProductDraftTitleService(repository);
     await expect(
       service.get(productDraftId, {
-        sellerId: null,
-        prototypeAdministrator: false,
+        mode: "delegated_administrator",
+        expectedSellerId: sellerId,
       }),
     ).rejects.toMatchObject({
       statusCode: 404,
       code: "product_draft_not_found",
     });
+    expect(repository.expectedSellerIds).toEqual([sellerId]);
   });
 
   it("normalizes administrator edits and derives human or null sources", async () => {
@@ -148,8 +150,8 @@ describe("ProductDraftTitleService", () => {
         productFields: { status: "published" },
       }),
     ).rejects.toMatchObject({
-      statusCode: 400,
-      code: "product_draft_title_invalid",
+      statusCode: 409,
+      code: "product_draft_title_required",
     });
   });
 
@@ -224,6 +226,18 @@ describe("ProductDraftTitleService", () => {
     await expect(service.update(productDraftId, "Title", ownerAccess)).rejects.toMatchObject({
       statusCode: 400,
       code: "product_draft_title_invalid",
+    });
+
+    repository.updateResult = { result: "title_required" };
+    await expect(
+      service.saveSellerProduct({
+        productDraftId,
+        sellerId,
+        productFields: { status: "published" },
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: "product_draft_title_required",
     });
   });
 });

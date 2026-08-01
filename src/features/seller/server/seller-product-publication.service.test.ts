@@ -31,7 +31,7 @@ describe("SellerProductPublicationService", () => {
       productStatus: "published",
       publicationStatus: "not_required",
       attemptCount: 0,
-      errorCode: null,
+      failureReasonCode: null,
       retryAllowed: false,
       publicProductUrl: `/p/${productDraftId}`,
     });
@@ -59,6 +59,44 @@ describe("SellerProductPublicationService", () => {
         coverImageUrl: null,
       }),
     );
+  });
+
+  it("validates a direct title before its cover requirement", async () => {
+    const service = new SellerProductPublicationService(
+      productRepository({
+        imagePublicationMode: "direct",
+        title: "",
+        coverImageUrl: null,
+      }),
+      publicationService(),
+      vi.fn(),
+    );
+
+    await expect(service.publish(sellerId, productInput())).rejects.toMatchObject({
+      statusCode: 409,
+      code: "product_publication_title_required",
+    });
+  });
+
+  it.each([
+    ["title_required", 409, "product_publication_title_required"],
+    ["title_invalid", 400, "product_publication_title_invalid"],
+  ] as const)("maps imported database result %s", async (result, statusCode, code) => {
+    const publications = publicationService();
+    publications.authorize.mockResolvedValueOnce({
+      result,
+      productDraftId,
+    });
+    const service = new SellerProductPublicationService(
+      productRepository({ imagePublicationMode: "imported" }),
+      publications,
+      vi.fn(),
+    );
+
+    await expect(service.publish(sellerId, productInput())).rejects.toMatchObject({
+      statusCode,
+      code,
+    });
   });
 
   it("rejects an imported cover patch and preserves non-disclosing ownership", async () => {
@@ -106,6 +144,9 @@ describe("SellerProductPublicationService", () => {
       claimStartedAt: "2026-07-27T08:00:00.000Z",
       errorCode: "product_publication_transfer_failed",
       completedAt: null,
+      delegatedActionRequestId: null,
+      delegatedActionRequestFingerprint: null,
+      failureReasonCode: "product_publication_transfer_failed",
       retryAllowed: true,
     });
     publications.retry.mockResolvedValue("requeued");
@@ -121,7 +162,7 @@ describe("SellerProductPublicationService", () => {
       productStatus: "draft",
       publicationStatus: "failed",
       attemptCount: 2,
-      errorCode: "product_publication_transfer_failed",
+      failureReasonCode: "product_publication_transfer_failed",
       retryAllowed: true,
       publicProductUrl: null,
     });
@@ -136,6 +177,9 @@ describe("SellerProductPublicationService", () => {
       claimStartedAt: null,
       errorCode: null,
       completedAt: null,
+      delegatedActionRequestId: null,
+      delegatedActionRequestFingerprint: null,
+      failureReasonCode: null,
       retryAllowed: false,
     });
     await expect(service.retry(productDraftId, sellerId)).resolves.toMatchObject({
@@ -143,15 +187,35 @@ describe("SellerProductPublicationService", () => {
     });
     expect(publications.retry).toHaveBeenCalledWith(productDraftId, sellerId);
   });
+
+  it.each([
+    ["title_required", 409, "product_publication_title_required"],
+    ["title_invalid", 400, "product_publication_title_invalid"],
+  ] as const)("maps retry database result %s", async (result, statusCode, code) => {
+    const publications = publicationService();
+    publications.retry.mockResolvedValueOnce(result);
+    const service = new SellerProductPublicationService(
+      productRepository({ imagePublicationMode: "imported" }),
+      publications,
+      vi.fn(),
+    );
+
+    await expect(service.retry(productDraftId, sellerId)).rejects.toMatchObject({
+      statusCode,
+      code,
+    });
+  });
 });
 
 function productRepository(
   overrides: Partial<SellerProductPublicationProduct> = {},
 ): SellerProductPublicationRepository {
   return {
-    findOwnedProduct: vi.fn(async () => ({
+    findOwnedProduct: vi.fn<SellerProductPublicationRepository["findOwnedProduct"]>(async () => ({
       productDraftId,
       sellerId,
+      title: "Cotton shirt",
+      categoryId: uuid(3),
       productStatus: "draft",
       coverImageUrl: null,
       imagePublicationMode: "imported",
@@ -162,23 +226,26 @@ function productRepository(
 
 function publicationService() {
   return {
-    authorize: vi.fn(async () => ({
-      result: "pending" as const,
+    authorize: vi.fn<ProductPublicationService["authorize"]>(async () => ({
+      result: "pending",
       productDraftId,
-      status: "pending" as const,
+      status: "pending",
     })),
-    get: vi.fn(async () => ({
+    get: vi.fn<ProductPublicationService["get"]>(async () => ({
       productDraftId,
       sellerId,
-      status: "pending" as const,
+      status: "pending",
       attemptCount: 0,
       attemptToken: null,
       claimStartedAt: null,
       errorCode: null,
       completedAt: null,
+      delegatedActionRequestId: null,
+      delegatedActionRequestFingerprint: null,
+      failureReasonCode: null,
       retryAllowed: false,
     })),
-    retry: vi.fn(async () => "requeued" as const),
+    retry: vi.fn<ProductPublicationService["retry"]>(async () => "requeued"),
   } satisfies Pick<ProductPublicationService, "authorize" | "get" | "retry"> & {
     authorize: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
@@ -189,6 +256,7 @@ function publicationService() {
 function productInput() {
   return {
     id: productDraftId,
+    category_id: uuid(3),
     currency: "EUR",
     stock: "in_stock" as const,
     trending: false,

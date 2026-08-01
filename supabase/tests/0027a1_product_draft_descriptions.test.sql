@@ -32,23 +32,28 @@ SELECT ok(
     'public.apply_product_draft_description_patch(uuid,boolean,text,boolean,text,boolean,text,boolean,text)',
     'EXECUTE'
   )
-  AND has_function_privilege(
+  AND NOT has_function_privilege(
     'service_role',
     'public.apply_product_draft_description_patch(uuid,boolean,text,boolean,text,boolean,text,boolean,text)',
     'EXECUTE'
+  )
+  AND has_function_privilege(
+    'service_role',
+    'public.apply_scoped_product_draft_description_patch(uuid,uuid,boolean,text,boolean,text,boolean,text,boolean,text)',
+    'EXECUTE'
   ),
-  'only the service role can execute the description patch function'
+  'the service role can execute only the seller-scoped description patch function'
 );
 
 SELECT ok(
   NOT has_function_privilege(
     'authenticated',
-    'public.save_seller_product_with_description(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,text,boolean,public.product_status)',
+    'public.save_seller_product_with_description(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,public.product_status)',
     'EXECUTE'
   )
   AND has_function_privilege(
     'service_role',
-    'public.save_seller_product_with_description(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,text,boolean,public.product_status)',
+    'public.save_seller_product_with_description(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,public.product_status)',
     'EXECUTE'
   ),
   'only the service role can execute the atomic seller save function'
@@ -84,13 +89,14 @@ VALUES (
   'QA 0027a1'
 );
 
-INSERT INTO public.products (id, seller_id, title, title_source, status)
+INSERT INTO public.products (id, seller_id, title, title_source, status, category_id)
 VALUES (
   '27000000-0000-0000-0000-000000000101',
   '27000000-0000-0000-0000-000000000001',
   'Description draft',
   'human',
-  'draft'
+  'draft',
+  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
 );
 
 SELECT is(
@@ -105,8 +111,9 @@ SELECT is(
 
 CREATE TEMP TABLE first_description_patch AS
 SELECT *
-FROM public.apply_product_draft_description_patch(
+FROM public.apply_scoped_product_draft_description_patch(
   '27000000-0000-0000-0000-000000000101',
+  '27000000-0000-0000-0000-000000000001',
   false, NULL,
   true, E'  English description\r\nwith two lines  ',
   true, ' Deutsche Beschreibung ',
@@ -146,8 +153,9 @@ SELECT results_eq(
 
 CREATE TEMP TABLE polish_only_patch AS
 SELECT *
-FROM public.apply_product_draft_description_patch(
+FROM public.apply_scoped_product_draft_description_patch(
   '27000000-0000-0000-0000-000000000101',
+  '27000000-0000-0000-0000-000000000001',
   true, 'Polski opis',
   false, NULL,
   false, NULL,
@@ -177,8 +185,9 @@ SELECT is(
 
 CREATE TEMP TABLE no_op_description_patch AS
 SELECT *
-FROM public.apply_product_draft_description_patch(
+FROM public.apply_scoped_product_draft_description_patch(
   '27000000-0000-0000-0000-000000000101',
+  '27000000-0000-0000-0000-000000000001',
   false, NULL,
   true, E'English description\nwith two lines',
   false, NULL,
@@ -205,8 +214,9 @@ WHERE product_draft_id = '27000000-0000-0000-0000-000000000101'
 
 CREATE TEMP TABLE human_replacement_patch AS
 SELECT *
-FROM public.apply_product_draft_description_patch(
+FROM public.apply_scoped_product_draft_description_patch(
   '27000000-0000-0000-0000-000000000101',
+  '27000000-0000-0000-0000-000000000001',
   false, NULL,
   true, 'Human replacement',
   false, NULL,
@@ -254,8 +264,9 @@ SELECT throws_ok(
 
 CREATE TEMP TABLE clear_english_patch AS
 SELECT *
-FROM public.apply_product_draft_description_patch(
+FROM public.apply_scoped_product_draft_description_patch(
   '27000000-0000-0000-0000-000000000101',
+  '27000000-0000-0000-0000-000000000001',
   false, NULL,
   true, '   ',
   false, NULL,
@@ -284,13 +295,16 @@ SELECT is(
 );
 
 UPDATE public.products
-SET status = 'published'
+SET
+  status = 'published',
+  cover_image_url = 'https://example.test/qa-0027a1-published.jpg'
 WHERE id = '27000000-0000-0000-0000-000000000101';
 
 CREATE TEMP TABLE published_description_patch AS
 SELECT *
-FROM public.apply_product_draft_description_patch(
+FROM public.apply_scoped_product_draft_description_patch(
   '27000000-0000-0000-0000-000000000101',
+  '27000000-0000-0000-0000-000000000001',
   false, NULL,
   true, 'Published edit',
   false, NULL,
@@ -336,12 +350,13 @@ FROM public.save_seller_product_with_description(
   'Seller-created draft',
   true,
   ' Seller English description ',
-  NULL,
+  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
   NULL,
   NULL,
   NULL,
   'USD',
   'in_stock',
+  false,
   NULL,
   false,
   'draft'
@@ -379,12 +394,13 @@ FROM public.save_seller_product_with_description(
   NULL,
   false,
   NULL,
-  NULL,
+  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
   12,
   NULL,
   NULL,
   'USD',
   'in_stock',
+  false,
   NULL,
   false,
   'draft'
@@ -410,12 +426,13 @@ FROM public.save_seller_product_with_description(
   NULL,
   true,
   '   ',
-  NULL,
+  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
   12,
   NULL,
   NULL,
   'USD',
   'in_stock',
+  false,
   NULL,
   false,
   'draft'
@@ -447,13 +464,14 @@ FROM public.save_seller_product_with_description(
   NULL,
   true,
   ' Publication description ',
-  NULL,
+  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
   12,
   NULL,
   NULL,
   'USD',
   'in_stock',
-  NULL,
+  true,
+  'https://example.test/qa-0027a1-seller-published.jpg',
   false,
   'published'
 );

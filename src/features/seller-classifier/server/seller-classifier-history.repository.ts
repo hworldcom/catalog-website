@@ -5,6 +5,7 @@ import type {
 import type { SellerClassifierHistoryCursor } from "../seller-classifier-history.cursor";
 
 export type SellerClassifierHistoryImportRecord = {
+  id: string;
   status: "pending" | "running" | "completed" | "completed_with_errors" | "failed";
   errorCode: string | null;
   retryable: boolean;

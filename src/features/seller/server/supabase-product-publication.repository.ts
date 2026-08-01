@@ -9,6 +9,7 @@ import type {
   ProductPublicationRetryResult,
 } from "./product-publication.repository";
 import type {
+  ProductPublicationCorrelation,
   ProductPublicationItem,
   ProductPublicationItemStatus,
   ProductPublicationRun,
@@ -25,7 +26,7 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
   async authorize(
     input: ProductPublicationAuthorizationInput,
   ): Promise<ProductPublicationAuthorizationResult> {
-    const response = await this.database.rpc("authorize_seller_product_publication", {
+    const response = await this.database.rpc("authorize_product_publication_with_correlation", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
       p_title_patch_present: input.titlePatchPresent,
@@ -41,8 +42,15 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       p_cover_image_url_patch_present: input.coverImageUrlPatchPresent,
       p_cover_image_url: input.coverImageUrl,
       p_trending: input.trending,
+      p_delegated_action_request_id: input.delegatedAction?.requestId ?? null,
+      p_delegated_action_request_fingerprint: input.delegatedAction?.requestFingerprint ?? null,
     });
-    if (response.error) throwDatabaseError(response.error);
+    if (response.error) {
+      if (isCategoryRequired(response.error)) {
+        return { result: "category_required", productDraftId: input.productDraftId };
+      }
+      throwDatabaseError(response.error);
+    }
     const result = response.data?.[0];
     if (!result) throw new Error("Product publication authorization returned no result.");
 
@@ -68,7 +76,10 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       result.result === "image_required" ||
       result.result === "images_not_ready" ||
       result.result === "not_editable" ||
-      result.result === "facts_missing"
+      result.result === "facts_missing" ||
+      result.result === "title_required" ||
+      result.result === "title_invalid" ||
+      result.result === "category_required"
     ) {
       return {
         result: result.result,
@@ -86,6 +97,20 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       .maybeSingle();
     if (response.error) throwDatabaseError(response.error);
     return response.data ? mapRun(response.data) : null;
+  }
+
+  async getFirstItemErrorCode(productDraftId: string): Promise<string | null> {
+    const response = await this.database
+      .from("product_image_publication_items")
+      .select("error_code")
+      .eq("product_draft_id", productDraftId)
+      .not("error_code", "is", null)
+      .order("publication_order")
+      .order("product_draft_image_id")
+      .limit(1)
+      .maybeSingle();
+    if (response.error) throwDatabaseError(response.error);
+    return response.data?.error_code ?? null;
   }
 
   async claimRun(
@@ -261,18 +286,31 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
     return response.data;
   }
 
-  async retry(productDraftId: string, sellerId: string): Promise<ProductPublicationRetryResult> {
-    const response = await this.database.rpc("retry_product_image_publication", {
+  async retry(
+    productDraftId: string,
+    sellerId: string,
+    delegatedAction: ProductPublicationCorrelation | null,
+  ): Promise<ProductPublicationRetryResult> {
+    const response = await this.database.rpc("retry_product_publication_with_correlation", {
       p_product_draft_id: productDraftId,
       p_seller_id: sellerId,
+      p_delegated_action_request_id: delegatedAction?.requestId ?? null,
+      p_delegated_action_request_fingerprint: delegatedAction?.requestFingerprint ?? null,
     });
-    if (response.error) throwDatabaseError(response.error);
+    if (response.error) {
+      if (isCategoryRequired(response.error)) return "category_required";
+      throwDatabaseError(response.error);
+    }
     return parseResult<ProductPublicationRetryResult>(response.data, [
       "requeued",
       "noop",
       "not_found",
       "not_allowed",
       "cleanup_required",
+      "title_required",
+      "title_invalid",
+      "category_required",
+      "in_progress",
     ]);
   }
 }
@@ -287,6 +325,8 @@ function mapRun(row: RunRow): ProductPublicationRun {
     claimStartedAt: row.claim_started_at,
     errorCode: row.error_code,
     completedAt: row.completed_at,
+    delegatedActionRequestId: row.delegated_action_request_id,
+    delegatedActionRequestFingerprint: row.delegated_action_request_fingerprint,
   };
 }
 
@@ -340,4 +380,8 @@ function parseResult<T extends string>(value: string, allowed: readonly T[]): T 
 function throwDatabaseError(error: { message: string }): never {
   console.error("[Product publication] Database operation failed.", error);
   throw new Error("Product publication database operation failed.");
+}
+
+function isCategoryRequired(error: { message: string }): boolean {
+  return error.message.includes("product_publication_category_required");
 }

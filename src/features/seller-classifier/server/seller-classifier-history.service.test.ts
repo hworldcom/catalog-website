@@ -41,6 +41,15 @@ describe("SellerClassifierHistoryService", () => {
       "open_import",
       "open_import",
     ]);
+    expect(page.workflows.map((item) => item.productAccessAction)).toEqual([
+      "none",
+      "none",
+      "none",
+      "none",
+      "none",
+      "none",
+      "none",
+    ]);
     expect(decodeSellerClassifierHistoryCursor(page.nextCursor!)).toEqual({
       version: 1,
       createdAt: records[6]!.createdAt,
@@ -67,6 +76,28 @@ describe("SellerClassifierHistoryService", () => {
       { originalFiles: 4, processedFiles: 0, groups: 0, productDrafts: null },
       { originalFiles: 4, processedFiles: 0, groups: 0, productDrafts: 0 },
     ]);
+  });
+
+  it("exposes product access independently from a failed import action", async () => {
+    const repository = repositoryMock([
+      record(1, "failed", {
+        withImport: true,
+        productDraftCount: 2,
+        errorCode: "seller_classifier_import_incomplete",
+        importErrorCode: "seller_classifier_import_incomplete",
+      }),
+    ]);
+
+    const page = await new SellerClassifierHistoryService(repository).list(uuid(900), {
+      cursor: null,
+      limit: 10,
+    });
+
+    expect(page.workflows[0]).toMatchObject({
+      primaryAction: "open_import",
+      productAccessAction: "open_products",
+      counts: { productDrafts: 2 },
+    });
   });
 
   it.each([
@@ -209,6 +240,7 @@ function record(
     errorCode?: string | null;
     importErrorCode?: string | null;
     retryable?: boolean;
+    productDraftCount?: number;
   } = {},
 ): SellerClassifierHistoryRecord {
   return {
@@ -219,13 +251,14 @@ function record(
     originalFileCount: 4,
     processedFileCount: 0,
     groupCount: 0,
-    productDraftCount: 0,
+    productDraftCount: options.productDraftCount ?? 0,
     errorCode: options.errorCode ?? null,
     retryable: options.retryable ?? false,
     createdAt: `2026-07-${String(30 - value).padStart(2, "0")}T10:00:00.000Z`,
     updatedAt: `2026-07-${String(30 - value).padStart(2, "0")}T10:01:00.000Z`,
     import: options.withImport
       ? {
+          id: uuid(value + 100),
           status:
             options.importErrorCode === "seller_classifier_import_incomplete"
               ? "completed_with_errors"

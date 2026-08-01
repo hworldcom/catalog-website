@@ -218,6 +218,7 @@ function repositoryMock(
   return {
     authorize: vi.fn(),
     getRun: vi.fn(async () => currentRun),
+    getFirstItemErrorCode: vi.fn(async () => null),
     claimRun: vi.fn(async () => claimed),
     listItems: vi.fn(overrides.listItems ?? (async () => overrides.items ?? [item(1)])),
     recordObjectCreated: vi.fn(async () => true),
@@ -267,6 +268,8 @@ function run(): ProductPublicationRun {
     claimStartedAt: new Date().toISOString(),
     errorCode: null,
     completedAt: null,
+    delegatedActionRequestId: null,
+    delegatedActionRequestFingerprint: null,
   };
 }
 

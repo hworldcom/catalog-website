@@ -48,7 +48,8 @@ INSERT INTO public.products (
   seller_id,
   title,
   title_source,
-  status
+  status,
+  category_id
 )
 VALUES
   (
@@ -56,28 +57,32 @@ VALUES
     '26000000-0000-0000-0000-000000000021',
     '',
     NULL,
-    'draft'
+    'draft',
+    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
   ),
   (
     '26000000-0000-0000-0000-000000000212',
     '26000000-0000-0000-0000-000000000021',
     'Draft title',
     'human',
-    'draft'
+    'draft',
+    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
   ),
   (
     '26000000-0000-0000-0000-000000000213',
     '26000000-0000-0000-0000-000000000021',
     repeat('x', 121),
     'human',
-    'draft'
+    'draft',
+    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
   ),
   (
     '26000000-0000-0000-0000-000000000214',
     '26000000-0000-0000-0000-000000000021',
     'Archived title',
     'human',
-    'archived'
+    'archived',
+    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
   );
 
 SELECT is(
@@ -123,7 +128,9 @@ SELECT throws_ok(
 );
 
 UPDATE public.products
-SET status = 'published'
+SET
+  status = 'published',
+  cover_image_url = 'https://example.test/qa-0026g-published.jpg'
 WHERE id = '26000000-0000-0000-0000-000000000212';
 
 SELECT is(

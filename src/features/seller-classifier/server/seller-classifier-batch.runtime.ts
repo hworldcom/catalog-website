@@ -1,5 +1,6 @@
 import { ClassifierBatchProvisioningClient } from "./classifier-batch-provisioning-api";
 import { HttpClassifierReviewClient } from "./classifier-review-api";
+import { HttpClassifierMultimodalComparisonClient } from "./classifier-multimodal-comparison-api";
 import { HttpClassifierWorkflowClient } from "./classifier-workflow-api";
 import { ApprovedGroupsClient } from "@/features/admin/server/classifier-approved-groups.service";
 import { LocalClassifierImportDispatcher } from "@/features/admin/server/classifier-import.dispatcher";
@@ -12,6 +13,7 @@ import {
 } from "./seller-classifier-batch.service";
 import { SellerClassifierWorkflowService } from "./seller-classifier-workflow.service";
 import { SellerClassifierReviewService } from "./seller-classifier-review.service";
+import { SellerClassifierComparisonService } from "./seller-classifier-comparison.service";
 import { SellerClassifierImportService } from "./seller-classifier-import.service";
 import { SupabaseSellerClassifierBatchRepository } from "./supabase-seller-classifier-batch.repository";
 import { SupabaseSellerClassifierImportRepository } from "./supabase-seller-classifier-import.repository";
@@ -20,6 +22,7 @@ let servicePromise: Promise<SellerClassifierBatchService> | undefined;
 let ownershipServicePromise: Promise<SellerClassifierBatchOwnershipService> | undefined;
 let workflowServicePromise: Promise<SellerClassifierWorkflowService> | undefined;
 let reviewServicePromise: Promise<SellerClassifierReviewService> | undefined;
+let comparisonServicePromise: Promise<SellerClassifierComparisonService> | undefined;
 let importServicePromise: Promise<SellerClassifierImportService> | undefined;
 
 export function getSellerClassifierBatchService(): Promise<SellerClassifierBatchService> {
@@ -40,6 +43,11 @@ export function getSellerClassifierWorkflowService(): Promise<SellerClassifierWo
 export function getSellerClassifierReviewService(): Promise<SellerClassifierReviewService> {
   reviewServicePromise ??= createSellerClassifierReviewService();
   return reviewServicePromise;
+}
+
+export function getSellerClassifierComparisonService(): Promise<SellerClassifierComparisonService> {
+  comparisonServicePromise ??= createSellerClassifierComparisonService();
+  return comparisonServicePromise;
 }
 
 export function getSellerClassifierImportService(): Promise<SellerClassifierImportService> {
@@ -86,6 +94,19 @@ async function createSellerClassifierReviewService(): Promise<SellerClassifierRe
   return new SellerClassifierReviewService(
     new SupabaseSellerClassifierBatchRepository(supabaseAdmin),
     new HttpClassifierReviewClient({
+      baseUrl: config.classifierApiBaseUrl,
+      timeoutMs: config.classifierCommandTimeoutMs,
+    }),
+    config.classifierOrganizationId,
+  );
+}
+
+async function createSellerClassifierComparisonService(): Promise<SellerClassifierComparisonService> {
+  const config = readSellerClassifierBatchConfig();
+  const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+  return new SellerClassifierComparisonService(
+    new SupabaseSellerClassifierBatchRepository(supabaseAdmin),
+    new HttpClassifierMultimodalComparisonClient({
       baseUrl: config.classifierApiBaseUrl,
       timeoutMs: config.classifierCommandTimeoutMs,
     }),

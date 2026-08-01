@@ -23,6 +23,15 @@ import { t, tr, useLang } from "@/lib/i18n";
 import { approveMyClassifierBatchAndCreateDrafts } from "../seller-classifier-import.functions";
 import type { SellerClassifierDraftImportSnapshot } from "../seller-classifier-import.types";
 import {
+  dispatchMyClassifierMultimodalComparison,
+  getMyClassifierMultimodalComparisonStatus,
+} from "../seller-classifier-comparison.functions";
+import type {
+  SellerClassifierComparisonClient,
+  SellerClassifierComparisonFailureCode,
+  SellerClassifierComparisonSnapshot,
+} from "../seller-classifier-comparison.types";
+import {
   approveMyClassifierGroup,
   createMyClassifierGroup,
   getMyClassifierReview,
@@ -88,6 +97,12 @@ const S = {
     "Weryfikacja klasyfikatora nie jest skonfigurowana.",
     "Die Klassifikatorprüfung ist nicht konfiguriert.",
     "Phần xem xét phân loại chưa được cấu hình.",
+  ),
+  administratorRequired: t(
+    "Administrator access is required for this workflow.",
+    "Ten proces wymaga dostępu administratora.",
+    "Für diesen Ablauf ist Administratorzugriff erforderlich.",
+    "Quy trình này yêu cầu quyền quản trị viên.",
   ),
   unavailable: t(
     "Classifier review is temporarily unavailable.",
@@ -319,9 +334,151 @@ const S = {
     "Bild nicht verfügbar",
     "Ảnh không khả dụng",
   ),
+  actionInProgress: t(
+    "This action is already being reconciled. Try again to check its result.",
+    "Ta czynność jest już uzgadniana. Spróbuj ponownie, aby sprawdzić wynik.",
+    "Diese Aktion wird bereits abgeglichen. Versuchen Sie es erneut, um das Ergebnis zu prüfen.",
+    "Thao tác này đang được đối soát. Hãy thử lại để kiểm tra kết quả.",
+  ),
+  actionConflict: t(
+    "This saved request belongs to a different action. Review the current action before submitting it again.",
+    "Zapisane żądanie dotyczy innej czynności. Sprawdź bieżącą czynność przed ponownym wysłaniem.",
+    "Diese gespeicherte Anfrage gehört zu einer anderen Aktion. Prüfen Sie die aktuelle Aktion vor dem erneuten Absenden.",
+    "Yêu cầu đã lưu thuộc về một thao tác khác. Hãy kiểm tra thao tác hiện tại trước khi gửi lại.",
+  ),
+  submitNewAction: t(
+    "Submit as a new action",
+    "Wyślij jako nową czynność",
+    "Als neue Aktion senden",
+    "Gửi dưới dạng thao tác mới",
+  ),
+  comparisonTitle: t(
+    "Optional multimodal comparison",
+    "Opcjonalne porównanie multimodalne",
+    "Optionaler multimodaler Vergleich",
+    "So sánh đa phương thức tùy chọn",
+  ),
+  comparisonDescription: t(
+    "Use Gemini to refine eligible uncertain image pairs before making review changes.",
+    "Użyj Gemini, aby doprecyzować kwalifikujące się niepewne pary obrazów przed zmianą weryfikacji.",
+    "Verwenden Sie Gemini, um geeignete unsichere Bildpaare vor Änderungen an der Prüfung zu verfeinern.",
+    "Dùng Gemini để tinh chỉnh các cặp ảnh chưa chắc chắn đủ điều kiện trước khi thay đổi phần xem xét.",
+  ),
+  comparisonRun: t(
+    "Run multimodal comparison",
+    "Uruchom porównanie multimodalne",
+    "Multimodalen Vergleich ausführen",
+    "Chạy so sánh đa phương thức",
+  ),
+  comparisonRetry: t(
+    "Retry multimodal comparison",
+    "Ponów porównanie multimodalne",
+    "Multimodalen Vergleich wiederholen",
+    "Thử lại so sánh đa phương thức",
+  ),
+  comparisonRunTitle: t(
+    "Run multimodal comparison?",
+    "Uruchomić porównanie multimodalne?",
+    "Multimodalen Vergleich ausführen?",
+    "Chạy so sánh đa phương thức?",
+  ),
+  comparisonRetryTitle: t(
+    "Retry multimodal comparison?",
+    "Ponowić porównanie multimodalne?",
+    "Multimodalen Vergleich wiederholen?",
+    "Thử lại so sánh đa phương thức?",
+  ),
+  comparisonCostWarning: t(
+    "This optional step sends eligible uncertain image pairs to Google Gemini and may incur usage costs. It may take several minutes and must run before manual review changes.",
+    "Ten opcjonalny krok wysyła kwalifikujące się niepewne pary obrazów do Google Gemini i może generować koszty użycia. Może potrwać kilka minut i musi zostać wykonany przed ręcznymi zmianami weryfikacji.",
+    "Dieser optionale Schritt sendet geeignete unsichere Bildpaare an Google Gemini und kann Nutzungskosten verursachen. Er kann mehrere Minuten dauern und muss vor manuellen Prüfänderungen ausgeführt werden.",
+    "Bước tùy chọn này gửi các cặp ảnh chưa chắc chắn đủ điều kiện đến Google Gemini và có thể phát sinh chi phí sử dụng. Quá trình có thể mất vài phút và phải chạy trước các thay đổi xem xét thủ công.",
+  ),
+  comparisonRunConfirm: t(
+    "Run comparison",
+    "Uruchom porównanie",
+    "Vergleich ausführen",
+    "Chạy so sánh",
+  ),
+  comparisonChecking: t(
+    "Checking multimodal comparison status…",
+    "Sprawdzanie stanu porównania multimodalnego…",
+    "Status des multimodalen Vergleichs wird geprüft…",
+    "Đang kiểm tra trạng thái so sánh đa phương thức…",
+  ),
+  comparisonRunning: t(
+    "Multimodal comparison is running. This may take several minutes.",
+    "Trwa porównanie multimodalne. Może to potrwać kilka minut.",
+    "Der multimodale Vergleich läuft. Dies kann mehrere Minuten dauern.",
+    "So sánh đa phương thức đang chạy. Quá trình có thể mất vài phút.",
+  ),
+  comparisonCompleted: t(
+    "Multimodal comparison completed. Review groups were refreshed.",
+    "Porównanie multimodalne zakończone. Grupy weryfikacji zostały odświeżone.",
+    "Der multimodale Vergleich ist abgeschlossen. Die Prüfgruppen wurden aktualisiert.",
+    "So sánh đa phương thức đã hoàn tất. Các nhóm xem xét đã được làm mới.",
+  ),
+  comparisonStatusUnavailable: t(
+    "Multimodal comparison status could not be loaded.",
+    "Nie można załadować stanu porównania multimodalnego.",
+    "Der Status des multimodalen Vergleichs konnte nicht geladen werden.",
+    "Không thể tải trạng thái so sánh đa phương thức.",
+  ),
+  comparisonRefreshStatus: t(
+    "Refresh comparison status",
+    "Odśwież stan porównania",
+    "Vergleichsstatus aktualisieren",
+    "Làm mới trạng thái so sánh",
+  ),
+  comparisonDispatchUnavailable: t(
+    "Multimodal comparison could not be started.",
+    "Nie można uruchomić porównania multimodalnego.",
+    "Der multimodale Vergleich konnte nicht gestartet werden.",
+    "Không thể bắt đầu so sánh đa phương thức.",
+  ),
+  comparisonProviderUnavailable: t(
+    "The comparison provider is temporarily unavailable.",
+    "Dostawca porównania jest tymczasowo niedostępny.",
+    "Der Vergleichsanbieter ist vorübergehend nicht verfügbar.",
+    "Nhà cung cấp so sánh tạm thời không khả dụng.",
+  ),
+  comparisonStorageUnavailable: t(
+    "One or more comparison images could not be read.",
+    "Nie można odczytać co najmniej jednego obrazu do porównania.",
+    "Mindestens ein Vergleichsbild konnte nicht gelesen werden.",
+    "Không thể đọc một hoặc nhiều ảnh so sánh.",
+  ),
+  comparisonPersistenceUnavailable: t(
+    "Comparison results could not be saved.",
+    "Nie można zapisać wyników porównania.",
+    "Die Vergleichsergebnisse konnten nicht gespeichert werden.",
+    "Không thể lưu kết quả so sánh.",
+  ),
+  comparisonNotAllowed: t(
+    "The review changed before comparison completed. Review the latest groups.",
+    "Weryfikacja zmieniła się przed zakończeniem porównania. Sprawdź najnowsze grupy.",
+    "Die Prüfung wurde vor Abschluss des Vergleichs geändert. Prüfen Sie die aktuellen Gruppen.",
+    "Phần xem xét đã thay đổi trước khi so sánh hoàn tất. Hãy xem lại các nhóm mới nhất.",
+  ),
+  comparisonClaimExpired: t(
+    "Multimodal comparison took too long to complete.",
+    "Porównanie multimodalne trwało zbyt długo.",
+    "Der multimodale Vergleich dauerte zu lange.",
+    "So sánh đa phương thức mất quá nhiều thời gian để hoàn tất.",
+  ),
+  comparisonUnknownFailure: t(
+    "Multimodal comparison failed unexpectedly.",
+    "Porównanie multimodalne nieoczekiwanie się nie powiodło.",
+    "Der multimodale Vergleich ist unerwartet fehlgeschlagen.",
+    "So sánh đa phương thức gặp lỗi ngoài dự kiến.",
+  ),
   source: t("Grouping source", "Źródło grupowania", "Gruppierungsquelle", "Nguồn nhóm"),
   image: t("image", "obraz", "Bild", "ảnh"),
   images: t("images", "obrazy", "Bilder", "ảnh"),
+};
+
+export type ClassifierActionSubmissionOptions = {
+  newRequest?: boolean;
 };
 
 export type SellerClassifierReviewClient = {
@@ -338,8 +495,14 @@ export type SellerClassifierReviewClient = {
   ): Promise<SellerClassifierReviewSnapshot>;
   rejectImage(input: SellerClassifierGroupImageInput): Promise<SellerClassifierReviewSnapshot>;
   restoreImage(input: SellerClassifierGroupImageInput): Promise<SellerClassifierReviewSnapshot>;
-  approveGroup(input: SellerClassifierGroupInput): Promise<SellerClassifierReviewSnapshot>;
-  approveAndCreate(input: { workflowId: string }): Promise<SellerClassifierDraftImportSnapshot>;
+  approveGroup(
+    input: SellerClassifierGroupInput,
+    options?: ClassifierActionSubmissionOptions,
+  ): Promise<SellerClassifierReviewSnapshot>;
+  approveAndCreate(
+    input: { workflowId: string },
+    options?: ClassifierActionSubmissionOptions,
+  ): Promise<SellerClassifierDraftImportSnapshot>;
 };
 
 type ThumbnailDependencies = {
@@ -353,6 +516,18 @@ type PageError = {
 };
 
 type MutationOperation = () => Promise<SellerClassifierReviewSnapshot>;
+type MutationRunner = (
+  label: string,
+  operation: MutationOperation,
+  retryAsNewAction?: () => void,
+) => Promise<void>;
+
+export type SellerClassifierReviewLabels = {
+  title: string;
+  description: string;
+  approveAndCreate: string;
+  creatingDrafts: string;
+};
 
 const defaultThumbnailDependencies: ThumbnailDependencies = {
   getAccessToken: getSupabaseAccessToken,
@@ -381,6 +556,8 @@ export function SellerClassifierReviewScreen({
   const restoreImage = useServerFn(restoreMyClassifierImage);
   const approveGroup = useServerFn(approveMyClassifierGroup);
   const approveAndCreate = useServerFn(approveMyClassifierBatchAndCreateDrafts);
+  const dispatchComparison = useServerFn(dispatchMyClassifierMultimodalComparison);
+  const getComparisonStatus = useServerFn(getMyClassifierMultimodalComparisonStatus);
 
   const client = useMemo<SellerClassifierReviewClient>(
     () => ({
@@ -415,10 +592,19 @@ export function SellerClassifierReviewScreen({
     ],
   );
 
+  const comparisonClient = useMemo<SellerClassifierComparisonClient>(
+    () => ({
+      dispatchComparison: (id) => dispatchComparison({ data: { workflowId: id } }),
+      getComparisonStatus: (id) => getComparisonStatus({ data: { workflowId: id } }),
+    }),
+    [dispatchComparison, getComparisonStatus],
+  );
+
   return (
     <SellerClassifierReviewScreenView
       workflowId={workflowId}
       client={client}
+      comparisonClient={comparisonClient}
       initialNotice={notice}
       onImportAccepted={() =>
         void navigate({
@@ -434,15 +620,21 @@ export function SellerClassifierReviewScreen({
 export function SellerClassifierReviewScreenView({
   workflowId,
   client,
+  comparisonClient,
+  comparisonPollIntervalMs = 5_000,
   thumbnailDependencies = defaultThumbnailDependencies,
   initialNotice,
   onImportAccepted = () => {},
+  labels,
 }: {
   workflowId: string;
   client: SellerClassifierReviewClient;
+  comparisonClient?: SellerClassifierComparisonClient;
+  comparisonPollIntervalMs?: number;
   thumbnailDependencies?: ThumbnailDependencies;
   initialNotice?: "groups-not-approved";
   onImportAccepted?: () => void;
+  labels?: Partial<SellerClassifierReviewLabels>;
 }) {
   const [snapshot, setSnapshot] = useState<SellerClassifierReviewSnapshot | null>(null);
   const [categories, setCategories] = useState<SellerClassifierCategory[] | null>(null);
@@ -459,9 +651,33 @@ export function SellerClassifierReviewScreenView({
   const [categoryDrafts, setCategoryDrafts] = useState<Record<string, string>>({});
   const [snapshotGeneration, setSnapshotGeneration] = useState(0);
   const [transientStateVersion, setTransientStateVersion] = useState(0);
+  const [conflictRetry, setConflictRetry] = useState<(() => void) | null>(null);
+  const [reviewMutationOccurred, setReviewMutationOccurred] = useState(false);
+  const [comparisonStatus, setComparisonStatus] =
+    useState<SellerClassifierComparisonSnapshot | null>(null);
+  const [comparisonStatusLoading, setComparisonStatusLoading] = useState(
+    comparisonClient !== undefined,
+  );
+  const [comparisonStatusError, setComparisonStatusError] = useState(false);
+  const [comparisonActionError, setComparisonActionError] = useState<string | null>(null);
+  const [comparisonDispatchConflict, setComparisonDispatchConflict] = useState(false);
+  const [comparisonDispatchRetryAvailable, setComparisonDispatchRetryAvailable] = useState(false);
+  const [comparisonSuccess, setComparisonSuccess] = useState<string | null>(null);
+  const [comparisonCommandBusy, setComparisonCommandBusy] = useState(false);
+  const [comparisonReviewRefreshBusy, setComparisonReviewRefreshBusy] = useState(false);
+  const [comparisonReviewRefreshError, setComparisonReviewRefreshError] = useState(false);
   const mutationLock = useRef(false);
   const loadRequest = useRef(0);
   const initialNoticePending = useRef(initialNotice === "groups-not-approved");
+  const comparisonGeneration = useRef(0);
+  const comparisonReadInFlight = useRef<{
+    generation: number;
+    promise: Promise<SellerClassifierComparisonSnapshot>;
+  } | null>(null);
+  const comparisonCompletionArmed = useRef(false);
+  const comparisonNotAllowedHandled = useRef(false);
+  const comparisonCommandLock = useRef(false);
+  const comparisonBlocksReviewRef = useRef(false);
 
   const resetTransientState = useCallback(() => {
     setSelectedImageIds(new Set());
@@ -480,6 +696,118 @@ export function SellerClassifierReviewScreenView({
       resetTransientState();
     },
     [resetTransientState],
+  );
+
+  const refreshReviewForComparison = useCallback(
+    async (generation: number): Promise<boolean> => {
+      setComparisonReviewRefreshBusy(true);
+      setComparisonReviewRefreshError(false);
+      try {
+        const next = await client.getReview(workflowId);
+        if (generation !== comparisonGeneration.current) return false;
+        acceptSnapshot(next);
+        return true;
+      } catch (error) {
+        if (generation !== comparisonGeneration.current) return false;
+        if (reviewErrorCode(error) === "seller_classifier_batch_not_found") {
+          setPageError(reviewPageError(error));
+        } else {
+          setComparisonReviewRefreshError(true);
+        }
+        return false;
+      } finally {
+        if (generation === comparisonGeneration.current) {
+          setComparisonReviewRefreshBusy(false);
+        }
+      }
+    },
+    [acceptSnapshot, client, workflowId],
+  );
+
+  const acceptComparisonStatus = useCallback(
+    async (next: SellerClassifierComparisonSnapshot, generation: number) => {
+      if (generation !== comparisonGeneration.current) return;
+      setComparisonStatus(next);
+      setComparisonStatusError(false);
+
+      if (next.status === "pending" || next.status === "running") {
+        comparisonCompletionArmed.current = true;
+        comparisonNotAllowedHandled.current = false;
+        setComparisonActionError(null);
+        setComparisonDispatchRetryAvailable(false);
+        setComparisonSuccess(null);
+        return;
+      }
+
+      if (next.status === "completed") {
+        setComparisonActionError(null);
+        setComparisonDispatchRetryAvailable(false);
+        setComparisonSuccess(tr(S.comparisonCompleted));
+        if (comparisonCompletionArmed.current) {
+          comparisonCompletionArmed.current = false;
+          if (!(await refreshReviewForComparison(generation))) {
+            setComparisonSuccess(null);
+          }
+        }
+        return;
+      }
+
+      comparisonCompletionArmed.current = false;
+      if (next.status === "failed") {
+        setComparisonDispatchRetryAvailable(false);
+        setComparisonSuccess(null);
+        setComparisonActionError(comparisonFailureCopy(next.failureCode));
+        if (next.failureCode === "comparison_not_allowed" && !comparisonNotAllowedHandled.current) {
+          comparisonNotAllowedHandled.current = true;
+          await refreshReviewForComparison(generation);
+        }
+        return;
+      }
+
+      comparisonNotAllowedHandled.current = false;
+      setComparisonSuccess(null);
+    },
+    [refreshReviewForComparison],
+  );
+
+  const readComparisonStatus = useCallback(
+    (showLoading = false): Promise<SellerClassifierComparisonSnapshot> => {
+      if (!comparisonClient) {
+        return Promise.reject(new Error("Comparison capability is not available."));
+      }
+      const generation = comparisonGeneration.current;
+      const existing = comparisonReadInFlight.current;
+      if (existing?.generation === generation) return existing.promise;
+
+      if (showLoading) setComparisonStatusLoading(true);
+      const promise = (async () => {
+        try {
+          const next = await comparisonClient.getComparisonStatus(workflowId);
+          if (generation !== comparisonGeneration.current) return next;
+          await acceptComparisonStatus(next, generation);
+          return next;
+        } catch (error) {
+          if (generation === comparisonGeneration.current) {
+            if (reviewErrorCode(error) === "seller_classifier_batch_not_found") {
+              setPageError(reviewPageError(error));
+            } else {
+              setComparisonStatusError(true);
+            }
+          }
+          throw error;
+        } finally {
+          if (comparisonReadInFlight.current?.generation === generation) {
+            comparisonReadInFlight.current = null;
+          }
+          if (generation === comparisonGeneration.current) {
+            setComparisonStatusLoading(false);
+          }
+        }
+      })();
+      comparisonReadInFlight.current = { generation, promise };
+      return promise;
+    },
+    [acceptComparisonStatus, comparisonClient, workflowId],
   );
 
   const loadPage = useCallback(async () => {
@@ -515,6 +843,57 @@ export function SellerClassifierReviewScreenView({
     };
   }, [loadPage]);
 
+  useEffect(() => {
+    setReviewMutationOccurred(false);
+    comparisonCommandLock.current = false;
+    setComparisonCommandBusy(false);
+    comparisonCompletionArmed.current = false;
+    comparisonNotAllowedHandled.current = false;
+    comparisonReadInFlight.current = null;
+    setComparisonStatus(null);
+    setComparisonStatusError(false);
+    setComparisonActionError(null);
+    setComparisonDispatchConflict(false);
+    setComparisonDispatchRetryAvailable(false);
+    setComparisonSuccess(null);
+    setComparisonReviewRefreshError(false);
+
+    comparisonGeneration.current += 1;
+    if (!comparisonClient) {
+      comparisonCommandLock.current = false;
+      setComparisonCommandBusy(false);
+      setComparisonStatusLoading(false);
+      return;
+    }
+
+    setComparisonStatusLoading(true);
+    void readComparisonStatus(true).catch(() => undefined);
+    return () => {
+      comparisonGeneration.current += 1;
+      comparisonReadInFlight.current = null;
+    };
+  }, [comparisonClient, readComparisonStatus, workflowId]);
+
+  useEffect(() => {
+    if (
+      !comparisonClient ||
+      comparisonStatusError ||
+      (comparisonStatus?.status !== "pending" && comparisonStatus?.status !== "running")
+    ) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      void readComparisonStatus().catch(() => undefined);
+    }, comparisonPollIntervalMs);
+    return () => window.clearTimeout(timeout);
+  }, [
+    comparisonClient,
+    comparisonPollIntervalMs,
+    comparisonStatus,
+    comparisonStatusError,
+    readComparisonStatus,
+  ]);
+
   const recoverSnapshot = useCallback(
     async (message: string) => {
       try {
@@ -522,7 +901,10 @@ export function SellerClassifierReviewScreenView({
         acceptSnapshot(next);
         setActionError(message);
       } catch (error) {
-        if (reviewErrorCode(error) === "seller_classifier_batch_not_found") {
+        if (
+          reviewErrorCode(error) === "seller_classifier_batch_not_found" ||
+          reviewErrorCode(error) === "delegated_upload_workflow_not_found"
+        ) {
           setPageError(reviewPageError(error));
           return;
         }
@@ -532,24 +914,100 @@ export function SellerClassifierReviewScreenView({
     [acceptSnapshot, client, workflowId],
   );
 
+  const dispatchComparison = useCallback(async () => {
+    if (
+      !comparisonClient ||
+      mutationLock.current ||
+      comparisonCommandLock.current ||
+      comparisonBlocksReviewRef.current
+    ) {
+      return;
+    }
+
+    comparisonCommandLock.current = true;
+    comparisonGeneration.current += 1;
+    comparisonCompletionArmed.current = false;
+    comparisonNotAllowedHandled.current = false;
+    setComparisonCommandBusy(true);
+    setComparisonStatusError(false);
+    setComparisonActionError(null);
+    setComparisonDispatchConflict(false);
+    setComparisonDispatchRetryAvailable(false);
+    setComparisonSuccess(null);
+    setComparisonReviewRefreshError(false);
+
+    const generation = comparisonGeneration.current;
+    try {
+      const next = await comparisonClient.dispatchComparison(workflowId);
+      await acceptComparisonStatus(next, generation);
+    } catch (error) {
+      if (generation !== comparisonGeneration.current) return;
+      const code = reviewErrorCode(error);
+      if (code === "seller_classifier_batch_not_found") {
+        setPageError(reviewPageError(error));
+      } else if (code === "seller_classifier_multimodal_comparison_not_allowed") {
+        setComparisonDispatchConflict(true);
+        setComparisonActionError(tr(S.comparisonNotAllowed));
+        await refreshReviewForComparison(generation);
+      } else if (
+        code === "seller_classifier_multimodal_comparison_unavailable" ||
+        code === "seller_classifier_integration_unavailable"
+      ) {
+        setComparisonDispatchRetryAvailable(true);
+        setComparisonActionError(tr(S.comparisonDispatchUnavailable));
+        try {
+          await readComparisonStatus();
+        } catch {
+          // The original command error remains visible with an explicit confirmed retry.
+        }
+      } else {
+        setComparisonActionError(tr(S.comparisonDispatchUnavailable));
+      }
+    } finally {
+      if (generation === comparisonGeneration.current) {
+        comparisonCommandLock.current = false;
+        setComparisonCommandBusy(false);
+      }
+    }
+  }, [
+    acceptComparisonStatus,
+    comparisonClient,
+    readComparisonStatus,
+    refreshReviewForComparison,
+    workflowId,
+  ]);
+
   const runMutation = useCallback(
-    async (label: string, operation: MutationOperation) => {
-      if (mutationLock.current) return;
+    async (label: string, operation: MutationOperation, retryAsNewAction?: () => void) => {
+      if (mutationLock.current || comparisonBlocksReviewRef.current) return;
       mutationLock.current = true;
       setBusyAction(label);
       setActionError(null);
       setActionSuccess(null);
+      setConflictRetry(null);
       try {
         acceptSnapshot(await operation());
+        setReviewMutationOccurred(true);
         setActionSuccess(tr(S.saved));
       } catch (error) {
         const code = reviewErrorCode(error);
-        if (code === "seller_classifier_review_resource_not_found") {
+        if (
+          code === "seller_classifier_review_resource_not_found" ||
+          code === "delegated_review_resource_not_found"
+        ) {
           await recoverSnapshot(tr(S.resourceChanged));
-        } else if (code === "seller_classifier_review_not_allowed") {
+        } else if (
+          code === "seller_classifier_review_not_allowed" ||
+          code === "delegated_review_not_allowed"
+        ) {
           await recoverSnapshot(tr(S.stateChanged));
         } else if (code === "seller_classifier_batch_not_found") {
           setPageError(reviewPageError(error));
+        } else if (code === "delegated_upload_workflow_not_found") {
+          setPageError(reviewPageError(error));
+        } else if (code === "delegated_action_request_conflict" && retryAsNewAction) {
+          setActionError(tr(S.actionConflict));
+          setConflictRetry(() => retryAsNewAction);
         } else {
           setActionError(reviewActionError(error));
         }
@@ -561,29 +1019,55 @@ export function SellerClassifierReviewScreenView({
     [acceptSnapshot, recoverSnapshot],
   );
 
-  const approveAndCreateDrafts = useCallback(async () => {
-    if (mutationLock.current) return;
-    mutationLock.current = true;
-    setBusyAction(tr(S.creatingDrafts));
-    setActionError(null);
-    setActionSuccess(null);
-    try {
-      await client.approveAndCreate({ workflowId });
-      onImportAccepted();
-    } catch (error) {
-      const code = reviewErrorCode(error);
-      if (code === "seller_classifier_groups_not_approved") {
-        await recoverSnapshot(tr(S.staleReview));
-      } else if (code === "seller_classifier_batch_not_found") {
-        setPageError(reviewPageError(error));
-      } else {
-        setActionError(reviewImportActionError(error));
+  const approveAndCreateDrafts = useCallback(
+    async (newRequest = false) => {
+      if (mutationLock.current || comparisonBlocksReviewRef.current) return;
+      mutationLock.current = true;
+      setBusyAction(labels?.creatingDrafts ?? tr(S.creatingDrafts));
+      setActionError(null);
+      setActionSuccess(null);
+      setConflictRetry(null);
+      try {
+        if (newRequest) {
+          await client.approveAndCreate({ workflowId }, { newRequest: true });
+        } else {
+          await client.approveAndCreate({ workflowId });
+        }
+        onImportAccepted();
+      } catch (error) {
+        const code = reviewErrorCode(error);
+        if (
+          code === "seller_classifier_groups_not_approved" ||
+          code === "delegated_review_not_allowed"
+        ) {
+          await recoverSnapshot(tr(S.staleReview));
+        } else if (
+          code === "seller_classifier_batch_not_found" ||
+          code === "delegated_upload_workflow_not_found"
+        ) {
+          setPageError(reviewPageError(error));
+        } else if (code === "delegated_action_request_conflict") {
+          setActionError(tr(S.actionConflict));
+          setConflictRetry(() => () => void approveAndCreateDrafts(true));
+        } else {
+          setActionError(reviewImportActionError(error));
+        }
+      } finally {
+        mutationLock.current = false;
+        setBusyAction(null);
       }
-    } finally {
-      mutationLock.current = false;
-      setBusyAction(null);
-    }
-  }, [client, onImportAccepted, recoverSnapshot, workflowId]);
+    },
+    [client, labels?.creatingDrafts, onImportAccepted, recoverSnapshot, workflowId],
+  );
+
+  const comparisonIsActive =
+    comparisonStatus?.status === "pending" || comparisonStatus?.status === "running";
+  const comparisonBlocksReview =
+    comparisonStatusLoading ||
+    comparisonCommandBusy ||
+    comparisonReviewRefreshBusy ||
+    comparisonIsActive;
+  comparisonBlocksReviewRef.current = comparisonBlocksReview;
 
   if (loading && (!snapshot || !categories)) {
     return (
@@ -610,7 +1094,7 @@ export function SellerClassifierReviewScreenView({
     );
   }
 
-  const isBusy = busyAction !== null;
+  const isBusy = busyAction !== null || comparisonBlocksReview;
   const editableGroups = snapshot.groups.filter(
     (group) => snapshot.stage === "review" && group.status === "proposed",
   );
@@ -624,6 +1108,25 @@ export function SellerClassifierReviewScreenView({
     .map((group) => group.groupId);
   const allGroupsApproved =
     snapshot.groups.length > 0 && snapshot.groups.every((group) => group.status === "approved");
+  const anyGroupApproved = snapshot.groups.some((group) => group.status === "approved");
+  const retryableComparisonFailure =
+    comparisonStatus?.status === "failed" && comparisonStatus.retryable;
+  const retryAfterUncertainDispatch =
+    comparisonDispatchRetryAvailable &&
+    !comparisonDispatchConflict &&
+    !comparisonIsActive &&
+    (comparisonStatusError || !comparisonStatus || comparisonStatus.status === "not_started");
+  const comparisonActionIsRetry = retryableComparisonFailure || retryAfterUncertainDispatch;
+  const comparisonActionVisible =
+    comparisonClient !== undefined &&
+    snapshot.stage === "review" &&
+    (comparisonStatus?.status !== "failed" || retryableComparisonFailure) &&
+    !comparisonDispatchConflict;
+  const comparisonActionDisabled =
+    isBusy ||
+    anyGroupApproved ||
+    reviewMutationOccurred ||
+    (comparisonStatusError && !retryAfterUncertainDispatch);
 
   function toggleImageSelection(imageId: string) {
     setSelectedImageIds((current) => toggleSetValue(current, imageId));
@@ -656,8 +1159,12 @@ export function SellerClassifierReviewScreenView({
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="font-display text-2xl font-semibold tracking-tight">{tr(S.title)}</h1>
-              <CardDescription className="mt-2">{tr(S.description)}</CardDescription>
+              <h1 className="font-display text-2xl font-semibold tracking-tight">
+                {labels?.title ?? tr(S.title)}
+              </h1>
+              <CardDescription className="mt-2">
+                {labels?.description ?? tr(S.description)}
+              </CardDescription>
             </div>
             <Badge variant={snapshot.stage === "approved" ? "default" : "outline"}>
               {snapshot.stage === "approved" ? tr(S.approved) : tr(S.proposed)}
@@ -671,6 +1178,98 @@ export function SellerClassifierReviewScreenView({
           </dl>
         </CardContent>
       </Card>
+
+      {comparisonClient ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{tr(S.comparisonTitle)}</CardTitle>
+            <CardDescription>{tr(S.comparisonDescription)}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {comparisonStatusLoading || comparisonCommandBusy ? (
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                {tr(S.comparisonChecking)}
+              </p>
+            ) : null}
+
+            {comparisonIsActive ? (
+              <Alert role="status">
+                <AlertDescription>{tr(S.comparisonRunning)}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {comparisonStatusError ? (
+              <Alert variant="destructive" role="alert">
+                <AlertDescription className="space-y-3">
+                  <p>{tr(S.comparisonStatusUnavailable)}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={comparisonStatusLoading || comparisonCommandBusy}
+                    onClick={() => void readComparisonStatus(true).catch(() => undefined)}
+                  >
+                    {tr(S.comparisonRefreshStatus)}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {comparisonReviewRefreshError ? (
+              <Alert variant="destructive" role="alert">
+                <AlertDescription className="space-y-3">
+                  <p>{tr(S.unavailable)}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={comparisonReviewRefreshBusy}
+                    onClick={() => void refreshReviewForComparison(comparisonGeneration.current)}
+                  >
+                    {tr(S.retry)}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {comparisonActionError ? (
+              <Alert variant="destructive" role="alert">
+                <AlertDescription>{comparisonActionError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {comparisonSuccess ? (
+              <Alert role="status">
+                <AlertDescription>{comparisonSuccess}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {comparisonActionVisible ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" disabled={comparisonActionDisabled}>
+                    {comparisonActionIsRetry ? tr(S.comparisonRetry) : tr(S.comparisonRun)}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {comparisonActionIsRetry
+                        ? tr(S.comparisonRetryTitle)
+                        : tr(S.comparisonRunTitle)}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>{tr(S.comparisonCostWarning)}</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{tr(S.cancel)}</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => void dispatchComparison()}>
+                      {tr(S.comparisonRunConfirm)}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {editableGroups.length > 0 ? (
         <div className="grid gap-4 xl:grid-cols-2">
@@ -766,7 +1365,14 @@ export function SellerClassifierReviewScreenView({
       {actionError ? (
         <Alert variant="destructive" role="alert">
           <AlertTitle>{tr(S.loadErrorTitle)}</AlertTitle>
-          <AlertDescription>{actionError}</AlertDescription>
+          <AlertDescription className="space-y-3">
+            <p>{actionError}</p>
+            {conflictRetry ? (
+              <Button type="button" variant="outline" onClick={conflictRetry}>
+                {tr(S.submitNewAction)}
+              </Button>
+            ) : null}
+          </AlertDescription>
         </Alert>
       ) : null}
       {actionSuccess ? (
@@ -824,7 +1430,9 @@ export function SellerClassifierReviewScreenView({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{tr(S.approveAndCreate)}</CardTitle>
+          <CardTitle className="text-base">
+            {labels?.approveAndCreate ?? tr(S.approveAndCreate)}
+          </CardTitle>
           <CardDescription>{draftActionHelp}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -833,7 +1441,7 @@ export function SellerClassifierReviewScreenView({
             disabled={isBusy || !allGroupsApproved}
             onClick={() => void approveAndCreateDrafts()}
           >
-            {tr(S.approveAndCreate)}
+            {labels?.approveAndCreate ?? tr(S.approveAndCreate)}
           </Button>
         </CardContent>
       </Card>
@@ -878,7 +1486,7 @@ function ReviewGroupCard({
   onMoveTargetChange: (imageId: string, groupId: string) => void;
   onDuplicateTargetChange: (imageId: string, targetImageId: string) => void;
   onCategoryDraftChange: (categorySlug: string) => void;
-  runMutation: (label: string, operation: MutationOperation) => Promise<void>;
+  runMutation: MutationRunner;
   client: SellerClassifierReviewClient;
   workflowId: string;
 }) {
@@ -1020,8 +1628,16 @@ function ReviewGroupCard({
               type="button"
               disabled={isBusy || !canApprove}
               onClick={() =>
-                void runMutation(tr(S.approveGroup), () =>
-                  client.approveGroup({ workflowId, groupId: group.groupId }),
+                void runMutation(
+                  tr(S.approveGroup),
+                  () => client.approveGroup({ workflowId, groupId: group.groupId }),
+                  () =>
+                    void runMutation(tr(S.approveGroup), () =>
+                      client.approveGroup(
+                        { workflowId, groupId: group.groupId },
+                        { newRequest: true },
+                      ),
+                    ),
                 )
               }
             >
@@ -1134,7 +1750,7 @@ function ReviewImageCard({
   onToggleSelection: () => void;
   onMoveTargetChange: (groupId: string) => void;
   onDuplicateTargetChange: (imageId: string) => void;
-  runMutation: (label: string, operation: MutationOperation) => Promise<void>;
+  runMutation: MutationRunner;
   client: SellerClassifierReviewClient;
   workflowId: string;
 }) {
@@ -1541,6 +2157,26 @@ function groupLabel(
   return `${tr(S.group)} ${index >= 0 ? index + 1 : "—"}`;
 }
 
+function comparisonFailureCopy(code: SellerClassifierComparisonFailureCode | null): string {
+  switch (code) {
+    case "comparison_dispatch_unavailable":
+      return tr(S.comparisonDispatchUnavailable);
+    case "comparison_provider_unavailable":
+      return tr(S.comparisonProviderUnavailable);
+    case "comparison_storage_unavailable":
+      return tr(S.comparisonStorageUnavailable);
+    case "comparison_persistence_unavailable":
+      return tr(S.comparisonPersistenceUnavailable);
+    case "comparison_not_allowed":
+      return tr(S.comparisonNotAllowed);
+    case "comparison_claim_expired":
+      return tr(S.comparisonClaimExpired);
+    case "comparison_unknown_failure":
+    default:
+      return tr(S.comparisonUnknownFailure);
+  }
+}
+
 function reviewErrorCode(error: unknown): string | null {
   if (typeof error !== "object" || error === null || !("code" in error)) return null;
   return typeof error.code === "string" ? error.code : null;
@@ -1550,9 +2186,14 @@ function reviewPageError(error: unknown): PageError {
   switch (reviewErrorCode(error)) {
     case "seller_classifier_batch_not_found":
     case "seller_not_found":
+    case "delegated_upload_workflow_not_found":
       return { message: tr(S.notFound), retryable: false };
     case "seller_classifier_configuration_invalid":
+    case "delegated_action_configuration_invalid":
+    case "prototype_administrator_configuration_invalid":
       return { message: tr(S.setupError), retryable: false };
+    case "prototype_administrator_required":
+      return { message: tr(S.administratorRequired), retryable: false };
     default:
       return { message: tr(S.unavailable), retryable: true };
   }
@@ -1562,8 +2203,20 @@ function reviewActionError(error: unknown): string {
   switch (reviewErrorCode(error)) {
     case "seller_classifier_review_invalid":
       return error instanceof Error && error.message.trim() ? error.message : tr(S.actionInvalid);
+    case "delegated_review_invalid":
+      return tr(S.actionInvalid);
     case "seller_classifier_configuration_invalid":
+    case "delegated_action_configuration_invalid":
+    case "prototype_administrator_configuration_invalid":
       return tr(S.setupError);
+    case "prototype_administrator_required":
+      return tr(S.administratorRequired);
+    case "delegated_action_in_progress":
+      return tr(S.actionInProgress);
+    case "delegated_action_request_conflict":
+      return tr(S.actionConflict);
+    case "delegated_action_audit_unavailable":
+    case "delegated_classifier_unavailable":
     case "seller_classifier_unavailable":
       return tr(S.unavailable);
     default:
@@ -1578,7 +2231,18 @@ function reviewImportActionError(error: unknown): string {
     case "seller_classifier_import_ownership_conflict":
       return tr(S.importOwnershipConflict);
     case "seller_classifier_configuration_invalid":
+    case "delegated_action_configuration_invalid":
+    case "prototype_administrator_configuration_invalid":
       return tr(S.setupError);
+    case "prototype_administrator_required":
+      return tr(S.administratorRequired);
+    case "delegated_action_in_progress":
+      return tr(S.actionInProgress);
+    case "delegated_action_request_conflict":
+      return tr(S.actionConflict);
+    case "delegated_action_audit_unavailable":
+    case "delegated_import_unavailable":
+    case "delegated_classifier_unavailable":
     case "seller_classifier_import_unavailable":
     case "seller_classifier_unavailable":
       return tr(S.importUnavailable);
