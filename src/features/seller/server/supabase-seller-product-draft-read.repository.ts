@@ -27,6 +27,7 @@ export class SupabaseSellerProductDraftReadRepository implements SellerProductDr
       .select("*")
       .eq("id", productDraftId)
       .eq("seller_id", sellerId)
+      .neq("status", "archived")
       .maybeSingle();
     if (result.error) throw new Error(result.error.message);
     return result.data;

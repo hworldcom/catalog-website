@@ -217,6 +217,8 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          parent_id: string | null;
+          product_code_prefix: string | null;
           slug: string;
           sort_order: number;
           tagline: string | null;
@@ -226,6 +228,8 @@ export type Database = {
           created_at?: string;
           id?: string;
           name: string;
+          parent_id?: string | null;
+          product_code_prefix?: string | null;
           slug: string;
           sort_order?: number;
           tagline?: string | null;
@@ -235,12 +239,22 @@ export type Database = {
           created_at?: string;
           id?: string;
           name?: string;
+          parent_id?: string | null;
+          product_code_prefix?: string | null;
           slug?: string;
           sort_order?: number;
           tagline?: string | null;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       leads: {
         Row: {
@@ -321,6 +335,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "product_draft_facts_product_draft_id_fkey";
+            columns: ["product_draft_id"];
+            isOneToOne: true;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_draft_description_generation_attempts: {
+        Row: {
+          attempt_count: number;
+          attempt_token: string | null;
+          claim_started_at: string | null;
+          created_at: string;
+          error_code: string | null;
+          finished_at: string | null;
+          product_draft_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          finished_at?: string | null;
+          product_draft_id: string;
+          status: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempt_count?: number;
+          attempt_token?: string | null;
+          claim_started_at?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          finished_at?: string | null;
+          product_draft_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_draft_description_generation_attempts_product_draft_id_fkey";
             columns: ["product_draft_id"];
             isOneToOne: true;
             referencedRelation: "products";
@@ -918,9 +976,47 @@ export type Database = {
           },
         ];
       };
+      product_code_allocations: {
+        Row: {
+          allocated_at: string;
+          catalog_category_code_snapshot: string;
+          company_code_snapshot: string;
+          product_category_code_snapshot: string;
+          product_code: string;
+          product_id: string;
+          seller_id: string;
+        };
+        Insert: {
+          allocated_at?: string;
+          catalog_category_code_snapshot: string;
+          company_code_snapshot: string;
+          product_category_code_snapshot: string;
+          product_code: string;
+          product_id: string;
+          seller_id: string;
+        };
+        Update: {
+          allocated_at?: string;
+          catalog_category_code_snapshot?: string;
+          company_code_snapshot?: string;
+          product_category_code_snapshot?: string;
+          product_code?: string;
+          product_id?: string;
+          seller_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_code_allocations_seller_id_fkey";
+            columns: ["seller_id"];
+            isOneToOne: false;
+            referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       products: {
         Row: {
-          category_id: string | null;
+          category_id: string;
           classifier_group_id: string | null;
           classifier_organization_id: string | null;
           cover_image_id: string | null;
@@ -932,6 +1028,7 @@ export type Database = {
           moq: number | null;
           pack_size: string | null;
           price: number | null;
+          product_code: string;
           seller_id: string;
           status: Database["public"]["Enums"]["product_status"];
           stock: Database["public"]["Enums"]["stock_status"];
@@ -941,7 +1038,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          category_id?: string | null;
+          category_id: string;
           classifier_group_id?: string | null;
           classifier_organization_id?: string | null;
           cover_image_id?: string | null;
@@ -953,6 +1050,7 @@ export type Database = {
           moq?: number | null;
           pack_size?: string | null;
           price?: number | null;
+          product_code: string;
           seller_id: string;
           status?: Database["public"]["Enums"]["product_status"];
           stock?: Database["public"]["Enums"]["stock_status"];
@@ -962,7 +1060,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          category_id?: string | null;
+          category_id?: string;
           classifier_group_id?: string | null;
           classifier_organization_id?: string | null;
           cover_image_id?: string | null;
@@ -974,6 +1072,7 @@ export type Database = {
           moq?: number | null;
           pack_size?: string | null;
           price?: number | null;
+          product_code?: string;
           seller_id?: string;
           status?: Database["public"]["Enums"]["product_status"];
           stock?: Database["public"]["Enums"]["stock_status"];
@@ -998,6 +1097,13 @@ export type Database = {
             referencedColumns: ["product_draft_id", "id"];
           },
           {
+            foreignKeyName: "products_product_code_allocation_fkey";
+            columns: ["product_code", "id", "seller_id"];
+            isOneToOne: true;
+            referencedRelation: "product_code_allocations";
+            referencedColumns: ["product_code", "product_id", "seller_id"];
+          },
+          {
             foreignKeyName: "products_seller_id_fkey";
             columns: ["seller_id"];
             isOneToOne: false;
@@ -1010,6 +1116,8 @@ export type Database = {
         Row: {
           about: string | null;
           city: string | null;
+          company_code: string;
+          company_code_locked_at: string | null;
           country: string | null;
           cover_image_url: string | null;
           created_at: string;
@@ -1029,6 +1137,8 @@ export type Database = {
         Insert: {
           about?: string | null;
           city?: string | null;
+          company_code: string;
+          company_code_locked_at?: string | null;
           country?: string | null;
           cover_image_url?: string | null;
           created_at?: string;
@@ -1048,6 +1158,8 @@ export type Database = {
         Update: {
           about?: string | null;
           city?: string | null;
+          company_code?: string;
+          company_code_locked_at?: string | null;
           country?: string | null;
           cover_image_url?: string | null;
           created_at?: string;
@@ -1331,6 +1443,23 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      create_seller_with_company_code: {
+        Args: {
+          p_city: string | null;
+          p_country: string | null;
+          p_name: string;
+          p_owner_id: string;
+          p_primary_category_id: string | null;
+          p_slug_base: string;
+          p_submitted_company_code: string;
+          p_whatsapp: string | null;
+        };
+        Returns: Database["public"]["Tables"]["sellers"]["Row"][];
+      };
+      derive_company_code_base: {
+        Args: { p_company_name: string };
+        Returns: string | null;
+      };
       fail_seller_classifier_batch_provisioning: {
         Args: {
           p_error_code: string;
@@ -1464,6 +1593,10 @@ export type Database = {
           seller_id: string;
           slug: string;
         }[];
+      };
+      update_unlocked_seller_company_code: {
+        Args: { p_submitted_company_code: string };
+        Returns: Database["public"]["Tables"]["sellers"]["Row"][];
       };
       claim_product_draft_image_storage_cutover: {
         Args: {
@@ -1602,6 +1735,77 @@ export type Database = {
           snapshot: Json | null;
         }[];
       };
+      claim_product_draft_description_generation: {
+        Args: {
+          p_expected_seller_id: string;
+          p_product_draft_id: string;
+        };
+        Returns: {
+          attempt_token: string | null;
+          category_id: string | null;
+          category_name: string | null;
+          category_slug: string | null;
+          cover_content_type: string | null;
+          cover_image_id: string | null;
+          cover_image_url: string | null;
+          cover_object_key: string | null;
+          cover_size_bytes: number | null;
+          cover_source: string | null;
+          cover_storage_bucket: string | null;
+          facts_json: Json | null;
+          facts_revision: number | null;
+          human_languages: string[] | null;
+          result: string;
+          title_blank: boolean | null;
+        }[];
+      };
+      finalize_product_draft_description_generation: {
+        Args: {
+          p_attempt_token: string;
+          p_descriptions: Json;
+          p_expected_category_id: string;
+          p_expected_cover_content_type: string | null;
+          p_expected_cover_image_id: string | null;
+          p_expected_cover_image_url: string | null;
+          p_expected_cover_object_key: string | null;
+          p_expected_cover_size_bytes: number | null;
+          p_expected_cover_source: string;
+          p_expected_cover_storage_bucket: string | null;
+          p_expected_facts_revision: number;
+          p_expected_seller_id: string;
+          p_generated_at: string;
+          p_model: string;
+          p_pipeline_version: string;
+          p_product_draft_id: string;
+          p_provider: string;
+          p_title_proposal: string | null;
+        };
+        Returns: {
+          description_snapshot: Json | null;
+          result: string;
+          title_snapshot: Json | null;
+        }[];
+      };
+      fail_product_draft_description_generation: {
+        Args: {
+          p_attempt_token: string;
+          p_error_code: string;
+          p_expected_seller_id: string;
+          p_product_draft_id: string;
+        };
+        Returns: string;
+      };
+      archive_seller_product: {
+        Args: {
+          p_product_id: string;
+          p_seller_id: string;
+        };
+        Returns: {
+          product_id: string | null;
+          product_status: Database["public"]["Enums"]["product_status"] | null;
+          result: string;
+        }[];
+      };
       save_seller_product_with_description: {
         Args: {
           p_category_id: string | null;
@@ -1629,6 +1833,42 @@ export type Database = {
           title: string | null;
           title_source: string | null;
         }[];
+      };
+      create_seller_product_with_description: {
+        Args: {
+          p_category_id: string | null;
+          p_cover_image_url: string | null;
+          p_cover_image_url_patch_present: boolean;
+          p_currency: string;
+          p_description: string | null;
+          p_description_patch_present: boolean;
+          p_moq: number | null;
+          p_pack_size: string | null;
+          p_price: number | null;
+          p_seller_id: string;
+          p_status: Database["public"]["Enums"]["product_status"];
+          p_stock: Database["public"]["Enums"]["stock_status"];
+          p_title: string | null;
+          p_title_patch_present: boolean;
+          p_trending: boolean;
+        };
+        Returns: {
+          english_description: string | null;
+          product_code: string | null;
+          product_draft_id: string | null;
+          product_status: Database["public"]["Enums"]["product_status"] | null;
+          result: string;
+          title: string | null;
+          title_source: string | null;
+        }[];
+      };
+      reserve_product_code: {
+        Args: {
+          p_product_category_id: string;
+          p_product_id: string;
+          p_seller_id: string;
+        };
+        Returns: string;
       };
       validate_product_publication_title: {
         Args: {

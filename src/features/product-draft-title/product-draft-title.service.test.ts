@@ -155,6 +155,26 @@ describe("ProductDraftTitleService", () => {
     });
   });
 
+  it.each([
+    ["product_category_required", 400],
+    ["product_category_not_supported", 400],
+    ["product_code_company_unconfigured", 409],
+    ["product_code_category_unconfigured", 500],
+    ["product_code_allocation_failed", 503],
+  ] as const)("maps %s creation failures to status %s", async (result, statusCode) => {
+    const repository = new MemoryRepository();
+    repository.createResult = { result };
+    const service = new ProductDraftTitleService(repository);
+
+    await expect(
+      service.saveSellerProduct({
+        sellerId: sellerId,
+        title: "Cotton shirt",
+        productFields: { status: "draft", category_id: productDraftId },
+      }),
+    ).rejects.toMatchObject({ code: result, statusCode });
+  });
+
   it("omits an untouched seller title while persisting other fields atomically", async () => {
     const repository = new MemoryRepository();
     repository.updateResult = {

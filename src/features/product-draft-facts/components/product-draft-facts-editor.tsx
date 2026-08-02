@@ -156,11 +156,15 @@ const emptyForm: ProductDraftFactsFormValues = {
 export function ProductDraftFactsEditor({
   productDraftId,
   disabled = false,
+  refreshRequest = 0,
   onStateChange,
+  onSaved,
 }: {
   productDraftId: string;
   disabled?: boolean;
+  refreshRequest?: number;
   onStateChange?: (state: ProductDraftFactsEditorState) => void;
+  onSaved?: (snapshot: ProductDraftFactsSnapshot) => void;
 }) {
   const getFacts = useServerFn(getProductDraftFacts);
   const updateFacts = useServerFn(updateProductDraftFacts);
@@ -177,7 +181,9 @@ export function ProductDraftFactsEditor({
       productDraftId={productDraftId}
       client={client}
       disabled={disabled}
+      refreshRequest={refreshRequest}
       onStateChange={onStateChange}
+      onSaved={onSaved}
     />
   );
 }
@@ -186,12 +192,16 @@ export function ProductDraftFactsEditorView({
   productDraftId,
   client,
   disabled = false,
+  refreshRequest = 0,
   onStateChange,
+  onSaved,
 }: {
   productDraftId: string;
   client: ProductDraftFactsEditorClient;
   disabled?: boolean;
+  refreshRequest?: number;
   onStateChange?: (state: ProductDraftFactsEditorState) => void;
+  onSaved?: (snapshot: ProductDraftFactsSnapshot) => void;
 }) {
   const [snapshot, setSnapshot] = useState<ProductDraftFactsSnapshot | null>(null);
   const [form, setForm] = useState<ProductDraftFactsFormValues>(emptyForm);
@@ -229,7 +239,7 @@ export function ProductDraftFactsEditorView({
     return () => {
       cancelled = true;
     };
-  }, [client, loadRequest, productDraftId]);
+  }, [client, loadRequest, productDraftId, refreshRequest]);
 
   function replaceSnapshot(nextSnapshot: ProductDraftFactsSnapshot) {
     setSnapshot(nextSnapshot);
@@ -266,6 +276,7 @@ export function ProductDraftFactsEditorView({
     try {
       const nextSnapshot = await client.update(productDraftId, patch);
       replaceSnapshot(nextSnapshot);
+      onSaved?.(nextSnapshot);
       setSaveSuccess(true);
     } catch (error) {
       setSaveError(productDraftFactsErrorMessage(error));

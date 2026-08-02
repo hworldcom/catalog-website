@@ -7,7 +7,7 @@ Bazoria `ProductDraft`.
 
 Titles are normalized on the server by trimming leading and trailing
 whitespace and collapsing internal whitespace to one space. The normalized
-title may contain at most 120 characters.
+title may contain at most 50 Unicode characters.
 
 Drafts may have a blank title. A blank title is stored with a `null`
 `title_source` and is displayed as **Untitled product**. A ProductDraft cannot

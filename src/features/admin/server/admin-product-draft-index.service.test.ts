@@ -32,7 +32,7 @@ class MemoryRepository implements AdminProductDraftIndexRepository {
 describe("AdminProductDraftIndexService", () => {
   it("builds one stable page with cover and first-image previews", async () => {
     const first = product(1, { title: "", cover_image_id: uuid(101) });
-    const second = product(2, { seller_id: uuid(11), category_id: null });
+    const second = product(2, { seller_id: uuid(11) });
     const extra = product(3);
     const repository = new MemoryRepository(
       [first, second, extra],
@@ -106,7 +106,7 @@ describe("AdminProductDraftIndexService", () => {
     });
     expect(page.items[1]).toMatchObject({
       productDraftId: second.id,
-      category: null,
+      category: { slug: "trousers" },
       factsRevision: null,
       coverImageId: null,
       previewImageId: uuid(201),
@@ -168,6 +168,24 @@ describe("AdminProductDraftIndexService", () => {
     });
   });
 
+  it("maps a malformed stored product code to the existing unavailable boundary", async () => {
+    const draft = product(1, { product_code: "private-malformed-value" });
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const repository = new MemoryRepository([draft], details());
+    const service = new AdminProductDraftIndexService(repository, { resolve: vi.fn() });
+
+    await expect(
+      service.list({ limit: 25, cursor: null, status: null, sellerId: null }, authorization),
+    ).rejects.toMatchObject({ code: "admin_product_drafts_unavailable" });
+    expect(log).toHaveBeenCalledWith("[Admin ProductDraft index] Stored product code is invalid.", {
+      exceptionClass: "StoredProductCodeError",
+      productId: draft.id,
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain(draft.product_code);
+    expect(repository.loadDetails).not.toHaveBeenCalled();
+    log.mockRestore();
+  });
+
   it("preserves a complete image-delivery service failure", async () => {
     const draft = product(1, { cover_image_id: uuid(101) });
     const repository = new MemoryRepository([draft], details());
@@ -226,6 +244,7 @@ function product(
 ): AdminProductDraftIndexProductRecord {
   return {
     id: uuid(value),
+    product_code: "SEL-F-TSH-ABCDEFGH",
     title: `Draft ${value}`,
     status: "draft",
     seller_id: uuid(10),

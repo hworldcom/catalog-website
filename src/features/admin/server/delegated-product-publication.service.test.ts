@@ -258,6 +258,7 @@ function record(): DelegatedProductDraftRecord {
       title_source: "human",
       description: null,
       category_id: categoryId,
+      product_code: "SEL-F-TSH-ABCDEFGH",
       moq: null,
       pack_size: null,
       price: null,

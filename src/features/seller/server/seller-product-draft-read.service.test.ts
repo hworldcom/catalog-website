@@ -107,6 +107,31 @@ describe("SellerProductDraftReadService", () => {
     expect(repository.findOwnedProduct).toHaveBeenCalledWith(productDraftId, sellerId);
     expect(loadGallery).toHaveBeenCalledWith(product);
   });
+
+  it("stops before gallery access when the stored product code is malformed", async () => {
+    const repository = memoryRepository();
+    repository.findOwnedProduct.mockResolvedValue(
+      productRow({ product_code: "private-malformed-value" }),
+    );
+    const loadGallery = vi.fn();
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(
+      new SellerProductDraftReadService(repository).get({
+        routeProductDraftId: productDraftId,
+        userId,
+        loadGallery,
+      }),
+    ).rejects.toThrow("temporarily unavailable");
+
+    expect(loadGallery).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith("[Seller ProductDraft read] Stored product code is invalid.", {
+      exceptionClass: "StoredProductCodeError",
+      productId: productDraftId,
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private-malformed-value");
+    log.mockRestore();
+  });
 });
 
 function memoryRepository() {
@@ -117,14 +142,15 @@ function memoryRepository() {
   };
 }
 
-function productRow(): Product {
+function productRow(overrides: Partial<Product> = {}): Product {
   return {
     id: productDraftId,
     seller_id: sellerId,
     title: "Cotton shirt",
     title_source: "human",
     description: null,
-    category_id: null,
+    category_id: uuid(4),
+    product_code: "SEL-F-TSH-ABCDEFGH",
     classifier_group_id: null,
     classifier_organization_id: null,
     cover_image_id: null,
@@ -138,6 +164,7 @@ function productRow(): Product {
     status: "draft",
     created_at: "2026-07-26T12:00:00.000Z",
     updated_at: "2026-07-26T12:00:00.000Z",
+    ...overrides,
   };
 }
 

@@ -25,6 +25,15 @@ vi.mock("@/features/product-draft-facts/components/product-draft-facts-editor", 
   ProductDraftFactsEditor: () => <input aria-label="Editable product facts" defaultValue="" />,
 }));
 
+vi.mock(
+  "@/features/product-draft-descriptions/components/seller-product-draft-description-section",
+  () => ({
+    SellerProductDraftDescriptionSection: () => (
+      <input aria-label="Editable product description" defaultValue="" />
+    ),
+  }),
+);
+
 import { EditProductScreen } from "./edit-product-screen";
 
 const productDraftId = uuid(1);

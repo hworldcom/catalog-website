@@ -8,7 +8,7 @@ import type { SellerProductListPage } from "../seller-product-list.types";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
-  delete: vi.fn(),
+  archive: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
 }));
@@ -23,7 +23,7 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/features/seller/products.functions", () => ({
   listMyProducts: mocks.list,
-  deleteMyProduct: mocks.delete,
+  archiveMyProduct: mocks.archive,
 }));
 
 vi.mock("sonner", () => ({
@@ -38,7 +38,7 @@ import { ProductsScreen } from "./products-screen";
 describe("ProductsScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.delete.mockResolvedValue({ ok: true });
+    mocks.archive.mockResolvedValue({ productId: uuid(1), productStatus: "archived" });
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
@@ -54,6 +54,8 @@ describe("ProductsScreen", () => {
       "src",
       "https://signed.test/one",
     );
+    expect(screen.getByText("Product code")).toBeVisible();
+    expect(screen.getByText("SEL-F-TSH-ABCDEFGH")).toBeVisible();
     expect(queryClient.getQueryData(["my-products", 25, null])).toBeDefined();
 
     await userEvent.click(screen.getByRole("button", { name: "Next page" }));
@@ -78,7 +80,7 @@ describe("ProductsScreen", () => {
     expect(mocks.list).toHaveBeenCalledTimes(2);
   });
 
-  it("invalidates every product page and the summary after deletion", async () => {
+  it("archives and invalidates every product page and the summary", async () => {
     mocks.list.mockResolvedValue(page());
     const onRequestChange = vi.fn();
     const { queryClient } = renderScreen({
@@ -88,12 +90,31 @@ describe("ProductsScreen", () => {
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
     await screen.findByText("Cotton shirt");
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Archive" }));
 
-    await waitFor(() => expect(mocks.delete).toHaveBeenCalledWith({ data: { id: uuid(1) } }));
+    await waitFor(() => expect(mocks.archive).toHaveBeenCalledWith({ data: { id: uuid(1) } }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["my-products"] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["my-product-summary"] });
     expect(onRequestChange).toHaveBeenCalledWith({ limit: 25, cursor: null });
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Product archived");
+  });
+
+  it.each([
+    ["product_not_found", "The product was not found."],
+    [
+      "product_archive_not_allowed",
+      "Wait for active publication or complete publication cleanup before archiving this product.",
+    ],
+    ["product_archive_unavailable", "Product archival is temporarily unavailable."],
+  ])("shows localized guidance for %s", async (code, message) => {
+    mocks.list.mockResolvedValue(page());
+    mocks.archive.mockRejectedValue({ code });
+    renderScreen();
+
+    await screen.findByText("Cotton shirt");
+    await userEvent.click(screen.getByRole("button", { name: "Archive" }));
+
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith(message));
   });
 });
 
@@ -129,6 +150,7 @@ function page({
       {
         id: uuid(1),
         title: "Cotton shirt",
+        product_code: "SEL-F-TSH-ABCDEFGH",
         cover_image_url: null,
         price: null,
         currency: "USD",

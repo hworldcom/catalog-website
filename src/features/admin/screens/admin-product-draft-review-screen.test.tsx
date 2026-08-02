@@ -22,6 +22,8 @@ describe("AdminProductDraftReviewScreenView", () => {
     expect(screen.getByText("Seller (seller)")).toBeVisible();
     expect(screen.getByText("Trousers (trousers)")).toBeVisible();
     expect(screen.getByText(uuid(701))).toBeVisible();
+    expect(screen.getByText("Product code")).toBeVisible();
+    expect(screen.getByText("SEL-F-TSH-ABCDEFGH")).toBeVisible();
     expect(screen.getByRole("link", { name: "Back to ProductDrafts" })).toHaveAttribute(
       "href",
       "/admin/product-drafts?limit=25&lang=EN",
@@ -155,6 +157,7 @@ function review(overrides: Partial<AdminProductDraftReview> = {}): AdminProductD
   ];
   return {
     productDraftId: uuid(1),
+    productCode: "SEL-F-TSH-ABCDEFGH",
     title: "",
     titleSource: "human",
     status: "draft",

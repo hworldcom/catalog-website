@@ -15,9 +15,16 @@ type ImageUploadProps = {
   onChange: (url: string) => void;
   folder: ImageUploadFolder;
   label: string;
+  disabled?: boolean;
 };
 
-export function ImageUpload({ value, onChange, folder, label }: ImageUploadProps) {
+export function ImageUpload({
+  value,
+  onChange,
+  folder,
+  label,
+  disabled = false,
+}: ImageUploadProps) {
   const [busy, setBusy] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +81,7 @@ export function ImageUpload({ value, onChange, folder, label }: ImageUploadProps
         />
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || disabled}
           onClick={() => inputRef.current?.click()}
           className="border border-border bg-card px-4 py-2 text-sm font-medium hover:border-primary disabled:opacity-60"
         >
@@ -83,16 +90,18 @@ export function ImageUpload({ value, onChange, folder, label }: ImageUploadProps
         {value ? (
           <button
             type="button"
+            disabled={disabled}
             onClick={() => onChange("")}
-            className="text-sm text-muted-foreground hover:text-destructive"
+            className="text-sm text-muted-foreground hover:text-destructive disabled:opacity-60"
           >
             Remove
           </button>
         ) : null}
         <button
           type="button"
+          disabled={disabled}
           onClick={() => setShowUrl((s) => !s)}
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-60"
         >
           {showUrl ? "Hide URL" : "Use URL instead"}
         </button>
@@ -100,6 +109,7 @@ export function ImageUpload({ value, onChange, folder, label }: ImageUploadProps
       {showUrl ? (
         <input
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           placeholder="https://…"
           className="border border-border bg-background px-3 py-2 text-sm"

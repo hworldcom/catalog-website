@@ -121,6 +121,41 @@ function createSnapshot(result: ProductDraftTitleCreateResult): ProductDraftTitl
   if (result.result === "created") return snapshot(result);
   if (result.result === "title_required") throw requiredProductDraftTitle();
   if (result.result === "title_invalid") throw invalidProductDraftTitle();
+  if (result.result === "product_category_required") {
+    throw new ProductDraftTitleError(
+      400,
+      result.result,
+      "Select a supported product category before creating the product.",
+    );
+  }
+  if (result.result === "product_category_not_supported") {
+    throw new ProductDraftTitleError(
+      400,
+      result.result,
+      "The selected product category is not supported.",
+    );
+  }
+  if (result.result === "product_code_company_unconfigured") {
+    throw new ProductDraftTitleError(
+      409,
+      result.result,
+      "Configure the seller company code before creating a product.",
+    );
+  }
+  if (result.result === "product_code_category_unconfigured") {
+    throw new ProductDraftTitleError(
+      500,
+      result.result,
+      "The selected category has no product-code configuration.",
+    );
+  }
+  if (result.result === "product_code_allocation_failed") {
+    throw new ProductDraftTitleError(
+      503,
+      result.result,
+      "A product code could not be allocated. Retry the request.",
+    );
+  }
   throw invalidProductDraftTitle();
 }
 

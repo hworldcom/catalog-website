@@ -92,12 +92,12 @@ describe("ProductDraftTitleEditorView", () => {
 
     const input = await screen.findByLabelText("Product title");
     await userEvent.clear(input);
-    await userEvent.type(input, "x".repeat(121));
+    await userEvent.type(input, "x".repeat(51));
     await userEvent.click(screen.getByRole("button", { name: "Save title" }));
 
-    expect(screen.getByText("Enter at most 120 characters.")).toBeVisible();
+    expect(screen.getByText("Enter at most 50 characters.")).toBeVisible();
     expect(testClient.update).not.toHaveBeenCalled();
-    expect(input).toHaveValue("x".repeat(121));
+    expect(input).toHaveValue("x".repeat(51));
   });
 
   it("renders published and archived titles read-only", async () => {
@@ -151,6 +151,6 @@ describe("ProductDraftTitleEditorView", () => {
     await userEvent.type(input, "Changed");
     await userEvent.click(screen.getByRole("button", { name: "Save title" }));
 
-    expect(await screen.findByText("Enter at most 120 characters.")).toBeVisible();
+    expect(await screen.findByText("Enter at most 50 characters.")).toBeVisible();
   });
 });

@@ -5,13 +5,25 @@ SET LOCAL search_path = public, extensions;
 
 SELECT plan(9);
 
-INSERT INTO public.sellers (id, slug, name, published)
+INSERT INTO public.sellers (id, slug, name, published, company_code)
 VALUES (
   '29a30000-0000-0000-0000-000000000001',
   'qa-0029i3-seller',
   'QA 0029i3 Seller',
-  false
+  false,
+  'Q72'
 );
+
+CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT public.reserve_product_code(
+    p_product_id,
+    '29a30000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
+  );
+$$;
 
 INSERT INTO public.seller_classifier_batches (
   id,
@@ -43,6 +55,7 @@ VALUES (
 INSERT INTO public.products (
   id,
   seller_id,
+  product_code,
   title,
   title_source,
   status,
@@ -51,10 +64,11 @@ INSERT INTO public.products (
 VALUES (
   '29a30000-0000-0000-0000-000000000101',
   '29a30000-0000-0000-0000-000000000001',
+  pg_temp.qa_product_code('29a30000-0000-0000-0000-000000000101'),
   'Delegated draft',
   'human',
   'draft',
-  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
+  (SELECT id FROM public.categories WHERE slug = 't-shirts')
 );
 
 INSERT INTO public.product_draft_source_memberships (
@@ -172,7 +186,7 @@ SELECT throws_ok(
     )
   $$,
   '23514',
-  'product_publication_category_required',
+  'product_category_required',
   'a published product requires a destination category'
 );
 
@@ -212,7 +226,7 @@ SELECT results_eq(
       'Delegated draft',
       false,
       NULL,
-      (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+      (SELECT id FROM public.categories WHERE slug = 't-shirts'),
       NULL,
       NULL,
       NULL,
@@ -257,7 +271,7 @@ SELECT results_eq(
       'Delegated draft',
       false,
       NULL,
-      (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+      (SELECT id FROM public.categories WHERE slug = 't-shirts'),
       NULL,
       NULL,
       NULL,

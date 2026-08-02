@@ -285,10 +285,16 @@ const S = {
     "Nhập và lưu tên sản phẩm trước khi xuất bản.",
   ),
   titleInvalid: t(
-    "Enter a product title with at most 120 characters.",
-    "Wprowadź tytuł produktu zawierający maksymalnie 120 znaków.",
-    "Geben Sie einen Produkttitel mit höchstens 120 Zeichen ein.",
-    "Nhập tên sản phẩm có tối đa 120 ký tự.",
+    "Enter a product title with at most 50 characters.",
+    "Wprowadź tytuł produktu zawierający maksymalnie 50 znaków.",
+    "Geben Sie einen Produkttitel mit höchstens 50 Zeichen ein.",
+    "Nhập tên sản phẩm có tối đa 50 ký tự.",
+  ),
+  descriptionInvalid: t(
+    "Enter product descriptions with at most 300 characters each.",
+    "Każdy opis produktu może zawierać maksymalnie 300 znaków.",
+    "Geben Sie Produktbeschreibungen mit jeweils höchstens 300 Zeichen ein.",
+    "Nhập mỗi mô tả sản phẩm tối đa 300 ký tự.",
   ),
   categoryRequired: t(
     "Select a category before publishing.",
@@ -1055,6 +1061,8 @@ function actionErrorMessage(error: unknown, fallback: string): string {
       return tr(S.titleRequired);
     case "product_publication_title_invalid":
       return tr(S.titleInvalid);
+    case "product_publication_description_invalid":
+      return tr(S.descriptionInvalid);
     case "product_publication_category_required":
       return tr(S.categoryRequired);
     case "product_publication_image_required":

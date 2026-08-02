@@ -79,6 +79,7 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       result.result === "facts_missing" ||
       result.result === "title_required" ||
       result.result === "title_invalid" ||
+      result.result === "description_invalid" ||
       result.result === "category_required"
     ) {
       return {
@@ -309,6 +310,7 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       "cleanup_required",
       "title_required",
       "title_invalid",
+      "description_invalid",
       "category_required",
       "in_progress",
     ]);

@@ -18,16 +18,9 @@ export type HumanProductDraftTitleWrite = {
 
 export type SellerProductFields = Pick<
   ProductUpdate,
-  | "category_id"
-  | "moq"
-  | "pack_size"
-  | "price"
-  | "currency"
-  | "stock"
-  | "cover_image_url"
-  | "trending"
-  | "status"
+  "moq" | "pack_size" | "price" | "currency" | "stock" | "cover_image_url" | "trending" | "status"
 > & {
+  category_id?: string | null;
   description?: string | null;
 };
 
@@ -47,6 +40,14 @@ export type ProductDraftTitleCreateResult =
   | ({ result: "created" } & ProductDraftTitleRecord)
   | { result: "title_required" }
   | { result: "title_invalid" }
+  | {
+      result:
+        | "product_category_required"
+        | "product_category_not_supported"
+        | "product_code_company_unconfigured"
+        | "product_code_category_unconfigured"
+        | "product_code_allocation_failed";
+    }
   | { result: "invalid" };
 
 export interface ProductDraftTitleRepository {

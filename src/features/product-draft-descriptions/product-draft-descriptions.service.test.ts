@@ -11,17 +11,24 @@ const productDraftId = "00000000-0000-4000-8000-000000000001";
 const access = { mode: "prototype_administrator" } as const;
 
 class MemoryRepository implements ProductDraftDescriptionRepository {
+  expectedSellerId: string | null | undefined;
   record: ProductDraftDescriptionRecord = descriptionRecord();
   patchResult: ProductDraftDescriptionPatchResult = {
     result: "applied",
     snapshot: descriptionRecord()!,
   };
 
-  async get() {
+  async get(_productDraftId: string, expectedSellerId: string | null) {
+    this.expectedSellerId = expectedSellerId;
     return this.record;
   }
 
-  async applyPatch() {
+  async applyPatch(
+    _productDraftId: string,
+    _patch: Parameters<ProductDraftDescriptionRepository["applyPatch"]>[1],
+    expectedSellerId: string | null,
+  ) {
+    this.expectedSellerId = expectedSellerId;
     return this.patchResult;
   }
 }
@@ -72,6 +79,18 @@ describe("ProductDraftDescriptionService", () => {
       code: "product_draft_description_unavailable",
     });
   });
+
+  it("scopes seller reads and edits to the expected seller", async () => {
+    const repository = new MemoryRepository();
+    const service = new ProductDraftDescriptionService(repository);
+    const sellerAccess = { mode: "seller", expectedSellerId: uuid(2) } as const;
+
+    await service.get(productDraftId, sellerAccess);
+    expect(repository.expectedSellerId).toBe(uuid(2));
+
+    await service.update(productDraftId, { en: "Updated" }, sellerAccess);
+    expect(repository.expectedSellerId).toBe(uuid(2));
+  });
 });
 
 function descriptionRecord(): Exclude<ProductDraftDescriptionRecord, null> {
@@ -113,4 +132,8 @@ function missing(language: "pl" | "de" | "vi") {
     updatedAt: null,
     outdated: null,
   } as const;
+}
+
+function uuid(value: number): string {
+  return `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 }

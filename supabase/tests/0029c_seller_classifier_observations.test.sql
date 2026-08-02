@@ -5,17 +5,19 @@ SET LOCAL search_path = public, extensions;
 
 SELECT plan(16);
 
-INSERT INTO public.sellers (id, slug, name)
+INSERT INTO public.sellers (id, slug, name, company_code)
 VALUES
   (
     '29c00000-0000-0000-0000-000000000001',
     'qa-0029c-seller-one',
-    'QA 0029c Seller One'
+    'QA 0029c Seller One',
+    'Q21'
   ),
   (
     '29c00000-0000-0000-0000-000000000002',
     'qa-0029c-seller-two',
-    'QA 0029c Seller Two'
+    'QA 0029c Seller Two',
+    'Q22'
   );
 
 CREATE TEMP TABLE qa_0029c_workflows (

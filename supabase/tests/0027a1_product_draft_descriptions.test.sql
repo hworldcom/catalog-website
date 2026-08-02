@@ -82,21 +82,42 @@ SELECT is(
   'all existing English compatibility projections have authoritative rows'
 );
 
-INSERT INTO public.sellers (id, slug, name)
+INSERT INTO public.sellers (id, slug, name, company_code)
 VALUES (
   '27000000-0000-0000-0000-000000000001',
   'qa-0027a1',
-  'QA 0027a1'
+  'QA 0027a1',
+  'Q04'
 );
 
-INSERT INTO public.products (id, seller_id, title, title_source, status, category_id)
+CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT public.reserve_product_code(
+    p_product_id,
+    '27000000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
+  );
+$$;
+
+INSERT INTO public.products (
+  id,
+  seller_id,
+  product_code,
+  title,
+  title_source,
+  status,
+  category_id
+)
 VALUES (
   '27000000-0000-0000-0000-000000000101',
   '27000000-0000-0000-0000-000000000001',
+  pg_temp.qa_product_code('27000000-0000-0000-0000-000000000101'),
   'Description draft',
   'human',
   'draft',
-  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
+  (SELECT id FROM public.categories WHERE slug = 't-shirts')
 );
 
 SELECT is(
@@ -350,7 +371,7 @@ FROM public.save_seller_product_with_description(
   'Seller-created draft',
   true,
   ' Seller English description ',
-  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   NULL,
   NULL,
   NULL,
@@ -394,7 +415,7 @@ FROM public.save_seller_product_with_description(
   NULL,
   false,
   NULL,
-  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   12,
   NULL,
   NULL,
@@ -426,7 +447,7 @@ FROM public.save_seller_product_with_description(
   NULL,
   true,
   '   ',
-  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   12,
   NULL,
   NULL,
@@ -464,7 +485,7 @@ FROM public.save_seller_product_with_description(
   NULL,
   true,
   ' Publication description ',
-  (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   12,
   NULL,
   NULL,

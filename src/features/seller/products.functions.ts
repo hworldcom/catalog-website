@@ -15,7 +15,7 @@ import {
   emptySellerProductSummary,
   parseSellerProductListRequest,
 } from "./seller-product-list.types";
-import { sellerProductIdSchema, sellerProductSaveSchema } from "./seller-product-write.types";
+import { sellerProductSaveSchema } from "./seller-product-write.types";
 import { SellerProductPublicationError } from "./seller-product-publication.types";
 
 export const listMyProducts = createServerFn({ method: "GET" })
@@ -146,7 +146,7 @@ export const saveMyProduct = createServerFn({ method: "POST" })
           throw new SellerProductPublicationError(
             400,
             "product_publication_title_invalid",
-            "The product title must contain at most 120 characters.",
+            "The product title must contain at most 50 characters.",
           );
         }
       }
@@ -161,9 +161,9 @@ export const saveMyProduct = createServerFn({ method: "POST" })
     };
   });
 
-export const deleteMyProduct = createServerFn({ method: "POST" })
+export const archiveMyProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input) => z.object({ id: sellerProductIdSchema }).parse(input))
+  .validator((input) => z.object({ id: z.string() }).strict().parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as {
       supabase: import("@supabase/supabase-js").SupabaseClient;
@@ -171,17 +171,7 @@ export const deleteMyProduct = createServerFn({ method: "POST" })
     };
 
     const sellerId = await getCurrentSellerId({ supabase, userId });
-    if (!sellerId) throw new Error("Product not found");
-
-    const { data: deleted, error } = await supabase
-      .from("products")
-      .delete()
-      .eq("id", data.id)
-      .eq("seller_id", sellerId)
-      .select("id")
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!deleted) throw new Error("Product not found");
-
-    return { ok: true };
+    const { createSellerProductArchiveService } =
+      await import("./server/seller-product-archive.runtime");
+    return (await createSellerProductArchiveService()).archive(data.id, sellerId);
   });

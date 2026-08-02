@@ -6,6 +6,7 @@ export type SellerProductListRecord = Pick<
   Database["public"]["Tables"]["products"]["Row"],
   | "id"
   | "title"
+  | "product_code"
   | "cover_image_id"
   | "cover_image_url"
   | "price"

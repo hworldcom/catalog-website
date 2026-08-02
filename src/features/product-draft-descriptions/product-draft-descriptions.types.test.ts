@@ -24,6 +24,16 @@ describe("ProductDraft description request types", () => {
     expect(patch).not.toHaveProperty("pl");
   });
 
+  it("accepts 300 Unicode characters and rejects 301", () => {
+    expect(normalizeProductDraftDescription("😀".repeat(300))).toBe("😀".repeat(300));
+    expect(() => normalizeProductDraftDescription("😀".repeat(301))).toThrowError(
+      expect.objectContaining({
+        statusCode: 400,
+        code: "product_draft_description_invalid",
+      }),
+    );
+  });
+
   it("rejects empty or unsupported-language patches", () => {
     expectInvalidPatch({
       productDraftId: "00000000-0000-4000-8000-000000000001",

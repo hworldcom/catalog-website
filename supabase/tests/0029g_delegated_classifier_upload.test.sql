@@ -5,31 +5,35 @@ SET LOCAL search_path = public, extensions;
 
 SELECT plan(7);
 
-INSERT INTO public.sellers (id, slug, name, published)
+INSERT INTO public.sellers (id, slug, name, published, company_code)
 VALUES
   (
     '29f00000-0000-0000-0000-000000000001',
     'qa-0029g-beta',
     'QA 0029g Beta',
-    false
+    false,
+    'Q51'
   ),
   (
     '29f00000-0000-0000-0000-000000000002',
     'qa-0029g-alpha',
     'qa 0029g alpha',
-    true
+    true,
+    'Q52'
   ),
   (
     '29f00000-0000-0000-0000-000000000003',
     'qa-0029g-percent',
     'QA 0029g Percent %',
-    true
+    true,
+    'Q53'
   ),
   (
     '29f00000-0000-0000-0000-000000000004',
     'qa-0029g-underscore',
     'QA 0029g Underscore _',
-    true
+    true,
+    'Q54'
   );
 
 SELECT results_eq(

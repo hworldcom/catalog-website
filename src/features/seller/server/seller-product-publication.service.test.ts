@@ -81,6 +81,7 @@ describe("SellerProductPublicationService", () => {
   it.each([
     ["title_required", 409, "product_publication_title_required"],
     ["title_invalid", 400, "product_publication_title_invalid"],
+    ["description_invalid", 400, "product_publication_description_invalid"],
   ] as const)("maps imported database result %s", async (result, statusCode, code) => {
     const publications = publicationService();
     publications.authorize.mockResolvedValueOnce({
@@ -191,6 +192,7 @@ describe("SellerProductPublicationService", () => {
   it.each([
     ["title_required", 409, "product_publication_title_required"],
     ["title_invalid", 400, "product_publication_title_invalid"],
+    ["description_invalid", 400, "product_publication_description_invalid"],
   ] as const)("maps retry database result %s", async (result, statusCode, code) => {
     const publications = publicationService();
     publications.retry.mockResolvedValueOnce(result);

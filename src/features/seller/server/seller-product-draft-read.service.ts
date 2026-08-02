@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { parseStoredProductCode } from "@/features/product-code/product-code";
 import type { Database } from "@/lib/supabase/types";
 
 import type { SellerProductDraftGallery } from "../product-draft-image-gallery.types";
@@ -38,6 +39,17 @@ export class SellerProductDraftReadService {
     const product = await this.repository.findOwnedProduct(parsedId.data, sellerId);
     if (!product) return notFound();
 
+    let productCode: string;
+    try {
+      productCode = parseStoredProductCode(product.product_code);
+    } catch (error) {
+      console.error("[Seller ProductDraft read] Stored product code is invalid.", {
+        exceptionClass: error instanceof Error ? error.constructor.name : "UnknownError",
+        productId: product.id,
+      });
+      throw new Error("The seller product is temporarily unavailable.");
+    }
+
     const [imagePublicationMode, gallery] = await Promise.all([
       this.repository
         .hasSourceMembership(product.id)
@@ -48,6 +60,7 @@ export class SellerProductDraftReadService {
     return {
       product: {
         ...product,
+        product_code: productCode,
         imagePublicationMode,
       },
       gallery,

@@ -1,8 +1,10 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import { PublicShell } from "@/components/layout/public-shell";
 import { formatPrice, getStockLabel } from "@/components/product/product-format";
+import { productCodeCopy } from "@/features/product-code/product-code.copy";
 import { t, tr } from "@/lib/i18n";
 
 import { InquiryForm } from "../components/inquiry-form";
@@ -83,11 +85,23 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
             </div>
 
             <dl className="mt-6 grid grid-cols-2 gap-3 border-y border-border/60 py-4 text-sm">
+              <Detail label={tr(productCodeCopy.label)} value={product.product_code} mono />
               {product.moq ? <Detail label={tr(P.moq)} value={String(product.moq)} /> : null}
               {product.pack_size ? (
                 <Detail label={tr(P.packSize)} value={product.pack_size} />
               ) : null}
-              <Detail label={tr(P.supplier)} value={seller.name} />
+              <Detail
+                label={tr(P.supplier)}
+                value={
+                  <Link
+                    to="/s/$sellerSlug"
+                    params={{ sellerSlug: seller.slug }}
+                    className="underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  >
+                    {seller.name}
+                  </Link>
+                }
+              />
               <Detail
                 label={tr(P.location)}
                 value={[seller.city, seller.country].filter(Boolean).join(", ")}
@@ -113,11 +127,19 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: ReactNode;
+  mono?: boolean;
+}) {
   return (
     <div>
       <dt className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 text-foreground">{value}</dd>
+      <dd className={`mt-0.5 select-text text-foreground ${mono ? "font-mono" : ""}`}>{value}</dd>
     </div>
   );
 }

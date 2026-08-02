@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type {
@@ -9,6 +10,7 @@ import type {
 import {
   ProductDraftDescriptionEditor,
   type ProductDraftDescriptionEditorClient,
+  type ProductDraftDescriptionEditorHandle,
 } from "./product-draft-description-editor";
 
 const productDraftId = "00000000-0000-4000-8000-000000000001";
@@ -95,6 +97,42 @@ describe("ProductDraftDescriptionEditor", () => {
     ).toBeVisible();
     expect(screen.queryByRole("button", { name: "Save descriptions" })).not.toBeInTheDocument();
     expect(client.update).not.toHaveBeenCalled();
+  });
+
+  it("refreshes metadata and untouched languages without discarding dirty text", async () => {
+    const get = vi
+      .fn()
+      .mockResolvedValueOnce(
+        snapshot({
+          en: entry("en", "Initial English", "model"),
+          pl: entry("pl", "Initial Polish", "model"),
+        }),
+      )
+      .mockResolvedValueOnce(
+        snapshot({
+          en: { ...entry("en", "Server English", "model"), factsRevision: 2, outdated: false },
+          pl: { ...entry("pl", "Server Polish", "model"), factsRevision: 2, outdated: false },
+        }),
+      );
+    const ref = createRef<ProductDraftDescriptionEditorHandle>();
+    render(
+      <ProductDraftDescriptionEditor
+        ref={ref}
+        productDraftId={productDraftId}
+        client={createClient({ get })}
+      />,
+    );
+
+    const english = await screen.findByRole("textbox", { name: /English/i });
+    await userEvent.clear(english);
+    await userEvent.type(english, "Unsaved English");
+    await act(async () => {
+      await ref.current?.refresh();
+    });
+
+    expect(english).toHaveValue("Unsaved English");
+    expect(screen.getByRole("textbox", { name: /Polish/i })).toHaveValue("Server Polish");
+    expect(screen.getAllByText("Facts revision: 2").length).toBeGreaterThan(0);
   });
 });
 

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { t, tr, useLang, type Lang, type T } from "@/lib/i18n";
+import { productCodeCopy } from "@/features/product-code/product-code.copy";
 
 import { listAdminProductDrafts } from "../admin-product-draft-index.functions";
 import { buildAdminProductDraftReviewHref } from "../admin-product-draft-index.navigation";
@@ -521,6 +522,7 @@ function ProductDraftCard({
                 value={`${item.seller.name} (${item.seller.slug})`}
               />
               <Definition label={tr(S.sellerIdShort)} value={item.seller.id} mono />
+              <Definition label={tr(productCodeCopy.label)} value={item.productCode} mono />
               <Definition
                 label={tr(S.category)}
                 value={

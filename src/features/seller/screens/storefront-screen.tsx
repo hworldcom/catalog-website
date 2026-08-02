@@ -2,9 +2,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type FormEvent } from "react";
 
-import { listCategoriesForPicker } from "@/features/seller/categories.functions";
+import { listSellerBusinessCategories } from "@/features/seller/categories.functions";
+import {
+  normalizeSubmittedCompanyCode,
+  readSellerCompanyCodeError,
+} from "@/features/seller/company-code";
+import { companyCodeCopy, companyCodeErrorCopy } from "@/features/seller/company-code.copy";
+import { updateMyCompanyCode } from "@/features/seller/company-code.functions";
 import { getMySeller } from "@/features/seller/current-seller.functions";
 import { updateStorefront } from "@/features/seller/storefront.functions";
+import { tr } from "@/lib/i18n";
 import { toast } from "sonner";
 
 import { Field } from "../components/field";
@@ -13,10 +20,11 @@ import { ImageUpload } from "../components/image-upload";
 export function StorefrontScreen() {
   const getSeller = useServerFn(getMySeller);
   const save = useServerFn(updateStorefront);
-  const listCats = useServerFn(listCategoriesForPicker);
+  const saveCompanyCode = useServerFn(updateMyCompanyCode);
+  const listCats = useServerFn(listSellerBusinessCategories);
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["my-seller"], queryFn: () => getSeller() });
-  const cats = useQuery({ queryKey: ["cats-picker"], queryFn: () => listCats() });
+  const cats = useQuery({ queryKey: ["seller-business-categories"], queryFn: () => listCats() });
 
   const seller = data?.seller;
   const [form, setForm] = useState<null | {
@@ -32,6 +40,9 @@ export function StorefrontScreen() {
     cover_image_url: string;
     established_year: string;
     primary_category_id: string;
+    company_code: string;
+    company_code_saved: string;
+    company_code_locked_at: string | null;
     published: boolean;
   }>(null);
   const [busy, setBusy] = useState(false);
@@ -51,6 +62,9 @@ export function StorefrontScreen() {
         cover_image_url: seller.cover_image_url ?? "",
         established_year: seller.established_year ? String(seller.established_year) : "",
         primary_category_id: seller.primary_category_id ?? "",
+        company_code: seller.company_code,
+        company_code_saved: seller.company_code,
+        company_code_locked_at: seller.company_code_locked_at,
         published: seller.published,
       });
     }
@@ -63,6 +77,21 @@ export function StorefrontScreen() {
     if (!form) return;
     setBusy(true);
     try {
+      const companyCode = normalizeSubmittedCompanyCode(form.company_code);
+      if (!form.company_code_locked_at && companyCode !== form.company_code_saved) {
+        const result = await saveCompanyCode({ data: { companyCode } });
+        setForm((current) =>
+          current
+            ? {
+                ...current,
+                company_code: result.seller.company_code,
+                company_code_saved: result.seller.company_code,
+                company_code_locked_at: result.seller.company_code_locked_at,
+              }
+            : current,
+        );
+      }
+
       await save({
         data: {
           id: form.id,
@@ -81,9 +110,16 @@ export function StorefrontScreen() {
         },
       });
       await queryClient.invalidateQueries({ queryKey: ["my-seller"] });
-      toast.success("Saved");
+      toast.success(tr(companyCodeCopy.saveSuccess));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed");
+      const companyCodeError = readSellerCompanyCodeError(err);
+      toast.error(
+        companyCodeError
+          ? tr(companyCodeErrorCopy[companyCodeError])
+          : err instanceof Error && err.message !== "seller_company_code_unavailable"
+            ? err.message
+            : tr(companyCodeCopy.saveUnavailable),
+      );
     } finally {
       setBusy(false);
     }
@@ -110,6 +146,26 @@ export function StorefrontScreen() {
             onChange={(e) => update("name", e.target.value)}
             className={inputCls}
           />
+        </Field>
+        <Field label={tr(companyCodeCopy.label)}>
+          <input
+            required
+            minLength={3}
+            maxLength={10}
+            pattern="[A-Z0-9]{3}[0-9]*"
+            value={form.company_code}
+            onChange={(e) => update("company_code", e.target.value.toUpperCase())}
+            disabled={Boolean(form.company_code_locked_at)}
+            className={`${inputCls} uppercase disabled:cursor-not-allowed disabled:opacity-60`}
+            autoComplete="off"
+          />
+          <span className="text-[11px] text-muted-foreground">
+            {tr(
+              form.company_code_locked_at
+                ? companyCodeCopy.lockedHelp
+                : companyCodeCopy.unlockedHelp,
+            )}
+          </span>
         </Field>
         <Field label="URL slug (a-z, 0-9, -)">
           <input

@@ -33,6 +33,10 @@
     "worker:classifier-import": "tsx src/features/admin/server/classifier-import.worker-process.ts",
     "prereconcile:product-draft-images": "node ./scripts/check-node-version.cjs",
     "reconcile:product-draft-images": "tsx src/features/admin/server/legacy-product-draft-image-cutover.command.ts",
+    "prereset:product-data": "node ./scripts/check-node-version.cjs",
+    "reset:product-data": "tsx src/features/admin/server/product-data-reset.command.ts",
+    "preqa:description-generation-provider": "node ./scripts/check-node-version.cjs",
+    "qa:description-generation-provider": "tsx --env-file=.env src/features/product-draft-description-generation/server/product-draft-description-generation-provider.command.ts",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -79,6 +83,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
+    "openai": "^7.3.0",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.0",

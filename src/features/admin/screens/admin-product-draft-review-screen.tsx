@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ProductDraftFactsEditor } from "@/features/product-draft-facts/components/product-draft-facts-editor";
+import { productCodeCopy } from "@/features/product-code/product-code.copy";
 import { ProductDraftTitleEditor } from "@/features/product-draft-title/components/product-draft-title-editor";
 import { t, tr, useLang, type Lang, type T } from "@/lib/i18n";
 
@@ -528,6 +529,7 @@ function ProductSummary({
             value={`${review.seller.name} (${review.seller.slug})`}
           />
           <Definition label={tr(S.sellerId)} value={review.seller.id} mono />
+          <Definition label={tr(productCodeCopy.label)} value={review.productCode} mono />
           <Definition
             label={tr(S.category)}
             value={

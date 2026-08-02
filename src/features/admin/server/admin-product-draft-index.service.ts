@@ -5,6 +5,7 @@ import {
   type AdminProductDraftIndexRequest,
   type AdminProductDraftPreview,
 } from "../admin-product-draft-index.types";
+import { parseStoredProductCode } from "@/features/product-code/product-code";
 import {
   decodeAdminProductDraftIndexCursor,
   encodeAdminProductDraftIndexCursor,
@@ -65,6 +66,9 @@ export class AdminProductDraftIndexService {
     });
     const hasMore = rows.length > request.limit;
     const products = rows.slice(0, request.limit);
+    const productCodeByProduct = new Map(
+      products.map((product) => [product.id, readProductCode(product)]),
+    );
     const details = await this.repository.loadDetails(products);
     const previewImageIdByProduct = selectPreviewImages(products, details);
     const deliveryByProduct = await this.resolvePreviews(
@@ -75,7 +79,13 @@ export class AdminProductDraftIndexService {
 
     return {
       items: products.map((product) =>
-        buildItem(product, details, previewImageIdByProduct, deliveryByProduct),
+        buildItem(
+          product,
+          productCodeByProduct,
+          details,
+          previewImageIdByProduct,
+          deliveryByProduct,
+        ),
       ),
       nextCursor:
         hasMore && products.length
@@ -135,6 +145,7 @@ function selectPreviewImages(
 
 function buildItem(
   product: AdminProductDraftIndexProductRecord,
+  productCodeByProduct: Map<string, string>,
   details: AdminProductDraftIndexDetails,
   previewImageIdByProduct: Map<string, string | null>,
   deliveryByProduct: Map<string, ProductDraftImageDeliveryResult>,
@@ -153,9 +164,12 @@ function buildItem(
   );
   const previewImageId = previewImageIdByProduct.get(product.id) ?? null;
   const delivery = deliveryByProduct.get(product.id);
+  const productCode = productCodeByProduct.get(product.id);
+  if (!productCode) throw adminProductDraftsUnavailable();
 
   return {
     productDraftId: product.id,
+    productCode,
     title: product.title,
     status: product.status,
     seller: {
@@ -178,6 +192,18 @@ function buildItem(
     createdAt: product.created_at,
     updatedAt: product.updated_at,
   };
+}
+
+function readProductCode(product: AdminProductDraftIndexProductRecord): string {
+  try {
+    return parseStoredProductCode(product.product_code);
+  } catch (error) {
+    console.error("[Admin ProductDraft index] Stored product code is invalid.", {
+      exceptionClass: error instanceof Error ? error.constructor.name : "UnknownError",
+      productId: product.id,
+    });
+    throw adminProductDraftsUnavailable();
+  }
 }
 
 function buildPreview(

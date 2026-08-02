@@ -13,7 +13,7 @@ import { AdminProductDraftIndexRepositoryError } from "./admin-product-draft-ind
 type AdminClient = SupabaseClient<Database>;
 
 const productFields =
-  "id,title,status,seller_id,category_id,cover_image_id,created_at,updated_at" as const;
+  "id,product_code,title,status,seller_id,category_id,cover_image_id,created_at,updated_at" as const;
 
 export class SupabaseAdminProductDraftIndexRepository implements AdminProductDraftIndexRepository {
   constructor(private readonly database: AdminClient) {}

@@ -31,7 +31,11 @@ describe("SupabaseSellerProductListRepository", () => {
     });
 
     expect(products).toHaveLength(1);
+    expect(productsQuery.select).toHaveBeenCalledWith(
+      "id,title,product_code,cover_image_id,cover_image_url,price,currency,moq,pack_size,stock,status,created_at",
+    );
     expect(productsQuery.eq).toHaveBeenCalledWith("seller_id", uuid(900));
+    expect(productsQuery.neq).toHaveBeenCalledWith("status", "archived");
     expect(productsQuery.order).toHaveBeenNthCalledWith(1, "created_at", {
       ascending: false,
     });
@@ -59,6 +63,7 @@ describe("SupabaseSellerProductListRepository", () => {
 
     expect(allProducts.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
     expect(allProducts.eq).toHaveBeenCalledWith("seller_id", uuid(900));
+    expect(allProducts.neq).toHaveBeenCalledWith("status", "archived");
     expect(publishedProducts.select).toHaveBeenCalledWith("id", {
       count: "exact",
       head: true,
@@ -99,6 +104,7 @@ function query(result: {
   const builder = {
     select: vi.fn(),
     eq: vi.fn(),
+    neq: vi.fn(),
     order: vi.fn(),
     limit: vi.fn(),
     or: vi.fn(),
@@ -108,6 +114,7 @@ function query(result: {
   };
   builder.select.mockReturnValue(builder);
   builder.eq.mockReturnValue(builder);
+  builder.neq.mockReturnValue(builder);
   builder.order.mockReturnValue(builder);
   builder.limit.mockReturnValue(builder);
   builder.or.mockReturnValue(builder);
@@ -119,6 +126,7 @@ function productRow() {
   return {
     id: uuid(1),
     title: "Product",
+    product_code: "SEL-F-TSH-ABCDEFGH",
     cover_image_id: null,
     cover_image_url: null,
     price: null,

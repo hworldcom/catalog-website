@@ -5,6 +5,7 @@ import {
   type AdminProductDraftReviewImage,
   type AdminProductDraftReviewRequest,
 } from "../admin-product-draft-review.types";
+import { parseStoredProductCode } from "@/features/product-code/product-code";
 import {
   resolveAdminProductDraftSource,
   selectAdminProductDraftPreviewImageId,
@@ -51,6 +52,7 @@ export class AdminProductDraftReviewService {
     if (!data.seller || (data.product.category_id && !data.category)) {
       throw adminProductDraftReviewUnavailable();
     }
+    const productCode = readProductCode(data.product);
 
     const images = [...data.images].sort(
       (left, right) =>
@@ -89,6 +91,7 @@ export class AdminProductDraftReviewService {
 
     return {
       productDraftId: data.product.id,
+      productCode,
       title: data.product.title,
       titleSource: data.product.title_source,
       status: data.product.status,
@@ -136,5 +139,17 @@ export class AdminProductDraftReviewService {
       deliveryByImage.set(result.imageId, result);
     }
     return deliveryByImage;
+  }
+}
+
+function readProductCode(product: { id: string; product_code: unknown }): string {
+  try {
+    return parseStoredProductCode(product.product_code);
+  } catch (error) {
+    console.error("[Admin ProductDraft review] Stored product code is invalid.", {
+      exceptionClass: error instanceof Error ? error.constructor.name : "UnknownError",
+      productId: product.id,
+    });
+    throw adminProductDraftReviewUnavailable();
   }
 }

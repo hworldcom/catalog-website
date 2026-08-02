@@ -40,7 +40,7 @@ vi.mock("@/features/seller/product-publication.functions", () => ({
 }));
 
 vi.mock("@/features/seller/categories.functions", () => ({
-  listCategoriesForPicker: mocks.listCategories,
+  listProductCategories: mocks.listCategories,
 }));
 
 vi.mock("./image-upload", () => ({
@@ -54,6 +54,7 @@ const productId = "00000000-0000-4000-8000-000000000001";
 type InitialProduct = {
   id: string;
   title: string;
+  product_code: string;
   title_source: "human" | "model" | null;
   description: string | null;
   category_id: string | null;
@@ -71,6 +72,7 @@ type InitialProduct = {
 const initial: InitialProduct = {
   id: productId,
   title: "Model title",
+  product_code: "SEL-F-TSH-ABCDEFGH",
   title_source: "model" as const,
   description: null,
   category_id: null,
@@ -97,6 +99,18 @@ describe("ProductEditor title and description behavior", () => {
     mocks.getPublication.mockResolvedValue(publication("not_started"));
     mocks.publish.mockResolvedValue(publication("pending"));
     mocks.retryPublication.mockResolvedValue(publication("pending"));
+  });
+
+  it("shows a persisted code but no code field for an unsaved product", () => {
+    const persisted = renderEditor(initial);
+    expect(screen.getByText("Product code:")).toBeVisible();
+    expect(screen.getByText("SEL-F-TSH-ABCDEFGH")).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: /Product code/i })).not.toBeInTheDocument();
+
+    persisted.unmount();
+    renderEditor(null);
+    expect(screen.queryByText("Product code:")).not.toBeInTheDocument();
+    expect(screen.queryByText("SEL-F-TSH-ABCDEFGH")).not.toBeInTheDocument();
   });
 
   it("omits an untouched existing title", async () => {
@@ -138,6 +152,23 @@ describe("ProductEditor title and description behavior", () => {
     expect(mocks.save.mock.calls[1]?.[0].data).toMatchObject({ title: "" });
   });
 
+  it("preserves unsaved fields when a stale save finds an archived product", async () => {
+    renderEditor(initial);
+    const input = screen.getByRole("textbox", { name: "Title" });
+
+    await userEvent.clear(input);
+    await userEvent.type(input, "Unsaved seller title");
+    mocks.save.mockRejectedValueOnce({ code: "product_draft_title_not_editable" });
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        "This product was archived and can no longer be edited.",
+      ),
+    );
+    expect(input).toHaveValue("Unsaved seller title");
+  });
+
   it("always includes the title value when creating a draft", async () => {
     mocks.save.mockResolvedValueOnce({
       id: productId,
@@ -165,19 +196,13 @@ describe("ProductEditor title and description behavior", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["my-product-summary"] });
   });
 
-  it("omits an untouched existing description and includes a changed or cleared one", async () => {
+  it("removes the legacy description control and never submits it for a saved product", async () => {
     renderEditor({ ...initial, description: "Model description" });
+    expect(screen.queryByRole("textbox", { name: "Description" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
 
     await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
     expect(mocks.save.mock.calls[0]?.[0].data).not.toHaveProperty("description");
-
-    const description = screen.getByRole("textbox", { name: "Description" });
-    await userEvent.clear(description);
-    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
-
-    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(2));
-    expect(mocks.save.mock.calls[1]?.[0].data).toMatchObject({ description: "" });
   });
 
   it("preserves edited product fields after a failed draft save", async () => {
@@ -185,17 +210,14 @@ describe("ProductEditor title and description behavior", () => {
     renderEditor(initial);
 
     const title = screen.getByRole("textbox", { name: "Title" });
-    const description = screen.getByRole("textbox", { name: "Description" });
     const price = screen.getByRole("spinbutton", { name: "Price (per unit)" });
     await userEvent.clear(title);
     await userEvent.type(title, "Recovered title");
-    await userEvent.type(description, "Recovered description");
     await userEvent.type(price, "19.50");
     await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
 
     await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
     expect(title).toHaveValue("Recovered title");
-    expect(description).toHaveValue("Recovered description");
     expect(price).toHaveValue(19.5);
     expect(screen.getByRole("button", { name: "Save draft" })).toBeEnabled();
   });
@@ -205,7 +227,7 @@ describe("ProductEditor title and description behavior", () => {
     async (status) => {
       renderEditor({ ...initial, status });
       expect(screen.getByRole("textbox", { name: "Title" })).toBeDisabled();
-      expect(screen.getByRole("textbox", { name: "Description" })).toBeDisabled();
+      expect(screen.queryByRole("textbox", { name: "Description" })).not.toBeInTheDocument();
     },
   );
 
@@ -244,10 +266,74 @@ describe("ProductEditor title and description behavior", () => {
   it("blocks publication while optional facts are dirty", async () => {
     renderEditor({ ...initial, imagePublicationMode: "imported" }, { dirty: true, saving: false });
 
-    expect(screen.getByText("Save optional product details before publishing.")).toBeVisible();
+    expect(
+      screen.getByText("Save product details and descriptions before publishing."),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "Publish" }));
     expect(mocks.publish).not.toHaveBeenCalled();
+  });
+
+  it("blocks publication while multilingual descriptions are dirty", async () => {
+    renderEditor(
+      { ...initial, imagePublicationMode: "imported" },
+      { dirty: false, saving: false },
+      { dirty: true, saving: false },
+    );
+
+    expect(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
+    expect(mocks.publish).not.toHaveBeenCalled();
+  });
+
+  it("reports durable publication state", async () => {
+    mocks.getPublication.mockResolvedValueOnce(publication("pending"));
+    const onStateChange = vi.fn();
+    renderEditor({ ...initial, imagePublicationMode: "imported" }, undefined, undefined, {
+      onStateChange,
+    });
+
+    await waitFor(() =>
+      expect(onStateChange).toHaveBeenCalledWith({
+        dirty: false,
+        saving: false,
+        publicationActive: true,
+      }),
+    );
+  });
+
+  it("reports unsaved product changes", async () => {
+    const onStateChange = vi.fn();
+    renderEditor(initial, undefined, undefined, { onStateChange });
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Pack size" }), "12 per box");
+    await waitFor(() =>
+      expect(onStateChange).toHaveBeenLastCalledWith({
+        dirty: true,
+        saving: false,
+        publicationActive: false,
+      }),
+    );
+  });
+
+  it("applies a generated title without discarding other unsaved product fields", async () => {
+    const view = renderEditor(initial);
+    const packSize = screen.getByRole("textbox", { name: "Pack size" });
+
+    await userEvent.type(packSize, "12 per box");
+    view.rerenderEditor(initial, {
+      titleReplacement: {
+        version: 1,
+        snapshot: { title: "Generated cotton shirt", source: "model" },
+      },
+    });
+
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Generated cotton shirt");
+    expect(packSize).toHaveValue("12 per box");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
+    expect(mocks.save.mock.calls[0]?.[0].data).not.toHaveProperty("title");
+    expect(mocks.save.mock.calls[0]?.[0].data).toMatchObject({ pack_size: "12 per box" });
   });
 
   it("shows a server-approved retry for a failed durable run", async () => {
@@ -306,7 +392,11 @@ describe("ProductEditor title and description behavior", () => {
 
   it.each([
     ["product_publication_title_required", "Enter and save a product title before publishing."],
-    ["product_publication_title_invalid", "Enter a product title with at most 120 characters."],
+    ["product_publication_title_invalid", "Enter a product title with at most 50 characters."],
+    [
+      "product_publication_description_invalid",
+      "Enter product descriptions with at most 300 characters each.",
+    ],
   ])("shows actionable synchronous error %s", async (code, message) => {
     mocks.publish.mockRejectedValueOnce({ code });
     renderEditor({ ...initial, imagePublicationMode: "imported" });
@@ -359,18 +449,35 @@ describe("ProductEditor title and description behavior", () => {
 function renderEditor(
   product: InitialProduct | null,
   factsState = { dirty: false, saving: false },
+  descriptionState = { dirty: false, saving: false },
+  props: {
+    onStateChange?: Parameters<typeof ProductEditor>[0]["onStateChange"];
+    titleReplacement?: Parameters<typeof ProductEditor>[0]["titleReplacement"];
+  } = {},
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
     },
   });
-  const result = render(
+  const renderUi = (nextProduct: InitialProduct | null, nextProps: typeof props = props) => (
     <QueryClientProvider client={queryClient}>
-      <ProductEditor initial={product} factsState={factsState} />
-    </QueryClientProvider>,
+      <ProductEditor
+        initial={nextProduct}
+        factsState={factsState}
+        descriptionState={descriptionState}
+        onStateChange={nextProps.onStateChange}
+        titleReplacement={nextProps.titleReplacement}
+      />
+    </QueryClientProvider>
   );
-  return { ...result, queryClient };
+  const result = render(renderUi(product));
+  return {
+    ...result,
+    queryClient,
+    rerenderEditor: (nextProduct: InitialProduct | null, nextProps: typeof props = props) =>
+      result.rerender(renderUi(nextProduct, nextProps)),
+  };
 }
 
 function publication(

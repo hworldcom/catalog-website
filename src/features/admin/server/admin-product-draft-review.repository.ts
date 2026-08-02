@@ -11,6 +11,7 @@ export type AdminProductDraftReviewProductRecord = Omit<
   Pick<
     Database["public"]["Tables"]["products"]["Row"],
     | "id"
+    | "product_code"
     | "title"
     | "title_source"
     | "status"

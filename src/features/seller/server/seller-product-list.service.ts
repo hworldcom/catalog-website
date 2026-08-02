@@ -1,5 +1,6 @@
 import type { ProductDraftImageDeliveryEngine } from "@/features/admin/server/product-draft-image-delivery.service";
 import type { ProductDraftImageDeliveryResult } from "@/features/admin/server/product-draft-image-delivery.types";
+import { parseStoredProductCode } from "@/features/product-code/product-code";
 
 import {
   decodeSellerProductListCursor,
@@ -26,8 +27,8 @@ type PreviewDelivery = Pick<ProductDraftImageDeliveryEngine, "resolve">;
 
 export type SellerProductListLogger = {
   error(
-    event: "seller_product_list_preview_unavailable",
-    context: { exceptionClass: string; productCount: number },
+    event: "seller_product_list_preview_unavailable" | "seller_product_list_product_code_invalid",
+    context: { exceptionClass: string; productCount?: number; productId?: string },
   ): void;
 };
 
@@ -64,11 +65,12 @@ export class SellerProductListService {
 
     const hasMore = rows.length > request.limit;
     const pageRows = rows.slice(0, request.limit);
+    const browserProducts = pageRows.map((product) => browserProduct(product, this.logger));
     const previewResult = await this.resolvePreviews(pageRows);
 
     return {
-      products: pageRows.map((product) => ({
-        ...browserProduct(product),
+      products: browserProducts.map((product) => ({
+        ...product,
         preview: previewResult.previews.get(product.id) ?? unavailablePreview(),
       })),
       nextCursor:
@@ -225,10 +227,22 @@ function validateDeliveryResponse(
   return results;
 }
 
-function browserProduct(product: SellerProductListRecord) {
+function browserProduct(product: SellerProductListRecord, logger: SellerProductListLogger) {
+  let productCode: string;
+  try {
+    productCode = parseStoredProductCode(product.product_code);
+  } catch (error) {
+    logger.error("seller_product_list_product_code_invalid", {
+      exceptionClass: error instanceof Error ? error.constructor.name : "UnknownError",
+      productId: product.id,
+    });
+    throw sellerProductListUnavailable();
+  }
+
   return {
     id: product.id,
     title: product.title,
+    product_code: productCode,
     cover_image_url: product.cover_image_url,
     price: product.price,
     currency: product.currency,

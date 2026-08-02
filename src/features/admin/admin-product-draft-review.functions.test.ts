@@ -58,6 +58,7 @@ describe("handleGetAdminProductDraftReview", () => {
 function review(): AdminProductDraftReview {
   return {
     productDraftId: uuid(1),
+    productCode: "SEL-F-TSH-ABCDEFGH",
     title: "Draft",
     titleSource: "human",
     status: "draft",

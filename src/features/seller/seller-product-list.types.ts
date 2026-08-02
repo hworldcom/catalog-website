@@ -31,6 +31,7 @@ export type SellerProductListItem = Pick<
   Database["public"]["Tables"]["products"]["Row"],
   | "id"
   | "title"
+  | "product_code"
   | "cover_image_url"
   | "price"
   | "currency"

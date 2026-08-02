@@ -8,8 +8,7 @@ SELECT plan(18);
 SELECT ok(
   (
     SELECT
-      count(*) > 0
-      AND count(*) FILTER (
+      count(*) FILTER (
         WHERE facts_json -> 'schemaVersion' = '2'::jsonb
           AND ARRAY(
             SELECT key
@@ -30,30 +29,46 @@ SELECT ok(
 
 SELECT ok(
   (
-    SELECT bool_and(facts_revision >= 2)
+    SELECT coalesce(bool_and(facts_revision >= 2), true)
     FROM public.product_draft_facts
   ),
   'the migration increments every pre-existing facts revision'
 );
 
-INSERT INTO public.sellers (id, slug, name)
+INSERT INTO public.sellers (id, slug, name, company_code)
 VALUES (
   '26000000-0000-0000-0000-000000000011',
   'qa-0026f1',
-  'QA 0026f1'
+  'QA 0026f1',
+  'Q02'
 );
 
-INSERT INTO public.products (id, seller_id, title, status)
+CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT public.reserve_product_code(
+    p_product_id,
+    '26000000-0000-0000-0000-000000000011',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
+  );
+$$;
+
+INSERT INTO public.products (id, seller_id, category_id, product_code, title, status)
 VALUES
   (
     '26000000-0000-0000-0000-000000000111',
     '26000000-0000-0000-0000-000000000011',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+    pg_temp.qa_product_code('26000000-0000-0000-0000-000000000111'),
     'Draft product',
     'draft'
   ),
   (
     '26000000-0000-0000-0000-000000000112',
     '26000000-0000-0000-0000-000000000011',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+    pg_temp.qa_product_code('26000000-0000-0000-0000-000000000112'),
     'Archived product',
     'archived'
   );

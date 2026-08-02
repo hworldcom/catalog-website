@@ -42,3 +42,31 @@ export const updateProductDraftDescriptions = createServerFn({ method: "POST" })
       runtime.access,
     );
   });
+
+export const getMyProductDraftDescriptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator(parseGetProductDraftDescriptionsInput)
+  .handler(async ({ data, context }) => {
+    const { createSellerProductDraftDescriptionRequestContext } =
+      await import("./server/product-draft-descriptions.runtime");
+    const runtime = await createSellerProductDraftDescriptionRequestContext(
+      context as AuthenticatedContext,
+    );
+    return runtime.service.get(data.productDraftId, runtime.access);
+  });
+
+export const updateMyProductDraftDescriptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(parseUpdateProductDraftDescriptionsInput)
+  .handler(async ({ data, context }) => {
+    const { createSellerProductDraftDescriptionRequestContext } =
+      await import("./server/product-draft-descriptions.runtime");
+    const runtime = await createSellerProductDraftDescriptionRequestContext(
+      context as AuthenticatedContext,
+    );
+    return runtime.service.update(
+      data.productDraftId,
+      normalizeProductDraftDescriptionPatch(data.descriptions),
+      runtime.access,
+    );
+  });

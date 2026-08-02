@@ -7,9 +7,13 @@ import { toast } from "sonner";
 import { ProductDraftFields } from "@/components/product/product-draft-fields";
 import { ProductPublicationStatus } from "@/components/product/product-publication-status";
 import { isActiveProductPublication } from "@/components/product/product-publication-status.utils";
+import { productCodeCopy } from "@/features/product-code/product-code.copy";
+import type { ProductDraftDescriptionEditorState } from "@/features/product-draft-descriptions/components/product-draft-description-editor";
+import { PRODUCT_DRAFT_DESCRIPTION_MAX_LENGTH } from "@/features/product-draft-descriptions/product-draft-descriptions.types";
 import type { ProductDraftFactsEditorState } from "@/features/product-draft-facts/components/product-draft-facts-editor";
+import type { ProductDraftTitleSnapshot } from "@/features/product-draft-title/product-draft-title.types";
 import { t, tr } from "@/lib/i18n";
-import { listCategoriesForPicker } from "@/features/seller/categories.functions";
+import { listProductCategories } from "@/features/seller/categories.functions";
 import {
   getMyProductPublication,
   publishMyProduct,
@@ -159,6 +163,12 @@ const S = {
     "Das Produkt kann in seinem aktuellen Zustand nicht veröffentlicht werden.",
     "Không thể xuất bản sản phẩm ở trạng thái hiện tại.",
   ),
+  notEditable: t(
+    "This product was archived and can no longer be edited.",
+    "Ten produkt został zarchiwizowany i nie można go już edytować.",
+    "Dieses Produkt wurde archiviert und kann nicht mehr bearbeitet werden.",
+    "Sản phẩm này đã được lưu trữ và không thể chỉnh sửa nữa.",
+  ),
   configurationInvalid: t(
     "Product publication is temporarily misconfigured.",
     "Publikacja produktu jest tymczasowo nieprawidłowo skonfigurowana.",
@@ -190,10 +200,16 @@ const S = {
     "Nhập và lưu tên sản phẩm trước khi xuất bản.",
   ),
   titleInvalid: t(
-    "Enter a product title with at most 120 characters.",
-    "Wprowadź tytuł produktu zawierający maksymalnie 120 znaków.",
-    "Geben Sie einen Produkttitel mit höchstens 120 Zeichen ein.",
-    "Nhập tên sản phẩm có tối đa 120 ký tự.",
+    "Enter a product title with at most 50 characters.",
+    "Wprowadź tytuł produktu zawierający maksymalnie 50 znaków.",
+    "Geben Sie einen Produkttitel mit höchstens 50 Zeichen ein.",
+    "Nhập tên sản phẩm có tối đa 50 ký tự.",
+  ),
+  descriptionInvalid: t(
+    "Enter product descriptions with at most 300 characters each.",
+    "Każdy opis produktu może zawierać maksymalnie 300 znaków.",
+    "Geben Sie Produktbeschreibungen mit jeweils höchstens 300 Zeichen ein.",
+    "Nhập mỗi mô tả sản phẩm tối đa 300 ký tự.",
   ),
   imageRequired: t(
     "Add at least one product picture before publishing.",
@@ -260,6 +276,7 @@ const S = {
 type ProductInitial = {
   id: string;
   title: string;
+  product_code: string;
   title_source: "human" | "model" | null;
   description: string | null;
   category_id: string | null;
@@ -293,24 +310,60 @@ const cleanFactsState: ProductDraftFactsEditorState = {
   saving: false,
 };
 
+const cleanDescriptionState: ProductDraftDescriptionEditorState = {
+  dirty: false,
+  saving: false,
+};
+
+export type ProductEditorCoordinationState = {
+  dirty: boolean;
+  saving: boolean;
+  publicationActive: boolean;
+};
+
+export type ProductEditorTitleReplacement = {
+  version: number;
+  snapshot: ProductDraftTitleSnapshot;
+};
+
+export type SavedProductSnapshot = {
+  id: string;
+  title: string;
+  titleSource: "human" | "model" | null;
+  status: "draft" | "published" | "archived";
+};
+
 export function ProductEditor({
   initial,
   factsState = cleanFactsState,
+  descriptionState = cleanDescriptionState,
+  disabled = false,
+  titleReplacement = null,
   onSaved,
+  onProductSaved,
+  onStateChange,
+  onDisplayTitleChange,
 }: {
   initial: ProductInitial;
   factsState?: ProductDraftFactsEditorState;
+  descriptionState?: ProductDraftDescriptionEditorState;
+  disabled?: boolean;
+  titleReplacement?: ProductEditorTitleReplacement | null;
   onSaved?: (id: string) => void;
+  onProductSaved?: (snapshot: SavedProductSnapshot) => void;
+  onStateChange?: (state: ProductEditorCoordinationState) => void;
+  onDisplayTitleChange?: (title: string) => void;
 }) {
   const save = useServerFn(saveMyProduct);
   const publish = useServerFn(publishMyProduct);
   const getPublication = useServerFn(getMyProductPublication);
   const retryPublication = useServerFn(retryMyProductPublication);
-  const listCats = useServerFn(listCategoriesForPicker);
+  const listCats = useServerFn(listProductCategories);
   const queryClient = useQueryClient();
-  const cats = useQuery({ queryKey: ["cats-picker"], queryFn: () => listCats() });
+  const cats = useQuery({ queryKey: ["product-categories"], queryFn: () => listCats() });
 
   const [form, setForm] = useState<ProductForm>(() => productForm(initial));
+  const [savedForm, setSavedForm] = useState<ProductForm>(() => productForm(initial));
   const [busy, setBusy] = useState(false);
   const [titleTouched, setTitleTouched] = useState(false);
   const [descriptionTouched, setDescriptionTouched] = useState(false);
@@ -333,14 +386,34 @@ export function ProductEditor({
   });
   const currentPublication = publicationSnapshot ?? publicationQuery.data ?? null;
   const publicationActive = isActiveProductPublication(currentPublication?.publicationStatus);
+  const dirty = !sameProductForm(form, savedForm);
 
   useEffect(() => {
     if (!initial) return;
-    setForm(productForm(initial));
+    const next = productForm(initial);
+    setForm(next);
+    setSavedForm(next);
     setTitleTouched(false);
     setDescriptionTouched(false);
     setTitleSource(initial.title_source);
   }, [initial]);
+
+  useEffect(() => {
+    if (!titleReplacement) return;
+    setForm((current) => ({ ...current, title: titleReplacement.snapshot.title }));
+    setSavedForm((current) => ({ ...current, title: titleReplacement.snapshot.title }));
+    setTitleTouched(false);
+    setTitleSource(titleReplacement.snapshot.titleSource);
+  }, [titleReplacement]);
+
+  useEffect(() => {
+    onStateChange?.({ dirty, saving: busy, publicationActive });
+  }, [busy, dirty, onStateChange, publicationActive]);
+
+  useEffect(
+    () => () => onStateChange?.({ dirty: false, saving: false, publicationActive: false }),
+    [onStateChange],
+  );
 
   useEffect(() => {
     if (publicationQuery.data) setPublicationSnapshot(publicationQuery.data);
@@ -392,7 +465,14 @@ export function ProductEditor({
       await submitNewProductPublication();
       return;
     }
-    if (factsState.dirty || factsState.saving) return;
+    if (
+      factsState.dirty ||
+      factsState.saving ||
+      descriptionState.dirty ||
+      descriptionState.saving
+    ) {
+      return;
+    }
 
     setBusy(true);
     try {
@@ -470,11 +550,15 @@ export function ProductEditor({
     }
   }
 
-  function applySavedProduct(saved: { title: string; titleSource: "human" | "model" | null }) {
-    setForm((current) => ({ ...current, title: saved.title }));
+  function applySavedProduct(saved: SavedProductSnapshot) {
+    const nextForm = { ...form, title: saved.title };
+    setForm(nextForm);
+    setSavedForm(nextForm);
     setTitleTouched(false);
     setDescriptionTouched(false);
     setTitleSource(saved.titleSource);
+    onDisplayTitleChange?.(saved.title);
+    onProductSaved?.(saved);
   }
 
   function replacePublicationSnapshot(snapshot: SellerProductPublicationSnapshot) {
@@ -485,8 +569,9 @@ export function ProductEditor({
   const inputCls = "border border-border bg-background px-3 py-2 text-sm";
   const titleReadOnly = initial?.status === "published" || initial?.status === "archived";
   const descriptionReadOnly = titleReadOnly;
-  const publishBlockedByFacts = factsState.dirty || factsState.saving;
-  const actionsDisabled = busy || publicationActive;
+  const publishBlockedByEditors =
+    factsState.dirty || factsState.saving || descriptionState.dirty || descriptionState.saving;
+  const actionsDisabled = disabled || busy || publicationActive;
 
   return (
     <div className="flex flex-col gap-6">
@@ -498,6 +583,12 @@ export function ProductEditor({
           <p className="text-sm text-muted-foreground">
             {isPublished ? "Live on your storefront." : "Draft — not visible to buyers yet."}
           </p>
+          {initial ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              <span>{tr(productCodeCopy.label)}: </span>
+              <span className="select-text font-mono text-foreground">{initial.product_code}</span>
+            </p>
+          ) : null}
         </div>
         <Link to="/seller/products" className="text-xs text-muted-foreground hover:text-foreground">
           ← Back
@@ -508,7 +599,7 @@ export function ProductEditor({
         <ProductPublicationStatus
           snapshot={currentPublication}
           statusReadFailed={publicationQuery.isError}
-          busy={busy}
+          busy={busy || disabled}
           onRefresh={() => void observeCurrentPublication()}
           onRetry={() => void retryDurablePublication()}
         />
@@ -535,10 +626,11 @@ export function ProductEditor({
             }}
             categories={cats.data?.categories ?? []}
             titleSource={titleSource}
-            disabled={publicationActive}
-            titleDisabled={titleReadOnly || publicationActive}
+            disabled={disabled || publicationActive}
+            titleDisabled={titleReadOnly || disabled || publicationActive}
             onChange={(next) => {
               if (next.title !== form.title) setTitleTouched(true);
+              if (next.title !== form.title) onDisplayTitleChange?.(next.title);
               setForm({
                 ...form,
                 title: next.title,
@@ -553,20 +645,23 @@ export function ProductEditor({
             }}
           />
         </div>
-        <div className="md:col-span-2">
-          <Field label="Description">
-            <textarea
-              rows={6}
-              value={form.description}
-              onChange={(event) => {
-                setForm({ ...form, description: event.target.value });
-                setDescriptionTouched(true);
-              }}
-              className={inputCls}
-              disabled={descriptionReadOnly}
-            />
-          </Field>
-        </div>
+        {!initial ? (
+          <div className="md:col-span-2">
+            <Field label="Description">
+              <textarea
+                rows={6}
+                maxLength={PRODUCT_DRAFT_DESCRIPTION_MAX_LENGTH}
+                value={form.description}
+                onChange={(event) => {
+                  setForm({ ...form, description: event.target.value });
+                  setDescriptionTouched(true);
+                }}
+                className={inputCls}
+                disabled={descriptionReadOnly || disabled}
+              />
+            </Field>
+          </div>
+        ) : null}
         {!isImported ? (
           <div className="md:col-span-2">
             <ImageUpload
@@ -574,13 +669,14 @@ export function ProductEditor({
               folder="products"
               value={form.cover_image_url}
               onChange={(url) => setForm({ ...form, cover_image_url: url })}
+              disabled={disabled}
             />
           </div>
         ) : null}
 
-        {publishBlockedByFacts && !isPublished ? (
+        {publishBlockedByEditors && !isPublished ? (
           <p className="text-sm text-amber-700 md:col-span-2">
-            Save optional product details before publishing.
+            Save product details and descriptions before publishing.
           </p>
         ) : null}
 
@@ -595,7 +691,7 @@ export function ProductEditor({
           {!isPublished ? (
             <button
               type="button"
-              disabled={actionsDisabled || publishBlockedByFacts}
+              disabled={actionsDisabled || publishBlockedByEditors}
               onClick={() => void submitPublication()}
               className="bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
@@ -622,6 +718,22 @@ function productForm(initial: ProductInitial): ProductForm {
     cover_image_url: initial?.cover_image_url ?? "",
     trending: initial?.trending ?? false,
   };
+}
+
+function sameProductForm(left: ProductForm, right: ProductForm): boolean {
+  return (
+    left.id === right.id &&
+    left.title === right.title &&
+    left.description === right.description &&
+    left.category_id === right.category_id &&
+    left.moq === right.moq &&
+    left.pack_size === right.pack_size &&
+    left.price === right.price &&
+    left.currency === right.currency &&
+    left.stock === right.stock &&
+    left.cover_image_url === right.cover_image_url &&
+    left.trending === right.trending
+  );
 }
 
 function productFields(
@@ -663,6 +775,8 @@ function publicationErrorMessage(error: unknown, fallback: string): string {
       return tr(S.titleRequired);
     case "product_publication_title_invalid":
       return tr(S.titleInvalid);
+    case "product_publication_description_invalid":
+      return tr(S.descriptionInvalid);
     case "product_publication_image_required":
       return tr(S.imageRequired);
     case "product_publication_images_not_ready":
@@ -671,6 +785,8 @@ function publicationErrorMessage(error: unknown, fallback: string): string {
       return tr(S.inProgress);
     case "product_publication_not_allowed":
       return tr(S.notAllowed);
+    case "product_draft_title_not_editable":
+      return tr(S.notEditable);
     case "product_publication_configuration_invalid":
       return tr(S.configurationInvalid);
     case "product_publication_unavailable":

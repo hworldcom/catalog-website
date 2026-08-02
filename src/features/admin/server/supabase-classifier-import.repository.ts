@@ -246,6 +246,10 @@ export class SupabaseClassifierImportRepository implements ClassifierImportRepos
     }
     if (
       row.result === "category_not_mapped" ||
+      row.result === "product_category_not_supported" ||
+      row.result === "product_code_company_unconfigured" ||
+      row.result === "product_code_category_unconfigured" ||
+      row.result === "product_code_allocation_failed" ||
       row.result === "product_draft_source_conflict" ||
       row.result === "claim_lost"
     ) {

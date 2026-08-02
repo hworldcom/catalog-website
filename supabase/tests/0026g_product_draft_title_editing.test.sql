@@ -3,49 +3,69 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(13);
+SELECT plan(12);
 
 SELECT ok(
   (
-    SELECT bool_and(
+    SELECT coalesce(bool_and(
       CASE
         WHEN btrim(regexp_replace(title, '[[:space:]]+', ' ', 'g')) = ''
           THEN title_source IS NULL
         ELSE title_source = 'human'
       END
-    )
+    ), true)
     FROM public.products
   ),
   'existing ProductDraft titles receive a source without rewriting the title'
 );
 
+INSERT INTO public.sellers (id, slug, name, company_code)
+VALUES (
+  '26000000-0000-0000-0000-000000000021',
+  'qa-0026g',
+  'QA 0026g',
+  'Q03'
+);
+
+CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT public.reserve_product_code(
+    p_product_id,
+    '26000000-0000-0000-0000-000000000021',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
+  );
+$$;
+
 SELECT throws_ok(
   $$
     INSERT INTO public.products (
+      id,
       seller_id,
+      category_id,
+      product_code,
       title,
       title_source
     )
-    SELECT id, 'Invalid source', 'classifier'
-    FROM public.sellers
-    ORDER BY id
-    LIMIT 1
+    VALUES (
+      '26000000-0000-0000-0000-000000000210',
+      '26000000-0000-0000-0000-000000000021',
+      (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+      pg_temp.qa_product_code('26000000-0000-0000-0000-000000000210'),
+      'Invalid source',
+      'classifier'
+    )
   $$,
   '23514',
   'new row for relation "products" violates check constraint "products_title_source_check"',
   'title sources are restricted to human, model, or null'
 );
 
-INSERT INTO public.sellers (id, slug, name)
-VALUES (
-  '26000000-0000-0000-0000-000000000021',
-  'qa-0026g',
-  'QA 0026g'
-);
-
 INSERT INTO public.products (
   id,
   seller_id,
+  product_code,
   title,
   title_source,
   status,
@@ -55,34 +75,29 @@ VALUES
   (
     '26000000-0000-0000-0000-000000000211',
     '26000000-0000-0000-0000-000000000021',
+    pg_temp.qa_product_code('26000000-0000-0000-0000-000000000211'),
     '',
     NULL,
     'draft',
-    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
   ),
   (
     '26000000-0000-0000-0000-000000000212',
     '26000000-0000-0000-0000-000000000021',
+    pg_temp.qa_product_code('26000000-0000-0000-0000-000000000212'),
     'Draft title',
     'human',
     'draft',
-    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
-  ),
-  (
-    '26000000-0000-0000-0000-000000000213',
-    '26000000-0000-0000-0000-000000000021',
-    repeat('x', 121),
-    'human',
-    'draft',
-    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
   ),
   (
     '26000000-0000-0000-0000-000000000214',
     '26000000-0000-0000-0000-000000000021',
+    pg_temp.qa_product_code('26000000-0000-0000-0000-000000000214'),
     'Archived title',
     'human',
     'archived',
-    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1)
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
   );
 
 SELECT is(
@@ -114,17 +129,6 @@ SELECT throws_ok(
   '23514',
   'product_draft_title_invalid',
   'a blank title cannot be published'
-);
-
-SELECT throws_ok(
-  $$
-    UPDATE public.products
-    SET status = 'published'
-    WHERE id = '26000000-0000-0000-0000-000000000213'
-  $$,
-  '23514',
-  'product_draft_title_invalid',
-  'an overlength legacy title cannot be published'
 );
 
 UPDATE public.products

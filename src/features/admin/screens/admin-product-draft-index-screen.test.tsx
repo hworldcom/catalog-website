@@ -49,6 +49,8 @@ describe("AdminProductDraftIndexScreenView", () => {
     expect(screen.getByText("Trousers (trousers)")).toBeVisible();
     expect(screen.getByText("4")).toBeVisible();
     expect(screen.getByText(uuid(701))).toBeVisible();
+    expect(screen.getByText("Product code")).toBeVisible();
+    expect(screen.getByText("SEL-F-TSH-ABCDEFGH")).toBeVisible();
     expect(screen.getByRole("img", { name: "Untitled product preview" })).toHaveAttribute(
       "src",
       draft.preview.url,
@@ -224,6 +226,7 @@ function item(overrides: Partial<AdminProductDraftIndexItem> = {}): AdminProduct
       : overrides.previewImageId;
   return {
     productDraftId,
+    productCode: "SEL-F-TSH-ABCDEFGH",
     title: `Draft ${Number(productDraftId.slice(-3))}`,
     status: "draft",
     seller: { id: uuid(10), name: "Seller One", slug: "seller-one" },

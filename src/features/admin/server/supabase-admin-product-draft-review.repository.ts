@@ -12,7 +12,7 @@ import { AdminProductDraftReviewRepositoryError } from "./admin-product-draft-re
 type AdminClient = SupabaseClient<Database>;
 
 const productFields =
-  "id,title,title_source,status,seller_id,category_id,cover_image_id,created_at,updated_at" as const;
+  "id,product_code,title,title_source,status,seller_id,category_id,cover_image_id,created_at,updated_at" as const;
 
 export class SupabaseAdminProductDraftReviewRepository implements AdminProductDraftReviewRepository {
   constructor(private readonly database: AdminClient) {}

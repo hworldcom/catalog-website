@@ -5,20 +5,33 @@ SET LOCAL search_path = public, extensions;
 
 SELECT plan(10);
 
-INSERT INTO public.sellers (id, slug, name, published)
+INSERT INTO public.sellers (id, slug, name, published, company_code)
 VALUES
   (
     '29f00000-0000-0000-0000-000000000001',
     'qa-0029j-seller-one',
     'QA 0029j Seller One',
-    false
+    false,
+    'Q81'
   ),
   (
     '29f00000-0000-0000-0000-000000000002',
     'qa-0029j-seller-two',
     'QA 0029j Seller Two',
-    false
+    false,
+    'Q82'
   );
+
+CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT public.reserve_product_code(
+    p_product_id,
+    '29f00000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
+  );
+$$;
 
 INSERT INTO public.seller_classifier_batches (
   id,
@@ -77,6 +90,8 @@ VALUES (
 INSERT INTO public.products (
   id,
   seller_id,
+  category_id,
+  product_code,
   title,
   status,
   classifier_organization_id,
@@ -86,6 +101,8 @@ VALUES
   (
     '29f00000-0000-0000-0000-000000000051',
     '29f00000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+    pg_temp.qa_product_code('29f00000-0000-0000-0000-000000000051'),
     'Recovered second group',
     'draft',
     '29f00000-0000-0000-0000-000000000099',
@@ -94,6 +111,8 @@ VALUES
   (
     '29f00000-0000-0000-0000-000000000052',
     '29f00000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+    pg_temp.qa_product_code('29f00000-0000-0000-0000-000000000052'),
     'Recovered first group',
     'archived',
     '29f00000-0000-0000-0000-000000000099',
@@ -102,6 +121,8 @@ VALUES
   (
     '29f00000-0000-0000-0000-000000000053',
     '29f00000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+    pg_temp.qa_product_code('29f00000-0000-0000-0000-000000000053'),
     'Conflicting product',
     'draft',
     '29f00000-0000-0000-0000-000000000099',

@@ -25,6 +25,7 @@ export type AdminProductDraftReviewImage = {
 
 export type AdminProductDraftReview = {
   productDraftId: string;
+  productCode: string;
   title: string;
   titleSource: "human" | "model" | null;
   status: Database["public"]["Enums"]["product_status"];

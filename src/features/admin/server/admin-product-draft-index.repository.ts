@@ -6,6 +6,7 @@ import type { AdminProductDraftIndexCursor } from "../admin-product-draft-index.
 export type AdminProductDraftIndexProductRecord = Pick<
   Database["public"]["Tables"]["products"]["Row"],
   | "id"
+  | "product_code"
   | "title"
   | "status"
   | "seller_id"

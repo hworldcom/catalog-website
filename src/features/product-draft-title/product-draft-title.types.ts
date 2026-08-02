@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const PRODUCT_DRAFT_TITLE_MAX_LENGTH = 120;
+export const PRODUCT_DRAFT_TITLE_MAX_LENGTH = 50;
 
 export type ProductDraftTitleSource = "human" | "model" | null;
 export type ProductDraftTitleStatus = "draft" | "published" | "archived";
@@ -22,7 +22,7 @@ export type UpdateProductDraftTitleInput = {
   title: string;
 };
 
-export type ProductDraftTitleErrorStatus = 400 | 404 | 409 | 500;
+export type ProductDraftTitleErrorStatus = 400 | 404 | 409 | 500 | 503;
 
 export class ProductDraftTitleError extends Error {
   constructor(
@@ -32,6 +32,12 @@ export class ProductDraftTitleError extends Error {
       | "product_draft_title_required"
       | "product_draft_not_found"
       | "product_draft_title_not_editable"
+      | "product_category_required"
+      | "product_category_not_supported"
+      | "product_code_company_unconfigured"
+      | "product_code_category_unconfigured"
+      | "product_code_allocation_failed"
+      | "product_code_immutable"
       | "product_draft_title_unavailable",
     message: string,
   ) {
@@ -63,7 +69,7 @@ export function parseUpdateProductDraftTitleInput(input: unknown): UpdateProduct
 
 export function normalizeProductDraftTitle(input: string): string {
   const normalized = input.trim().replace(/\s+/gu, " ");
-  if (normalized.length > PRODUCT_DRAFT_TITLE_MAX_LENGTH) {
+  if (Array.from(normalized).length > PRODUCT_DRAFT_TITLE_MAX_LENGTH) {
     throw invalidProductDraftTitle();
   }
   return normalized;

@@ -43,6 +43,7 @@ const TERMINAL_SAFE_FAILURES = new Set([
   "product_not_found",
   "product_publication_title_required",
   "product_publication_title_invalid",
+  "product_publication_description_invalid",
   "product_publication_category_required",
   "product_publication_image_required",
   "product_publication_images_not_ready",

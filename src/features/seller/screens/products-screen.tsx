@@ -4,7 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { deleteMyProduct, listMyProducts } from "@/features/seller/products.functions";
+import { archiveMyProduct, listMyProducts } from "@/features/seller/products.functions";
+import { productCodeCopy } from "@/features/product-code/product-code.copy";
 import type {
   SellerProductListItem,
   SellerProductListRequest,
@@ -41,19 +42,36 @@ const S = {
     "Sản phẩm chưa có tên",
   ),
   edit: t("Edit", "Edytuj", "Bearbeiten", "Chỉnh sửa"),
-  delete: t("Delete", "Usuń", "Löschen", "Xóa"),
-  deleteConfirm: t(
-    "Delete this product?",
-    "Usunąć ten produkt?",
-    "Dieses Produkt löschen?",
-    "Xóa sản phẩm này?",
+  archive: t("Archive", "Archiwizuj", "Archivieren", "Lưu trữ"),
+  archiveConfirm: t(
+    "Archive this product? It will disappear from your product list and cannot be restored.",
+    "Zarchiwizować ten produkt? Zniknie z listy produktów i nie będzie można go przywrócić.",
+    "Dieses Produkt archivieren? Es verschwindet aus Ihrer Produktliste und kann nicht wiederhergestellt werden.",
+    "Lưu trữ sản phẩm này? Sản phẩm sẽ biến mất khỏi danh sách và không thể khôi phục.",
   ),
-  deleted: t("Deleted", "Usunięto", "Gelöscht", "Đã xóa"),
-  deleteFailed: t(
-    "Delete failed",
-    "Usuwanie nie powiodło się",
-    "Löschen fehlgeschlagen",
-    "Xóa thất bại",
+  archiveSuccess: t(
+    "Product archived",
+    "Produkt zarchiwizowany",
+    "Produkt archiviert",
+    "Đã lưu trữ sản phẩm",
+  ),
+  archiveNotAllowed: t(
+    "Wait for active publication or complete publication cleanup before archiving this product.",
+    "Poczekaj na zakończenie publikacji lub dokończ jej czyszczenie przed zarchiwizowaniem produktu.",
+    "Warten Sie auf den Abschluss der Veröffentlichung oder schließen Sie deren Bereinigung ab, bevor Sie das Produkt archivieren.",
+    "Hãy chờ xuất bản hoàn tất hoặc hoàn tất dọn dẹp xuất bản trước khi lưu trữ sản phẩm.",
+  ),
+  productNotFound: t(
+    "The product was not found.",
+    "Nie znaleziono produktu.",
+    "Das Produkt wurde nicht gefunden.",
+    "Không tìm thấy sản phẩm.",
+  ),
+  archiveUnavailable: t(
+    "Product archival is temporarily unavailable.",
+    "Archiwizacja produktu jest tymczasowo niedostępna.",
+    "Die Produktarchivierung ist vorübergehend nicht verfügbar.",
+    "Tính năng lưu trữ sản phẩm tạm thời không khả dụng.",
   ),
   noProducts: t(
     "No products yet.",
@@ -110,7 +128,7 @@ export type ProductsScreenProps = {
 
 export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps) {
   const listProducts = useServerFn(listMyProducts);
-  const del = useServerFn(deleteMyProduct);
+  const archive = useServerFn(archiveMyProduct);
   const queryClient = useQueryClient();
   const [locallyUnavailable, setLocallyUnavailable] = useState<Set<string>>(new Set());
   const [refreshError, setRefreshError] = useState(false);
@@ -196,20 +214,20 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
     return () => window.clearTimeout(timer);
   }, [data, locallyUnavailable, refreshImportedPreviews]);
 
-  async function handleDelete(id: string) {
-    if (!window.confirm(tr(S.deleteConfirm))) return;
+  async function handleArchive(id: string) {
+    if (!window.confirm(tr(S.archiveConfirm))) return;
     try {
-      await del({ data: { id } });
+      await archive({ data: { id } });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["my-products"] }),
         queryClient.invalidateQueries({ queryKey: ["my-product-summary"] }),
       ]);
-      toast.success(tr(S.deleted));
+      toast.success(tr(S.archiveSuccess));
       if (request.cursor && data?.products.length === 1) {
         onRequestChange({ ...request, cursor: null });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : tr(S.deleteFailed));
+      toast.error(productArchiveErrorMessage(error));
     }
   }
 
@@ -259,6 +277,7 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
                   <tr>
                     <th className="p-3">{tr(S.preview)}</th>
                     <th className="p-3">{tr(S.title)}</th>
+                    <th className="p-3">{tr(productCodeCopy.label)}</th>
                     <th className="p-3">{tr(S.status)}</th>
                     <th className="p-3">{tr(S.price)}</th>
                     <th className="p-3">{tr(S.moq)}</th>
@@ -288,6 +307,7 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
                           {product.title.trim() || tr(S.untitled)}
                         </Link>
                       </td>
+                      <td className="select-text p-3 font-mono text-xs">{product.product_code}</td>
                       <td className="p-3">
                         <span className={statusClass(product.status)}>
                           {localizedStatus(product.status)}
@@ -309,10 +329,10 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
                         </Link>
                         <button
                           type="button"
-                          onClick={() => void handleDelete(product.id)}
+                          onClick={() => void handleArchive(product.id)}
                           className="text-xs text-rose-400 hover:text-rose-300"
                         >
-                          {tr(S.delete)}
+                          {tr(S.archive)}
                         </button>
                       </td>
                     </tr>
@@ -365,6 +385,15 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
       )}
     </div>
   );
+}
+
+function productArchiveErrorMessage(error: unknown): string {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    if (error.code === "product_not_found") return tr(S.productNotFound);
+    if (error.code === "product_archive_not_allowed") return tr(S.archiveNotAllowed);
+    if (error.code === "product_archive_unavailable") return tr(S.archiveUnavailable);
+  }
+  return tr(S.archiveUnavailable);
 }
 
 function ProductPreview({

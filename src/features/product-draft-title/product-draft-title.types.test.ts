@@ -14,10 +14,10 @@ describe("ProductDraft title contract", () => {
     expect(normalizeProductDraftTitle(" \n ")).toBe("");
   });
 
-  it("accepts one through 120 normalized characters and rejects longer titles", () => {
+  it("accepts up to 50 Unicode characters and rejects longer titles", () => {
     expect(normalizeProductDraftTitle("x")).toBe("x");
-    expect(normalizeProductDraftTitle("x".repeat(120))).toHaveLength(120);
-    expect(() => normalizeProductDraftTitle("x".repeat(121))).toThrowError(
+    expect(normalizeProductDraftTitle("😀".repeat(50))).toBe("😀".repeat(50));
+    expect(() => normalizeProductDraftTitle("😀".repeat(51))).toThrowError(
       expect.objectContaining({
         statusCode: 400,
         code: "product_draft_title_invalid",

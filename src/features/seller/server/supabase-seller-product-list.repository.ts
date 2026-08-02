@@ -16,7 +16,7 @@ import {
 type DatabaseClient = SupabaseClient<Database>;
 
 const productFields =
-  "id,title,cover_image_id,cover_image_url,price,currency,moq,pack_size,stock,status,created_at" as const;
+  "id,title,product_code,cover_image_id,cover_image_url,price,currency,moq,pack_size,stock,status,created_at" as const;
 
 export class SupabaseSellerProductListRepository implements SellerProductListRepository {
   constructor(private readonly database: DatabaseClient) {}
@@ -28,6 +28,7 @@ export class SupabaseSellerProductListRepository implements SellerProductListRep
       .from("products")
       .select(productFields)
       .eq("seller_id", input.sellerId)
+      .neq("status", "archived")
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(input.limit);
@@ -49,7 +50,8 @@ export class SupabaseSellerProductListRepository implements SellerProductListRep
       this.database
         .from("products")
         .select("id", { count: "exact", head: true })
-        .eq("seller_id", sellerId),
+        .eq("seller_id", sellerId)
+        .neq("status", "archived"),
       this.database
         .from("products")
         .select("id", { count: "exact", head: true })

@@ -1,5 +1,6 @@
 import {
   ProductDraftTitleError,
+  PRODUCT_DRAFT_TITLE_MAX_LENGTH,
   type ProductDraftTitleSnapshot,
 } from "@/features/product-draft-title/product-draft-title.types";
 
@@ -131,6 +132,7 @@ export class SellerProductPublicationService {
     if (result === "not_allowed") throw publicationNotAllowed();
     if (result === "title_required") throw publicationTitleRequired();
     if (result === "title_invalid") throw publicationTitleInvalid();
+    if (result === "description_invalid") throw publicationDescriptionInvalid();
     if (result === "category_required") throw publicationCategoryRequired();
     if (result === "in_progress") throw publicationInProgress();
 
@@ -163,6 +165,7 @@ function authorizationError(
     | "facts_missing"
     | "title_required"
     | "title_invalid"
+    | "description_invalid"
     | "category_required",
 ): SellerProductPublicationError {
   if (result === "not_found") return productNotFound();
@@ -176,6 +179,7 @@ function authorizationError(
   }
   if (result === "title_required") return publicationTitleRequired();
   if (result === "title_invalid") return publicationTitleInvalid();
+  if (result === "description_invalid") return publicationDescriptionInvalid();
   if (result === "category_required") return publicationCategoryRequired();
   if (result === "cover_not_allowed" || result === "not_allowed" || result === "not_editable") {
     return publicationNotAllowed();
@@ -240,7 +244,15 @@ export function publicationTitleInvalid(): SellerProductPublicationError {
   return new SellerProductPublicationError(
     400,
     "product_publication_title_invalid",
-    "The product title must contain at most 120 characters.",
+    "The product title must contain at most 50 characters.",
+  );
+}
+
+export function publicationDescriptionInvalid(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    400,
+    "product_publication_description_invalid",
+    "Each product description must contain at most 300 characters.",
   );
 }
 
@@ -284,5 +296,7 @@ function normalizeOptional(value: string | null | undefined): string | null {
 function requirePublicationTitle(title: string | null | undefined): void {
   const normalized = title?.trim().replace(/\s+/gu, " ") ?? "";
   if (!normalized) throw publicationTitleRequired();
-  if (normalized.length > 120) throw publicationTitleInvalid();
+  if (Array.from(normalized).length > PRODUCT_DRAFT_TITLE_MAX_LENGTH) {
+    throw publicationTitleInvalid();
+  }
 }

@@ -41,6 +41,7 @@ export type ProductPublicationAuthorizationResult =
         | "facts_missing"
         | "title_required"
         | "title_invalid"
+        | "description_invalid"
         | "category_required";
       productDraftId: string | null;
     };
@@ -53,6 +54,7 @@ export type ProductPublicationRetryResult =
   | "cleanup_required"
   | "title_required"
   | "title_invalid"
+  | "description_invalid"
   | "category_required"
   | "in_progress";
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const PRODUCT_DRAFT_DESCRIPTION_LANGUAGES = ["pl", "en", "de", "vi"] as const;
+export const PRODUCT_DRAFT_DESCRIPTION_MAX_LENGTH = 300;
 
 export type ProductDraftDescriptionLanguage = (typeof PRODUCT_DRAFT_DESCRIPTION_LANGUAGES)[number];
 export type ProductDraftDescriptionSource = "human" | "model" | null;
@@ -123,11 +124,11 @@ export function normalizeProductDraftDescription(value: string | null): string |
   if (value === null) return null;
   const normalized = value.replace(/\r\n?/g, "\n").trim();
   if (!normalized) return null;
-  if (Array.from(normalized).length > 8000) {
+  if (Array.from(normalized).length > PRODUCT_DRAFT_DESCRIPTION_MAX_LENGTH) {
     throw new ProductDraftDescriptionError(
       400,
       "product_draft_description_invalid",
-      "A ProductDraft description must contain at most 8,000 characters.",
+      "A ProductDraft description must contain at most 300 characters.",
     );
   }
   return normalized;

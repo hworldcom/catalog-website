@@ -147,6 +147,28 @@ describe("SellerProductListService", () => {
     });
   });
 
+  it("maps a malformed stored product code without logging its value", async () => {
+    const malformed = product(1, { product_code: "private-malformed-value" });
+    const logger = { error: vi.fn() };
+    const candidates = new MemoryCandidates([]);
+    const service = new SellerProductListService(
+      new MemoryProducts([malformed]),
+      candidates,
+      { resolve: vi.fn() },
+      logger,
+    );
+
+    await expect(service.list(uuid(900), { limit: 25, cursor: null })).rejects.toMatchObject({
+      code: "seller_product_list_unavailable",
+    });
+    expect(logger.error).toHaveBeenCalledWith("seller_product_list_product_code_invalid", {
+      exceptionClass: "StoredProductCodeError",
+      productId: malformed.id,
+    });
+    expect(JSON.stringify(logger.error.mock.calls)).not.toContain(malformed.product_code);
+    expect(candidates.listImages).not.toHaveBeenCalled();
+  });
+
   it("does not invoke delivery when the page has no private candidates", async () => {
     const products = new MemoryProducts([
       product(1, { cover_image_url: "https://public.test/cover.jpg" }),
@@ -190,6 +212,7 @@ function product(
   return {
     id: uuid(value),
     title: `Product ${value}`,
+    product_code: "SEL-F-TSH-ABCDEFGH",
     cover_image_id: null,
     cover_image_url: null,
     price: null,

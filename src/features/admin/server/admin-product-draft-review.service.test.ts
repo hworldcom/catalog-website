@@ -103,8 +103,6 @@ describe("AdminProductDraftReviewService", () => {
 
   it("uses a first-image preview and skips delivery for an empty gallery", async () => {
     const empty = reviewData({
-      product: { ...reviewData().product, category_id: null },
-      category: null,
       sources: [],
       images: [],
     });
@@ -115,7 +113,7 @@ describe("AdminProductDraftReviewService", () => {
 
     expect(emptyResolve).not.toHaveBeenCalled();
     expect(emptyReview).toMatchObject({
-      category: null,
+      category: { slug: "trousers" },
       source: null,
       coverImageId: null,
       previewImageId: null,
@@ -183,6 +181,26 @@ describe("AdminProductDraftReviewService", () => {
     ).rejects.toMatchObject({ code: "admin_product_draft_review_unavailable" });
   });
 
+  it("maps a malformed stored product code to the existing unavailable boundary", async () => {
+    const data = reviewData({
+      product: { ...reviewData().product, product_code: "private-malformed-value" },
+    });
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(
+      new AdminProductDraftReviewService(new MemoryRepository(data), { resolve: vi.fn() }).get(
+        { productDraftId: data.product.id },
+        authorization,
+      ),
+    ).rejects.toMatchObject({ code: "admin_product_draft_review_unavailable" });
+    expect(log).toHaveBeenCalledWith(
+      "[Admin ProductDraft review] Stored product code is invalid.",
+      { exceptionClass: "StoredProductCodeError", productId: data.product.id },
+    );
+    expect(JSON.stringify(log.mock.calls)).not.toContain(data.product.product_code);
+    log.mockRestore();
+  });
+
   it("preserves a total image-delivery service failure", async () => {
     const data = reviewData({ images: [image(101)] });
     const failure = new ProductDraftImageDeliveryRequestError(
@@ -206,6 +224,7 @@ function reviewData(
   return {
     product: {
       id: uuid(1),
+      product_code: "SEL-F-TSH-ABCDEFGH",
       title: "Draft",
       title_source: "human",
       status: "draft",

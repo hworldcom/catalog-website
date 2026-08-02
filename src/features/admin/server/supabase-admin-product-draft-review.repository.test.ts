@@ -9,6 +9,7 @@ describe("SupabaseAdminProductDraftReviewRepository", () => {
   it("loads one ProductDraft and its context with deterministic image ordering", async () => {
     const product = {
       id: uuid(1),
+      product_code: "SEL-F-TSH-ABCDEFGH",
       title: "Draft",
       title_source: "human" as const,
       status: "draft" as const,
@@ -59,6 +60,9 @@ describe("SupabaseAdminProductDraftReviewRepository", () => {
     const result = await repository.load(product.id);
 
     expect(from).toHaveBeenCalledTimes(5);
+    expect(tables.products.select).toHaveBeenCalledWith(
+      "id,product_code,title,title_source,status,seller_id,category_id,cover_image_id,created_at,updated_at",
+    );
     expect(tables.products.eq).toHaveBeenCalledWith("id", product.id);
     expect(tables.sellers.eq).toHaveBeenCalledWith("id", product.seller_id);
     expect(tables.categories.eq).toHaveBeenCalledWith("id", product.category_id);

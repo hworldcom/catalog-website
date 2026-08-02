@@ -11,6 +11,7 @@ describe("SupabaseAdminProductDraftIndexRepository", () => {
       data: [
         {
           id: uuid(1),
+          product_code: "SEL-F-TSH-ABCDEFGH",
           title: "Draft",
           status: "draft",
           seller_id: uuid(10),
@@ -42,6 +43,9 @@ describe("SupabaseAdminProductDraftIndexRepository", () => {
     });
 
     expect(rows).toHaveLength(1);
+    expect(productsQuery.select).toHaveBeenCalledWith(
+      "id,product_code,title,status,seller_id,category_id,cover_image_id,created_at,updated_at",
+    );
     expect(productsQuery.order).toHaveBeenNthCalledWith(1, "created_at", {
       ascending: false,
     });
@@ -59,6 +63,7 @@ describe("SupabaseAdminProductDraftIndexRepository", () => {
   it("loads all page details with bounded set-based queries", async () => {
     const draft = {
       id: uuid(1),
+      product_code: "SEL-F-TSH-ABCDEFGH",
       title: "Draft",
       status: "draft" as const,
       seller_id: uuid(10),

@@ -5,13 +5,14 @@ SET LOCAL search_path = public, extensions;
 
 SELECT plan(34);
 
-INSERT INTO public.sellers (id, slug, name, published)
+INSERT INTO public.sellers (id, slug, name, published, company_code)
 VALUES
   (
     '29a10000-0000-0000-0000-000000000001',
     'qa-0029i1-seller',
     'QA 0029i1 Seller',
-    false
+    false,
+    'Q71'
   );
 
 INSERT INTO public.seller_classifier_batches (

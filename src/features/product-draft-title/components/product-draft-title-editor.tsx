@@ -67,10 +67,10 @@ const S = {
     "Không thể lưu tên sản phẩm",
   ),
   invalid: t(
-    "Enter at most 120 characters.",
-    "Wprowadź maksymalnie 120 znaków.",
-    "Geben Sie höchstens 120 Zeichen ein.",
-    "Nhập tối đa 120 ký tự.",
+    "Enter at most 50 characters.",
+    "Wprowadź maksymalnie 50 znaków.",
+    "Geben Sie höchstens 50 Zeichen ein.",
+    "Nhập tối đa 50 ký tự.",
   ),
   notFound: t(
     "This ProductDraft was not found.",

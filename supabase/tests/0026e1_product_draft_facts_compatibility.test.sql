@@ -3,7 +3,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(12);
+SELECT plan(11);
 
 SELECT ok(
   (
@@ -56,16 +56,29 @@ SELECT is(
   'the compatibility migration backfills facts for every existing product'
 );
 
-INSERT INTO public.sellers (id, slug, name)
+INSERT INTO public.sellers (id, slug, name, company_code)
 VALUES (
   '26000000-0000-0000-0000-000000000001',
   'qa-0026e1',
-  'QA 0026e1'
+  'QA 0026e1',
+  'Q01'
 );
+
+CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT public.reserve_product_code(
+    p_product_id,
+    '26000000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
+  );
+$$;
 
 INSERT INTO public.products (
   id,
   seller_id,
+  product_code,
   title,
   status,
   category_id,
@@ -75,25 +88,28 @@ VALUES
   (
     '26000000-0000-0000-0000-000000000101',
     '26000000-0000-0000-0000-000000000001',
+    pg_temp.qa_product_code('26000000-0000-0000-0000-000000000101'),
     'Draft product',
     'draft',
-    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+    (SELECT id FROM public.categories WHERE slug = 't-shirts'),
     NULL
   ),
   (
     '26000000-0000-0000-0000-000000000102',
     '26000000-0000-0000-0000-000000000001',
+    pg_temp.qa_product_code('26000000-0000-0000-0000-000000000102'),
     'Published product',
     'published',
-    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+    (SELECT id FROM public.categories WHERE slug = 't-shirts'),
     'https://example.test/qa-0026e1-published.jpg'
   ),
   (
     '26000000-0000-0000-0000-000000000103',
     '26000000-0000-0000-0000-000000000001',
+    pg_temp.qa_product_code('26000000-0000-0000-0000-000000000103'),
     'Archived product',
     'archived',
-    (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+    (SELECT id FROM public.categories WHERE slug = 't-shirts'),
     NULL
   );
 
@@ -150,10 +166,12 @@ SELECT is(
   'new facts rows use the canonical empty version two document'
 );
 
-INSERT INTO public.products (id, seller_id, title, status)
+INSERT INTO public.products (id, seller_id, category_id, product_code, title, status)
 VALUES (
   '26000000-0000-0000-0000-000000000104',
   '26000000-0000-0000-0000-000000000001',
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+  pg_temp.qa_product_code('26000000-0000-0000-0000-000000000104'),
   'Reviewed product',
   'draft'
 );
@@ -180,7 +198,7 @@ WHERE product_draft_id = '26000000-0000-0000-0000-000000000104';
 UPDATE public.products
 SET
   status = 'published',
-  category_id = (SELECT id FROM public.categories ORDER BY sort_order, id LIMIT 1),
+  category_id = (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   cover_image_url = 'https://example.test/qa-0026e1-reviewed.jpg'
 WHERE id = '26000000-0000-0000-0000-000000000104';
 
@@ -223,10 +241,12 @@ SELECT ok(
   'a conflict-safe trigger leaves reviewed facts timestamps unchanged'
 );
 
-INSERT INTO public.products (id, seller_id, title, status)
+INSERT INTO public.products (id, seller_id, category_id, product_code, title, status)
 VALUES (
   '26000000-0000-0000-0000-000000000105',
   '26000000-0000-0000-0000-000000000001',
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+  pg_temp.qa_product_code('26000000-0000-0000-0000-000000000105'),
   'Repair product',
   'archived'
 );
@@ -234,28 +254,15 @@ VALUES (
 DELETE FROM public.product_draft_facts
 WHERE product_draft_id = '26000000-0000-0000-0000-000000000105';
 
-UPDATE public.products
-SET status = 'draft'
-WHERE id = '26000000-0000-0000-0000-000000000105';
-
-SELECT is(
-  (
-    SELECT count(*)::integer
-    FROM public.product_draft_facts
-    WHERE product_draft_id = '26000000-0000-0000-0000-000000000105'
-  ),
-  1,
-  'a transition from archived to draft repairs a missing facts row'
-);
-
-SELECT is(
-  (
-    SELECT facts_revision
-    FROM public.product_draft_facts
-    WHERE product_draft_id = '26000000-0000-0000-0000-000000000105'
-  ),
-  1,
-  'a repaired facts row starts at revision one'
+SELECT throws_ok(
+  $$
+    UPDATE public.products
+    SET status = 'draft'
+    WHERE id = '26000000-0000-0000-0000-000000000105'
+  $$,
+  '23514',
+  'product_archive_immutable',
+  'archived products cannot be restored to repair a missing facts row'
 );
 
 SELECT * FROM finish();

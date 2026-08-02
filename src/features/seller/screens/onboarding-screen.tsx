@@ -1,18 +1,27 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
-import { listCategoriesForPicker } from "@/features/seller/categories.functions";
+import { listSellerBusinessCategories } from "@/features/seller/categories.functions";
+import {
+  deriveCompanyCodePreview,
+  normalizeSubmittedCompanyCode,
+  readSellerCompanyCodeError,
+} from "@/features/seller/company-code";
+import { companyCodeCopy, companyCodeErrorCopy } from "@/features/seller/company-code.copy";
 import { onboardSeller } from "@/features/seller/onboarding.functions";
+import { tr } from "@/lib/i18n";
 import { toast } from "sonner";
 
 import { Field } from "../components/field";
 
 export function OnboardingScreen() {
   const onboard = useServerFn(onboardSeller);
-  const listCats = useServerFn(listCategoriesForPicker);
+  const listCats = useServerFn(listSellerBusinessCategories);
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
+  const [companyCode, setCompanyCode] = useState("");
+  const [companyCodeEdited, setCompanyCodeEdited] = useState(false);
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -20,9 +29,14 @@ export function OnboardingScreen() {
   const [busy, setBusy] = useState(false);
 
   const cats = useQuery({
-    queryKey: ["categories-picker"],
+    queryKey: ["seller-business-categories"],
     queryFn: () => listCats(),
   });
+
+  useEffect(() => {
+    const fashion = cats.data?.categories[0];
+    if (fashion && !categoryId) setCategoryId(fashion.id);
+  }, [categoryId, cats.data?.categories]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -31,6 +45,7 @@ export function OnboardingScreen() {
       await onboard({
         data: {
           name,
+          companyCode: normalizeSubmittedCompanyCode(companyCode),
           city,
           country,
           primary_category_id: categoryId,
@@ -38,9 +53,12 @@ export function OnboardingScreen() {
         },
       });
       await queryClient.invalidateQueries({ queryKey: ["my-seller"] });
-      toast.success("Storefront created — a few more steps to publish.");
+      toast.success(tr(companyCodeCopy.onboardingSuccess));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create storefront");
+      const code = readSellerCompanyCodeError(err);
+      toast.error(
+        code ? tr(companyCodeErrorCopy[code]) : tr(companyCodeCopy.onboardingUnavailable),
+      );
     } finally {
       setBusy(false);
     }
@@ -62,18 +80,44 @@ export function OnboardingScreen() {
             minLength={2}
             maxLength={120}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              const nextName = e.target.value;
+              setName(nextName);
+              if (!companyCodeEdited) setCompanyCode(deriveCompanyCodePreview(nextName));
+            }}
             className="border border-border bg-background px-3 py-2 text-sm"
             placeholder="Kesar Textiles"
           />
         </Field>
+        <Field label={tr(companyCodeCopy.label)}>
+          <input
+            required
+            minLength={3}
+            maxLength={10}
+            pattern="[A-Z0-9]{3}[0-9]*"
+            value={companyCode}
+            onChange={(e) => {
+              setCompanyCodeEdited(true);
+              setCompanyCode(e.target.value.toUpperCase());
+            }}
+            className="border border-border bg-background px-3 py-2 text-sm uppercase"
+            placeholder="KES"
+            autoComplete="off"
+          />
+          <span className="text-[11px] text-muted-foreground">
+            {tr(companyCodeCopy.onboardingHelp)}
+          </span>
+        </Field>
         <Field label="Primary category">
           <select
+            required
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             className="border border-border bg-background px-3 py-2 text-sm"
           >
-            <option value="">Choose a category…</option>
+            <option value="" disabled>
+              Choose a category…
+            </option>
             {cats.data?.categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}

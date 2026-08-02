@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { parseStoredProductCode } from "@/features/product-code/product-code";
 import type { Database } from "@/lib/supabase/types";
 
 function publicClient() {
@@ -120,6 +121,15 @@ export const getProductPage = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw error;
     if (!product) return { product: null, seller: null, images: [], category: null };
+    try {
+      product.product_code = parseStoredProductCode(product.product_code);
+    } catch (parseError) {
+      console.error("[Public product detail] Stored product code is invalid.", {
+        exceptionClass: parseError instanceof Error ? parseError.constructor.name : "UnknownError",
+        productId: product.id,
+      });
+      throw new Error("The published product is temporarily unavailable.");
+    }
     const [seller, images, category] = await Promise.all([
       sb
         .from("sellers")

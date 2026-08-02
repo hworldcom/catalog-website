@@ -65,12 +65,58 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     titleWrite: HumanProductDraftTitleWrite,
     productFields: SellerProductFields,
   ): Promise<ProductDraftTitleCreateResult> {
-    const result = await this.saveSellerProduct(null, sellerId, titleWrite, productFields);
-    if (result.result === "facts_missing") {
-      throw new Error("ProductDraft facts record is missing.");
+    const response = await this.database.rpc("create_seller_product_with_description", {
+      p_seller_id: sellerId,
+      p_title_patch_present: true,
+      p_title: titleWrite.title,
+      p_description_patch_present: hasDescriptionPatch(productFields),
+      p_description: productFields.description ?? null,
+      p_category_id: productFields.category_id ?? null,
+      p_moq: productFields.moq ?? null,
+      p_pack_size: productFields.pack_size ?? null,
+      p_price: productFields.price ?? null,
+      p_currency: productFields.currency ?? "USD",
+      p_stock: productFields.stock ?? "in_stock",
+      p_cover_image_url_patch_present: hasCoverImageUrlPatch(productFields),
+      p_cover_image_url: productFields.cover_image_url ?? null,
+      p_trending: productFields.trending ?? false,
+      p_status: productFields.status ?? "draft",
+    });
+    if (response.error) {
+      if (isTitleInvalid(response.error)) return { result: "invalid" };
+      throwDatabaseError(response.error);
     }
-    if (result.result === "title_required" || result.result === "title_invalid") return result;
-    return result.result === "created" ? result : { result: "invalid" };
+
+    const row = response.data?.[0];
+    if (!row) throw new Error("Seller ProductDraft creation returned no result.");
+    if (
+      row.result === "title_required" ||
+      row.result === "title_invalid" ||
+      row.result === "product_category_required" ||
+      row.result === "product_category_not_supported" ||
+      row.result === "product_code_company_unconfigured" ||
+      row.result === "product_code_category_unconfigured" ||
+      row.result === "product_code_allocation_failed"
+    ) {
+      return { result: row.result };
+    }
+    if (
+      row.result !== "created" ||
+      !row.product_draft_id ||
+      !row.product_code ||
+      row.title === null ||
+      !row.product_status
+    ) {
+      return { result: "invalid" };
+    }
+    const result: ProductDraftTitleCreateResult = {
+      result: "created",
+      productDraftId: row.product_draft_id,
+      title: row.title,
+      titleSource: parseStoredProductDraftTitleSource(row.title_source),
+      productStatus: row.product_status,
+    };
+    return result;
   }
 
   private async saveSellerProduct(

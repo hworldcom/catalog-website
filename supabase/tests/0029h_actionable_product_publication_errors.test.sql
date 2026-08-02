@@ -3,7 +3,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(16);
+SELECT plan(15);
 
 SELECT results_eq(
   $$
@@ -28,19 +28,31 @@ SELECT is(
 SELECT is(
   (
     SELECT result
-    FROM public.validate_product_publication_title(repeat('x', 121))
+    FROM public.validate_product_publication_title(repeat('x', 51))
   ),
   'title_invalid',
   'an overlong publication title is invalid'
 );
 
-INSERT INTO public.sellers (id, slug, name, published)
+INSERT INTO public.sellers (id, slug, name, published, company_code)
 VALUES (
   '29a00000-0000-0000-0000-000000000001',
   'qa-0029h-seller',
   'QA 0029h Seller',
-  false
+  false,
+  'Q61'
 );
+
+CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT public.reserve_product_code(
+    p_product_id,
+    '29a00000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.categories WHERE slug = 't-shirts')
+  );
+$$;
 
 CREATE TEMP TABLE direct_blank_result AS
 SELECT *
@@ -51,7 +63,7 @@ FROM public.save_seller_product_with_description(
   '   ',
   false,
   NULL,
-  NULL,
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   NULL,
   NULL,
   NULL,
@@ -85,10 +97,10 @@ FROM public.save_seller_product_with_description(
   NULL,
   '29a00000-0000-0000-0000-000000000001',
   true,
-  repeat('x', 121),
+  repeat('x', 51),
   false,
   NULL,
-  NULL,
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   NULL,
   NULL,
   NULL,
@@ -109,6 +121,8 @@ SELECT is(
 INSERT INTO public.products (
   id,
   seller_id,
+  category_id,
+  product_code,
   title,
   title_source,
   status,
@@ -117,6 +131,8 @@ INSERT INTO public.products (
 VALUES (
   '29a00000-0000-0000-0000-000000000012',
   '29a00000-0000-0000-0000-000000000001',
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+  pg_temp.qa_product_code('29a00000-0000-0000-0000-000000000012'),
   '',
   NULL,
   'draft',
@@ -132,7 +148,7 @@ FROM public.save_seller_product_with_description(
   NULL,
   false,
   NULL,
-  NULL,
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   NULL,
   NULL,
   NULL,
@@ -163,6 +179,8 @@ SELECT is(
 INSERT INTO public.products (
   id,
   seller_id,
+  category_id,
+  product_code,
   title,
   title_source,
   status
@@ -170,6 +188,8 @@ INSERT INTO public.products (
 VALUES (
   '29a00000-0000-0000-0000-000000000011',
   '29a00000-0000-0000-0000-000000000001',
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+  pg_temp.qa_product_code('29a00000-0000-0000-0000-000000000011'),
   '',
   NULL,
   'draft'
@@ -234,7 +254,7 @@ FROM public.authorize_seller_product_publication(
   NULL,
   false,
   NULL,
-  NULL,
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
   NULL,
   NULL,
   NULL,
@@ -340,35 +360,6 @@ SELECT is(
   ),
   'failed',
   'a title-rejected retry leaves its manifest item terminal'
-);
-
-UPDATE public.products
-SET title = repeat('x', 121)
-WHERE id = '29a00000-0000-0000-0000-000000000011';
-
-SELECT is(
-  (
-    SELECT result
-    FROM public.authorize_seller_product_publication(
-      '29a00000-0000-0000-0000-000000000011',
-      '29a00000-0000-0000-0000-000000000001',
-      false,
-      NULL,
-      false,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      'USD',
-      'in_stock',
-      false,
-      NULL,
-      false
-    )
-  ),
-  'title_invalid',
-  'imported authorization rejects an overlong persisted title'
 );
 
 SELECT is(

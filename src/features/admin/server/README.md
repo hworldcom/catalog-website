@@ -77,6 +77,73 @@ BAZORIA_IMAGE_PROMOTION_CLAIM_TIMEOUT_SECONDS=300
 BAZORIA_CLASSIFIER_IMPORT_WORKER_POLL_INTERVAL_SECONDS=5
 ```
 
+## Mandatory Product-Code Cutover
+
+Ticket `0028b1` intentionally removes all existing product and classifier
+workflow data from the hosted User Acceptance Testing (UAT) project before it
+enables mandatory product-code allocation. Authentication users, roles, seller
+identities, ownership, and company codes must survive unchanged.
+
+Run this only in a maintenance window. Stop the Bazoria web server, classifier
+import worker, publication worker, and every other process that can create or
+promote products. The command is hard-bound to project
+`jhkouuxouplqcfecjutd`; a different Supabase URL or confirmation value fails
+before storage is listed or deleted.
+
+Load the server-only environment and provide the comma-separated Universally
+Unique Identifiers (UUIDs) for every QA account that must survive:
+
+```bash
+cd /Users/hoangdeveloper/catalog-website
+set -a
+source .env
+set +a
+export BAZORIA_PRODUCT_RESET_QA_USER_IDS="<qa-user-id>,<second-qa-user-id>"
+export PRODUCT_RESET_SNAPSHOT="$(pwd)/.product-reset-identity-snapshot.json"
+export PRODUCT_RESET_SUMMARY="$(pwd)/.product-reset-prepare-summary.json"
+```
+
+Use a new snapshot path. The prepare command refuses to overwrite an existing
+snapshot. It records only preserved identifiers and profile fields, deletes all
+objects from `product-images` and `product-draft-images`, verifies both buckets
+are empty, and writes a machine-readable summary:
+
+```bash
+npm run reset:product-data -- prepare \
+  --confirm-project-ref jhkouuxouplqcfecjutd \
+  --snapshot "$PRODUCT_RESET_SNAPSHOT" \
+  --summary "$PRODUCT_RESET_SUMMARY" \
+  --page-size 100
+```
+
+Inspect the summary and require `status` to be `prepared`, every `failed` count
+to be zero, and both buckets to be empty. Then review and apply the linked UAT
+migrations. Never run `supabase db reset` against hosted UAT:
+
+```bash
+npx -y supabase@latest link --project-ref jhkouuxouplqcfecjutd
+npx -y supabase@latest db push --linked
+```
+
+After migration, compare the preserved identities and re-check both storage
+buckets with the same snapshot:
+
+```bash
+export PRODUCT_RESET_SUMMARY="$(pwd)/.product-reset-verify-summary.json"
+npm run reset:product-data -- verify \
+  --confirm-project-ref jhkouuxouplqcfecjutd \
+  --snapshot "$PRODUCT_RESET_SNAPSHOT" \
+  --summary "$PRODUCT_RESET_SUMMARY" \
+  --page-size 100
+```
+
+Require `status` to be `verified`. Sign in through the normal browser flow as
+each QA account named by `BAZORIA_PRODUCT_RESET_QA_USER_IDS` and confirm its
+seller ownership before restarting application or worker processes. A failed
+command, changed preserved identity, unresolved QA login, or remaining storage
+object blocks the cutover. Keep the snapshot and summaries out of version
+control and delete them after the cutover has been audited.
+
 The delegated administrator action timeout is bounded from 1 through 300
 seconds. Its lease is bounded from 31 through 900 seconds and must be at least
 30 seconds longer than the action timeout. Unknown remote outcomes remain

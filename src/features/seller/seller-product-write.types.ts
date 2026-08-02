@@ -13,7 +13,7 @@ const sellerProductFieldsSchema = z
       .nullable()
       .optional()
       .refine(hasValidSellerProductDescriptionLength, {
-        message: "Description must contain at most 8,000 characters.",
+        message: "Description must contain at most 300 characters.",
       }),
     category_id: z.string().uuid().nullable().optional(),
     moq: z.number().int().min(0).nullable().optional(),

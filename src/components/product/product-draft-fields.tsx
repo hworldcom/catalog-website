@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { PRODUCT_DRAFT_TITLE_MAX_LENGTH } from "@/features/product-draft-title/product-draft-title.types";
 import { t, tr } from "@/lib/i18n";
 
 export type ProductDraftFieldsValue = {
@@ -81,6 +82,7 @@ export function ProductDraftFields({
         <Field label={tr(S.title)}>
           <input
             value={value.title}
+            maxLength={PRODUCT_DRAFT_TITLE_MAX_LENGTH}
             onChange={(event) => change({ title: event.target.value })}
             className={inputClassName}
             disabled={titleDisabled}

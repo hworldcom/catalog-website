@@ -30,19 +30,21 @@ VALUES (
   now()
 );
 
-INSERT INTO public.sellers (id, slug, name, published)
+INSERT INTO public.sellers (id, slug, name, published, company_code)
 VALUES
   (
     '29e10000-0000-0000-0000-000000000001',
     'qa-0029e1-seller-one',
     'QA 0029e1 Seller One',
-    false
+    false,
+    'Q41'
   ),
   (
     '29e10000-0000-0000-0000-000000000002',
     'qa-0029e1-seller-two',
     'QA 0029e1 Seller Two',
-    true
+    true,
+    'Q42'
   );
 
 INSERT INTO public.seller_classifier_batches (
@@ -258,7 +260,7 @@ SELECT is(
           '29e10000-0000-0000-0000-000000000011'
       ),
       '29e10000-0000-0000-0000-000000000041',
-      'fashion',
+      't-shirts',
       '29e10000-0000-0000-0000-000000000051',
       0
     )

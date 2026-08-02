@@ -3,68 +3,43 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 
+import { companyCodeDatabaseError } from "./company-code.functions";
+
 export const onboardSchema = z.object({
   name: z.string().trim().min(2).max(120),
   city: z.string().trim().max(80).optional().or(z.literal("")),
   country: z.string().trim().max(80).optional().or(z.literal("")),
   primary_category_id: z.string().uuid().optional().or(z.literal("")),
   whatsapp: z.string().trim().max(40).optional().or(z.literal("")),
+  companyCode: z.string().max(64),
 });
 
 export const onboardSeller = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input) => onboardSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as {
-      supabase: import("@supabase/supabase-js").SupabaseClient;
+    const { userId } = context as {
       userId: string;
     };
 
-    const existing = await supabase
-      .from("sellers")
-      .select("*")
-      .eq("owner_id", userId)
-      .maybeSingle();
-    if (existing.data) return { seller: existing.data };
-
-    const [{ ensureSellerRole }, { slugify }, { supabaseAdmin }] = await Promise.all([
-      import("./server/seller-role.service"),
+    const [{ slugify }, { supabaseAdmin }] = await Promise.all([
       import("./server/seller-slug"),
       import("@/lib/supabase/client.server"),
     ]);
 
-    await ensureSellerRole({ userId });
+    const response = await supabaseAdmin.rpc("create_seller_with_company_code", {
+      p_owner_id: userId,
+      p_name: data.name,
+      p_slug_base: slugify(data.name),
+      p_city: data.city || null,
+      p_country: data.country || null,
+      p_primary_category_id: data.primary_category_id || null,
+      p_whatsapp: data.whatsapp || null,
+      p_submitted_company_code: data.companyCode,
+    });
+    if (response.error) throw companyCodeDatabaseError(response.error);
 
-    const base = slugify(data.name);
-    let slug = base;
-    let n = 1;
-    while (true) {
-      const { data: hit } = await supabaseAdmin
-        .from("sellers")
-        .select("id")
-        .eq("slug", slug)
-        .maybeSingle();
-      if (!hit) break;
-      n += 1;
-      slug = `${base}-${n}`;
-      if (n > 200) break;
-    }
-
-    const { data: created, error } = await supabaseAdmin
-      .from("sellers")
-      .insert({
-        owner_id: userId,
-        name: data.name,
-        slug,
-        city: data.city || null,
-        country: data.country || null,
-        primary_category_id: data.primary_category_id || null,
-        whatsapp: data.whatsapp || null,
-        published: false,
-      })
-      .select("*")
-      .single();
-    if (error) throw new Error(error.message);
-
-    return { seller: created };
+    const seller = response.data?.[0];
+    if (!seller) throw new Error("seller_onboarding_unavailable");
+    return { seller };
   });
