@@ -140,6 +140,12 @@ const S = {
     "Genehmigte Kategorie",
     "Danh mục được phê duyệt",
   ),
+  categoryNotSet: t(
+    "Category not set",
+    "Kategoria nieustawiona",
+    "Kategorie nicht festgelegt",
+    "Chưa đặt danh mục",
+  ),
   chooseCategory: t(
     "Choose a category",
     "Wybierz kategorię",
@@ -224,6 +230,12 @@ const S = {
     "Wybierz aktywną kategorię produktu.",
     "Wählen Sie eine aktive Produktkategorie.",
     "Chọn một danh mục sản phẩm đang hoạt động.",
+  ),
+  approvalCategoryOptional: t(
+    "Category is optional for classifier approval but must be selected before product publication.",
+    "Kategoria jest opcjonalna przy zatwierdzaniu klasyfikatora, ale musi zostać wybrana przed publikacją produktu.",
+    "Die Kategorie ist für die Klassifikatorfreigabe optional, muss aber vor der Produktveröffentlichung ausgewählt werden.",
+    "Danh mục là tùy chọn khi phê duyệt phân loại nhưng phải được chọn trước khi xuất bản sản phẩm.",
   ),
   approvalImageNeeded: t(
     "Keep at least one active non-duplicate image.",
@@ -1512,14 +1524,18 @@ function ReviewGroupCard({
   );
   const activeImages = group.images.filter((image) => !image.isRejected && !image.isDuplicate);
   const cover = activeImages.find((image) => image.imageId === group.coverImageId);
-  const approvalMessage = !approvedCategory
+  const categoryIsMissing = group.approvedCategorySlug === null;
+  const categoryIsValid = categoryIsMissing || Boolean(approvedCategory);
+  const approvalMessage = !categoryIsValid
     ? tr(S.approvalCategoryNeeded)
     : activeImages.length === 0
       ? tr(S.approvalImageNeeded)
       : !cover
         ? tr(S.approvalCoverNeeded)
-        : tr(S.approvalReady);
-  const canApprove = Boolean(approvedCategory && activeImages.length > 0 && cover);
+        : categoryIsMissing
+          ? tr(S.approvalCategoryOptional)
+          : tr(S.approvalReady);
+  const canApprove = Boolean(categoryIsValid && activeImages.length > 0 && cover);
 
   return (
     <Card data-review-group={group.groupId}>
@@ -1544,7 +1560,11 @@ function ReviewGroupCard({
           />
           <Definition
             label={tr(S.approvedCategory)}
-            value={categoryDisplayName(group.approvedCategorySlug, categories)}
+            value={
+              group.approvedCategorySlug === null
+                ? tr(S.categoryNotSet)
+                : categoryDisplayName(group.approvedCategorySlug, categories)
+            }
           />
           <Definition label={tr(S.confidence)} value={formatConfidence(group.confidence)} />
         </dl>

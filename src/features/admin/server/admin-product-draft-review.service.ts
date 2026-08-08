@@ -5,7 +5,7 @@ import {
   type AdminProductDraftReviewImage,
   type AdminProductDraftReviewRequest,
 } from "../admin-product-draft-review.types";
-import { parseStoredProductCode } from "@/features/product-code/product-code";
+import { parseStoredProductCodeOrNull } from "@/features/product-code/product-code";
 import {
   resolveAdminProductDraftSource,
   selectAdminProductDraftPreviewImageId,
@@ -100,13 +100,14 @@ export class AdminProductDraftReviewService {
         name: data.seller.name,
         slug: data.seller.slug,
       },
-      category: data.category
-        ? {
-            id: data.category.id,
-            name: data.category.name,
-            slug: data.category.slug,
-          }
-        : null,
+      category:
+        data.product.category_id && data.category
+          ? {
+              id: data.category.id,
+              name: data.category.name,
+              slug: data.category.slug,
+            }
+          : null,
       source: resolveAdminProductDraftSource(data.sources),
       coverImageId: data.product.cover_image_id,
       previewImageId,
@@ -142,9 +143,9 @@ export class AdminProductDraftReviewService {
   }
 }
 
-function readProductCode(product: { id: string; product_code: unknown }): string {
+function readProductCode(product: { id: string; product_code: unknown }): string | null {
   try {
-    return parseStoredProductCode(product.product_code);
+    return parseStoredProductCodeOrNull(product.product_code);
   } catch (error) {
     console.error("[Admin ProductDraft review] Stored product code is invalid.", {
       exceptionClass: error instanceof Error ? error.constructor.name : "UnknownError",

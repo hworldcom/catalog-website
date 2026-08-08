@@ -23,10 +23,10 @@ import type {
   SellerProductImagePublicationMode,
   SellerProductPublicationSnapshot,
 } from "@/features/seller/seller-product-publication.types";
+import type { SellerProductImageSourceMode } from "@/features/seller/server/seller-product-draft-read.service";
 import { saveMyProduct } from "@/features/seller/products.functions";
 
 import { Field } from "./field";
-import { ImageUpload } from "./image-upload";
 
 const S = {
   publication: t(
@@ -205,6 +205,18 @@ const S = {
     "Geben Sie einen Produkttitel mit höchstens 50 Zeichen ein.",
     "Nhập tên sản phẩm có tối đa 50 ký tự.",
   ),
+  categoryRequired: t(
+    "Select a product category before publishing.",
+    "Wybierz kategorię produktu przed publikacją.",
+    "Wählen Sie vor der Veröffentlichung eine Produktkategorie.",
+    "Chọn danh mục sản phẩm trước khi xuất bản.",
+  ),
+  publicationFieldsRequired: t(
+    "Enter a title and select a category before publishing. You can save the product as a draft without them.",
+    "Przed publikacją wprowadź tytuł i wybierz kategorię. Produkt można zapisać jako szkic bez tych danych.",
+    "Geben Sie vor der Veröffentlichung einen Titel ein und wählen Sie eine Kategorie. Ohne diese Angaben können Sie das Produkt als Entwurf speichern.",
+    "Nhập tên và chọn danh mục trước khi xuất bản. Bạn vẫn có thể lưu sản phẩm dưới dạng bản nháp khi chưa có các thông tin này.",
+  ),
   descriptionInvalid: t(
     "Enter product descriptions with at most 300 characters each.",
     "Każdy opis produktu może zawierać maksymalnie 300 znaków.",
@@ -218,10 +230,10 @@ const S = {
     "Thêm ít nhất một hình ảnh sản phẩm trước khi xuất bản.",
   ),
   imagesNotReady: t(
-    "One or more imported product pictures are not ready yet. Try again after image recovery completes.",
-    "Co najmniej jedno importowane zdjęcie produktu nie jest jeszcze gotowe. Spróbuj ponownie po zakończeniu odzyskiwania zdjęć.",
-    "Mindestens ein importiertes Produktbild ist noch nicht bereit. Versuchen Sie es nach Abschluss der Bildwiederherstellung erneut.",
-    "Một hoặc nhiều hình ảnh sản phẩm đã nhập chưa sẵn sàng. Hãy thử lại sau khi khôi phục hình ảnh hoàn tất.",
+    "Resolve pending, failed, or deleting product pictures before publishing.",
+    "Rozwiąż problemy z oczekującymi, nieudanymi lub usuwanymi zdjęciami przed publikacją.",
+    "Beheben Sie ausstehende, fehlgeschlagene oder zu löschende Produktbilder vor der Veröffentlichung.",
+    "Xử lý hình ảnh đang chờ, thất bại hoặc đang xóa trước khi xuất bản.",
   ),
   dispatchFailed: t(
     "Publication could not be started. Try again.",
@@ -276,7 +288,7 @@ const S = {
 type ProductInitial = {
   id: string;
   title: string;
-  product_code: string;
+  product_code: string | null;
   title_source: "human" | "model" | null;
   description: string | null;
   category_id: string | null;
@@ -289,6 +301,7 @@ type ProductInitial = {
   trending: boolean;
   status: "draft" | "published" | "archived";
   imagePublicationMode?: SellerProductImagePublicationMode;
+  imageSourceMode?: SellerProductImageSourceMode;
 } | null;
 
 type ProductForm = {
@@ -326,6 +339,13 @@ export type ProductEditorTitleReplacement = {
   snapshot: ProductDraftTitleSnapshot;
 };
 
+export type ProductEditorGalleryState = {
+  activeImageCount: number;
+  hasDurableImages: boolean;
+  hasAvailableCover: boolean;
+  incomplete: boolean;
+};
+
 export type SavedProductSnapshot = {
   id: string;
   title: string;
@@ -343,6 +363,7 @@ export function ProductEditor({
   onProductSaved,
   onStateChange,
   onDisplayTitleChange,
+  galleryState,
 }: {
   initial: ProductInitial;
   factsState?: ProductDraftFactsEditorState;
@@ -353,6 +374,7 @@ export function ProductEditor({
   onProductSaved?: (snapshot: SavedProductSnapshot) => void;
   onStateChange?: (state: ProductEditorCoordinationState) => void;
   onDisplayTitleChange?: (title: string) => void;
+  galleryState?: ProductEditorGalleryState;
 }) {
   const save = useServerFn(saveMyProduct);
   const publish = useServerFn(publishMyProduct);
@@ -374,12 +396,20 @@ export function ProductEditor({
 
   const productId = initial?.id ?? null;
   const imagePublicationMode = initial?.imagePublicationMode ?? "direct";
-  const isImported = imagePublicationMode === "imported";
+  const imageSourceMode = initial?.imageSourceMode ?? "seller_upload";
+  const resolvedGalleryState = galleryState ?? {
+    activeImageCount: imagePublicationMode === "imported" ? 1 : 0,
+    hasDurableImages: imagePublicationMode === "imported",
+    hasAvailableCover: imagePublicationMode === "imported",
+    incomplete: false,
+  };
+  const usesDurablePublication =
+    imageSourceMode === "classifier_import" || resolvedGalleryState.hasDurableImages;
   const isPublished = initial?.status === "published";
   const publicationQuery = useQuery({
     queryKey: ["my-product-publication", productId],
     queryFn: () => getPublication({ data: { productDraftId: productId! } }),
-    enabled: Boolean(productId && isImported),
+    enabled: Boolean(productId && usesDurablePublication),
     retry: false,
     refetchInterval: (query) =>
       isActiveProductPublication(query.state.data?.publicationStatus) ? 2_000 : false,
@@ -438,7 +468,7 @@ export function ProductEditor({
       const res = await save({
         data: {
           ...productFields(form, {
-            includeCover: !isImported,
+            includeCover: false,
             titleTouched,
             descriptionTouched,
           }),
@@ -461,10 +491,7 @@ export function ProductEditor({
   }
 
   async function submitPublication() {
-    if (!form.id) {
-      await submitNewProductPublication();
-      return;
-    }
+    if (!form.id) return;
     if (
       factsState.dirty ||
       factsState.saving ||
@@ -479,7 +506,7 @@ export function ProductEditor({
       const snapshot = await publish({
         data: {
           ...productFields(form, {
-            includeCover: !isImported,
+            includeCover: false,
             titleTouched,
             descriptionTouched,
           }),
@@ -498,30 +525,6 @@ export function ProductEditor({
       if (code === "product_publication_not_allowed") {
         await queryClient.invalidateQueries({ queryKey: ["my-product", form.id] });
       }
-      toast.error(publicationErrorMessage(error, tr(S.publishFailed)));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitNewProductPublication() {
-    setBusy(true);
-    try {
-      const res = await save({
-        data: {
-          ...productFields(form, {
-            includeCover: true,
-            titleTouched: true,
-            descriptionTouched: true,
-          }),
-          publish: true,
-        },
-      });
-      applySavedProduct(res);
-      await refreshSavedProduct(queryClient, null, null, res.status);
-      toast.success(tr(S.published));
-      onSaved?.(res.id);
-    } catch (error) {
       toast.error(publicationErrorMessage(error, tr(S.publishFailed)));
     } finally {
       setBusy(false);
@@ -571,6 +574,9 @@ export function ProductEditor({
   const descriptionReadOnly = titleReadOnly;
   const publishBlockedByEditors =
     factsState.dirty || factsState.saving || descriptionState.dirty || descriptionState.saving;
+  const publishBlockedByRequiredFields = form.title.trim() === "" || form.category_id.trim() === "";
+  const publishBlockedByGallery =
+    !productId || !resolvedGalleryState.hasAvailableCover || resolvedGalleryState.incomplete;
   const actionsDisabled = disabled || busy || publicationActive;
 
   return (
@@ -586,7 +592,9 @@ export function ProductEditor({
           {initial ? (
             <p className="mt-2 text-xs text-muted-foreground">
               <span>{tr(productCodeCopy.label)}: </span>
-              <span className="select-text font-mono text-foreground">{initial.product_code}</span>
+              <span className="select-text font-mono text-foreground">
+                {initial.product_code ?? tr(productCodeCopy.assignedWhenPublishing)}
+              </span>
             </p>
           ) : null}
         </div>
@@ -595,7 +603,7 @@ export function ProductEditor({
         </Link>
       </div>
 
-      {initial && isImported ? (
+      {initial && usesDurablePublication ? (
         <ProductPublicationStatus
           snapshot={currentPublication}
           statusReadFailed={publicationQuery.isError}
@@ -662,21 +670,19 @@ export function ProductEditor({
             </Field>
           </div>
         ) : null}
-        {!isImported ? (
-          <div className="md:col-span-2">
-            <ImageUpload
-              label="Cover image"
-              folder="products"
-              value={form.cover_image_url}
-              onChange={(url) => setForm({ ...form, cover_image_url: url })}
-              disabled={disabled}
-            />
-          </div>
-        ) : null}
-
         {publishBlockedByEditors && !isPublished ? (
           <p className="text-sm text-amber-700 md:col-span-2">
             Save product details and descriptions before publishing.
+          </p>
+        ) : null}
+
+        {publishBlockedByRequiredFields && !isPublished ? (
+          <p className="text-sm text-amber-700 md:col-span-2">{tr(S.publicationFieldsRequired)}</p>
+        ) : null}
+
+        {publishBlockedByGallery && !isPublished ? (
+          <p className="text-sm text-amber-700 md:col-span-2">
+            {resolvedGalleryState.incomplete ? tr(S.imagesNotReady) : tr(S.imageRequired)}
           </p>
         ) : null}
 
@@ -691,7 +697,12 @@ export function ProductEditor({
           {!isPublished ? (
             <button
               type="button"
-              disabled={actionsDisabled || publishBlockedByEditors}
+              disabled={
+                actionsDisabled ||
+                publishBlockedByEditors ||
+                publishBlockedByRequiredFields ||
+                publishBlockedByGallery
+              }
               onClick={() => void submitPublication()}
               className="bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
@@ -775,6 +786,8 @@ function publicationErrorMessage(error: unknown, fallback: string): string {
       return tr(S.titleRequired);
     case "product_publication_title_invalid":
       return tr(S.titleInvalid);
+    case "product_publication_category_required":
+      return tr(S.categoryRequired);
     case "product_publication_description_invalid":
       return tr(S.descriptionInvalid);
     case "product_publication_image_required":

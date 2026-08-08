@@ -25,13 +25,22 @@ export class SupabaseSellerProductPublicationRepository implements SellerProduct
     if (product.error) throw new Error("Seller product publication lookup failed.");
     if (!product.data) return null;
 
-    const membership = await this.database
-      .from("product_draft_source_memberships")
-      .select("product_draft_id")
-      .eq("product_draft_id", productDraftId)
-      .limit(1)
-      .maybeSingle();
+    const [membership, privateImage] = await Promise.all([
+      this.database
+        .from("product_draft_source_memberships")
+        .select("product_draft_id")
+        .eq("product_draft_id", productDraftId)
+        .limit(1)
+        .maybeSingle(),
+      this.database
+        .from("product_draft_images")
+        .select("product_draft_id")
+        .eq("product_draft_id", productDraftId)
+        .limit(1)
+        .maybeSingle(),
+    ]);
     if (membership.error) throw new Error("Seller product publication provenance lookup failed.");
+    if (privateImage.error) throw new Error("Seller product image publication lookup failed.");
 
     return {
       productDraftId: product.data.id,
@@ -40,7 +49,7 @@ export class SupabaseSellerProductPublicationRepository implements SellerProduct
       categoryId: product.data.category_id,
       productStatus: product.data.status,
       coverImageUrl: product.data.cover_image_url,
-      imagePublicationMode: membership.data ? "imported" : "direct",
+      imagePublicationMode: membership.data || privateImage.data ? "imported" : "direct",
     };
   }
 }

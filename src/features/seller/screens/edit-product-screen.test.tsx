@@ -15,6 +15,14 @@ vi.mock("@/features/seller/products.functions", () => ({
   getMyProduct: mocks.get,
 }));
 
+vi.mock("../product-draft-image-lifecycle.functions", () => ({
+  prepareMyProductDraftImageUploads: vi.fn(),
+  finalizeMyProductDraftImageUploads: vi.fn(),
+  updateMyProductDraftImageGallery: vi.fn(),
+  removeMyProductDraftImage: vi.fn(),
+  retryMyProductDraftImageCleanup: vi.fn(),
+}));
+
 vi.mock("../components/product-editor", () => ({
   ProductEditor: ({ initial }: { initial: { title: string } }) => (
     <input aria-label="Editable product title" defaultValue={initial.title} />

@@ -266,6 +266,7 @@ function record(): DelegatedProductDraftRecord {
       stock: "in_stock",
       cover_image_id: uuid(7),
       cover_image_url: null,
+      image_gallery_revision: 0,
       trending: false,
       status: "draft",
       classifier_group_id: null,

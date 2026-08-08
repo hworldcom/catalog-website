@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   data: {
@@ -8,7 +9,7 @@ const mocks = vi.hoisted(() => ({
       id: "00000000-0000-4000-8000-000000000001",
       title: "Cotton shirt",
       product_code: "SEL-F-TSH-ABCDEFGH",
-      cover_image_url: null,
+      cover_image_url: null as string | null,
       price: null,
       currency: "USD",
       stock: "in_stock",
@@ -24,7 +25,7 @@ const mocks = vi.hoisted(() => ({
       country: "Germany",
       whatsapp: null,
     },
-    images: [],
+    images: [] as Array<{ id: string; url: string }>,
     category: null,
   },
 }));
@@ -63,6 +64,11 @@ vi.mock("../components/inquiry-form", () => ({
 import { ProductDetailScreen } from "./product-detail-screen";
 
 describe("ProductDetailScreen", () => {
+  beforeEach(() => {
+    mocks.data.images = [];
+    mocks.data.product.cover_image_url = null;
+  });
+
   it("shows the exact stored product code as read-only text", () => {
     render(<ProductDetailScreen productId={mocks.data.product.id} />);
 
@@ -81,5 +87,49 @@ describe("ProductDetailScreen", () => {
     expect(supplierLink).toHaveAttribute("data-route", "/s/$sellerSlug");
     expect(supplierLink).toHaveAttribute("data-seller-slug", "seller");
     expect(supplierLink).toHaveClass("hover:underline", "focus-visible:ring-2");
+  });
+
+  it("shows every published image and lets keyboard controls change the main image", async () => {
+    mocks.data.images = Array.from({ length: 9 }, (_, index) => ({
+      id: `image-${index + 1}`,
+      url: `https://public.test/image-${index + 1}.jpg`,
+    }));
+    mocks.data.product.cover_image_url = mocks.data.images[1]!.url;
+
+    render(<ProductDetailScreen productId={mocks.data.product.id} />);
+
+    expect(screen.getByRole("img", { name: "Cotton shirt" })).toHaveAttribute(
+      "src",
+      "https://public.test/image-2.jpg",
+    );
+    expect(screen.getAllByRole("button", { name: /Select product image/ })).toHaveLength(9);
+
+    await userEvent.click(screen.getByRole("button", { name: "Select product image 9" }));
+    expect(screen.getByRole("img", { name: "Cotton shirt" })).toHaveAttribute(
+      "src",
+      "https://public.test/image-9.jpg",
+    );
+    expect(screen.getByRole("button", { name: "Select product image 9" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
+
+  it("falls back to the cover when a selected non-cover image fails", async () => {
+    mocks.data.images = [
+      { id: "cover", url: "https://public.test/cover.jpg" },
+      { id: "detail", url: "https://public.test/detail.jpg" },
+    ];
+    mocks.data.product.cover_image_url = "https://public.test/cover.jpg";
+    render(<ProductDetailScreen productId={mocks.data.product.id} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Select product image 2" }));
+    fireEvent.error(screen.getByRole("img", { name: "Cotton shirt" }));
+
+    expect(screen.getByRole("img", { name: "Cotton shirt" })).toHaveAttribute(
+      "src",
+      "https://public.test/cover.jpg",
+    );
+    expect(screen.getByRole("button", { name: "Select product image 2" })).toBeDisabled();
   });
 });

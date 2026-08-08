@@ -39,7 +39,9 @@ describe("SellerProductDraftDescriptionSection", () => {
 
     renderSection({ client, title: "", onGenerated, onGenerationStateChange });
 
-    const generateButton = await screen.findByRole("button", { name: "Generate descriptions" });
+    const generateButton = await screen.findByRole("button", {
+      name: "Generate title and descriptions",
+    });
     await waitFor(() => expect(generateButton).toBeEnabled());
     expect(client.generate).not.toHaveBeenCalled();
     await userEvent.click(generateButton);
@@ -107,7 +109,7 @@ describe("SellerProductDraftDescriptionSection", () => {
     });
 
     expect(
-      await screen.findByText("All descriptions and the title are already owned by human edits."),
+      await screen.findByText("All descriptions are human-edited and the title is already set."),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Generate descriptions" })).toBeDisabled();
   });
@@ -172,7 +174,7 @@ function renderSection(
   return render(
     <SellerProductDraftDescriptionSectionView
       productDraftId={productDraftId}
-      title=""
+      title="Existing title"
       client={createClient()}
       coordination={cleanCoordination}
       refreshRequest={0}

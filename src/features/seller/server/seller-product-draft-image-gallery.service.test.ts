@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProductDraftImageDeliveryEngine } from "@/features/admin/server/product-draft-image-delivery.service";
+import type { ProductDraftImageDeliveryResponse } from "@/features/admin/server/product-draft-image-delivery.types";
 
 import type { SellerProductDraftImageGalleryRepository } from "./product-draft-image-gallery.repository";
 import { SellerProductDraftImageGalleryService } from "./seller-product-draft-image-gallery.service";
@@ -11,7 +12,7 @@ const secondImageId = uuid(102);
 
 describe("SellerProductDraftImageGalleryService", () => {
   it("returns an empty available gallery without invoking delivery", async () => {
-    const repository = { list: vi.fn(async () => []) };
+    const repository = { list: vi.fn(async () => ({ galleryRevision: 0, records: [] })) };
     const delivery = { resolve: vi.fn() };
 
     await expect(
@@ -19,6 +20,7 @@ describe("SellerProductDraftImageGalleryService", () => {
     ).resolves.toEqual({
       status: "available",
       errorCode: null,
+      galleryRevision: 0,
       images: [],
     });
     expect(delivery.resolve).not.toHaveBeenCalled();
@@ -27,7 +29,7 @@ describe("SellerProductDraftImageGalleryService", () => {
   it("maps ordered metadata and preserves per-image delivery states", async () => {
     const repository = memoryRepository();
     const delivery: Pick<ProductDraftImageDeliveryEngine, "resolve"> = {
-      resolve: vi.fn(async () => ({
+      resolve: vi.fn(async (): Promise<ProductDraftImageDeliveryResponse> => ({
         entries: [
           {
             productDraftId,
@@ -59,11 +61,20 @@ describe("SellerProductDraftImageGalleryService", () => {
     ).resolves.toEqual({
       status: "available",
       errorCode: null,
+      galleryRevision: 4,
       images: [
         {
           imageId: firstImageId,
           sourcePosition: 0,
           durableStatus: "available",
+          sourceKind: "classifier_import",
+          clientUploadId: null,
+          originalFilename: null,
+          contentType: "image/jpeg",
+          sizeBytes: 100,
+          lifecycleErrorCode: null,
+          recoveryAction: null,
+          canRemove: false,
           deliveryStatus: "available",
           deliveryErrorCode: null,
           url: "https://signed.test/first",
@@ -74,6 +85,14 @@ describe("SellerProductDraftImageGalleryService", () => {
           imageId: secondImageId,
           sourcePosition: 1,
           durableStatus: "failed",
+          sourceKind: "classifier_import",
+          clientUploadId: null,
+          originalFilename: null,
+          contentType: "image/jpeg",
+          sizeBytes: 100,
+          lifecycleErrorCode: null,
+          recoveryAction: null,
+          canRemove: false,
           deliveryStatus: "failed",
           deliveryErrorCode: null,
           url: null,
@@ -99,11 +118,20 @@ describe("SellerProductDraftImageGalleryService", () => {
     ).resolves.toEqual({
       status: "unavailable",
       errorCode: "product_draft_image_delivery_unavailable",
+      galleryRevision: 4,
       images: [
         {
           imageId: firstImageId,
           sourcePosition: 0,
           durableStatus: "available",
+          sourceKind: "classifier_import",
+          clientUploadId: null,
+          originalFilename: null,
+          contentType: "image/jpeg",
+          sizeBytes: 100,
+          lifecycleErrorCode: null,
+          recoveryAction: null,
+          canRemove: false,
           deliveryStatus: "unavailable",
           deliveryErrorCode: null,
           url: null,
@@ -114,6 +142,14 @@ describe("SellerProductDraftImageGalleryService", () => {
           imageId: secondImageId,
           sourcePosition: 1,
           durableStatus: "failed",
+          sourceKind: "classifier_import",
+          clientUploadId: null,
+          originalFilename: null,
+          contentType: "image/jpeg",
+          sizeBytes: 100,
+          lifecycleErrorCode: null,
+          recoveryAction: null,
+          canRemove: false,
           deliveryStatus: "unavailable",
           deliveryErrorCode: null,
           url: null,
@@ -143,6 +179,7 @@ describe("SellerProductDraftImageGalleryService", () => {
     ).resolves.toEqual({
       status: "unavailable",
       errorCode: "product_draft_image_delivery_unavailable",
+      galleryRevision: 0,
       images: [],
     });
     expect(delivery.resolve).not.toHaveBeenCalled();
@@ -151,22 +188,41 @@ describe("SellerProductDraftImageGalleryService", () => {
 
 function memoryRepository(): SellerProductDraftImageGalleryRepository {
   return {
-    list: vi.fn(async () => [
-      {
-        imageId: firstImageId,
-        productDraftId,
-        sourcePosition: 0,
-        durableStatus: "available",
-        isSourceCover: true,
-      },
-      {
-        imageId: secondImageId,
-        productDraftId,
-        sourcePosition: 1,
-        durableStatus: "failed",
-        isSourceCover: false,
-      },
-    ]),
+    list: vi.fn(async (): ReturnType<SellerProductDraftImageGalleryRepository["list"]> => ({
+      galleryRevision: 4,
+      records: [
+        {
+          imageId: firstImageId,
+          productDraftId,
+          sourcePosition: 0,
+          durableStatus: "available",
+          sourceKind: "classifier_import",
+          clientUploadId: null,
+          originalFilename: null,
+          contentType: "image/jpeg",
+          sizeBytes: 100,
+          lifecycleErrorCode: null,
+          recoveryAction: null,
+          canRemove: false,
+          isSourceCover: true,
+        },
+        {
+          imageId: secondImageId,
+          productDraftId,
+          sourcePosition: 1,
+          durableStatus: "failed",
+          sourceKind: "classifier_import",
+          clientUploadId: null,
+          originalFilename: null,
+          contentType: "image/jpeg",
+          sizeBytes: 100,
+          lifecycleErrorCode: null,
+          recoveryAction: null,
+          canRemove: false,
+          isSourceCover: false,
+        },
+      ],
+    })),
   };
 }
 

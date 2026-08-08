@@ -11,18 +11,18 @@ SELECT has_table(
   'complete product-code reservations have a dedicated private table'
 );
 
-SELECT col_not_null(
+SELECT col_is_null(
   'public',
   'products',
   'product_code',
-  'every product requires a product code'
+  'draft products may defer product-code allocation until publication'
 );
 
-SELECT col_not_null(
+SELECT col_is_null(
   'public',
   'products',
   'category_id',
-  'every product requires a supported category'
+  'draft products may omit a supported category'
 );
 
 SELECT ok(
@@ -112,6 +112,43 @@ FROM public.create_seller_product_with_description(
   NULL,
   false,
   'draft'
+);
+
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  (SELECT product_draft_id FROM direct_creation),
+  'https://public.test/qa-0028b1-cover.jpg'
+);
+
+CREATE TEMP TABLE direct_publication AS
+SELECT *
+FROM public.save_seller_product_with_description(
+  (SELECT product_draft_id FROM direct_creation),
+  '28b10000-0000-0000-0000-000000000001',
+  false,
+  NULL,
+  false,
+  NULL,
+  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+  1,
+  '1',
+  10,
+  'EUR',
+  'in_stock',
+  true,
+  'https://public.test/qa-0028b1-cover.jpg',
+  false,
+  'published'
+);
+
+UPDATE direct_creation
+SET product_code = (
+  SELECT product.product_code
+  FROM public.products AS product
+  WHERE product.id = (SELECT product_draft_id FROM direct_creation)
 );
 
 SELECT is(
@@ -204,8 +241,8 @@ SELECT is(
       'draft'
     )
   ),
-  'product_category_required',
-  'direct creation reports a missing category without partial writes'
+  'created',
+  'direct draft creation permits a missing category without allocating a code'
 );
 
 SELECT is(
@@ -344,17 +381,17 @@ FROM public.prepare_classifier_import_group_at_position(
 SELECT is(
   (SELECT result FROM first_classifier_preparation),
   'prepared',
-  'classifier preparation creates an allocated ProductDraft'
+  'classifier preparation creates a ProductDraft for later publication allocation'
 );
 
-SELECT matches(
+SELECT is(
   (
     SELECT product_code
     FROM public.products
     WHERE id = (SELECT product_draft_id FROM first_classifier_preparation)
   ),
-  '^Q91-F-TRO-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$',
-  'classifier preparation allocates from the approved leaf category'
+  NULL::text,
+  'classifier preparation defers product-code allocation until publication'
 );
 
 CREATE TEMP TABLE repeated_classifier_preparation AS
@@ -380,8 +417,8 @@ SELECT is(
     FROM public.product_code_allocations
     WHERE product_id = (SELECT product_draft_id FROM first_classifier_preparation)
   ),
-  1,
-  'an idempotent classifier retry creates no second allocation'
+  0,
+  'an idempotent classifier retry creates no premature allocation'
 );
 
 SELECT is(
@@ -425,8 +462,8 @@ SELECT is(
       1
     )
   ),
-  'category_not_mapped',
-  'classifier preparation preserves the unmapped-category result'
+  'prepared',
+  'classifier preparation turns an unmapped category into review work'
 );
 
 SELECT is(
@@ -436,8 +473,8 @@ SELECT is(
     WHERE classifier_organization_id = '28b10000-0000-0000-0000-000000000111'
       AND classifier_group_id = '28b10000-0000-0000-0000-000000000142'
   ),
-  0,
-  'a classifier pre-creation failure leaves no partial ProductDraft'
+  1,
+  'an unmapped category creates one uncategorized ProductDraft'
 );
 
 SELECT * FROM finish();

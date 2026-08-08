@@ -66,7 +66,7 @@ export type ProductDraftDescriptionSnapshot = {
   currentFactsRevision: number;
   generationEligibility: {
     eligible: boolean;
-    reason: "product_not_draft" | "category_missing" | null;
+    reason: "product_not_draft" | null;
   };
   descriptions: ProductDraftDescriptionEntry[];
 };

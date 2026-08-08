@@ -58,6 +58,39 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
     });
   });
 
+  it("accepts an atomic claim with explicit null category metadata", async () => {
+    const rpc = vi.fn(async () => ({
+      data: [
+        {
+          result: "claimed",
+          attempt_token: uuid(3),
+          category_id: null,
+          category_slug: null,
+          category_name: null,
+          facts_revision: 2,
+          facts_json: facts(),
+          human_languages: [],
+          title_blank: true,
+          cover_source: "public_product_upload",
+          cover_image_id: null,
+          cover_image_url:
+            "https://example.supabase.co/storage/v1/object/public/product-images/cover.jpg",
+          cover_storage_bucket: null,
+          cover_object_key: null,
+          cover_content_type: null,
+          cover_size_bytes: null,
+        },
+      ],
+      error: null,
+    }));
+
+    await expect(repositoryWith(rpc).claim(productDraftId, sellerId)).resolves.toMatchObject({
+      result: "claimed",
+      category: null,
+      titleBlank: true,
+    });
+  });
+
   it("finalizes all generated fields and parses complete public snapshots", async () => {
     const rpc = vi.fn(async () => ({
       data: [
@@ -108,7 +141,7 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
       },
       provider: "openai",
       model: "configured-model",
-      pipelineVersion: "product-description-v2",
+      pipelineVersion: "product-description-v3",
       generatedAt: "2026-08-02T12:00:00.000Z",
     });
 
@@ -132,6 +165,50 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
       },
       titleSnapshot: { title: "Cotton T-shirt", titleSource: "model" },
     });
+  });
+
+  it("passes a null category fence to finalization", async () => {
+    const rpc = vi.fn(async () => ({
+      data: [{ result: "input_changed", description_snapshot: null, title_snapshot: null }],
+      error: null,
+    }));
+    const repository = repositoryWith(rpc);
+
+    await repository.finalize({
+      productDraftId,
+      expectedSellerId: sellerId,
+      claim: {
+        result: "claimed",
+        attemptToken: uuid(3),
+        category: null,
+        factsRevision: 2,
+        facts: facts(),
+        humanLanguages: [],
+        titleBlank: true,
+        cover: {
+          source: "public_product_upload",
+          imageUrl: "https://example.supabase.co/storage/v1/object/public/product-images/cover.jpg",
+        },
+      },
+      output: {
+        descriptions: {
+          pl: "Polski opis.",
+          en: "English description.",
+          de: "Deutsche Beschreibung.",
+          vi: "Mo ta tieng Viet.",
+        },
+        titleProposal: null,
+      },
+      provider: "openai",
+      model: "configured-model",
+      pipelineVersion: "product-description-v3",
+      generatedAt: "2026-08-08T12:00:00.000Z",
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "finalize_product_draft_description_generation",
+      expect.objectContaining({ p_expected_category_id: null }),
+    );
   });
 
   it("records only a documented failure through the atomic function", async () => {
@@ -184,7 +261,7 @@ function descriptionSnapshot() {
       factsRevision: 2,
       provider: language === "en" ? null : "openai",
       model: language === "en" ? null : "configured-model",
-      pipelineVersion: language === "en" ? null : "product-description-v2",
+      pipelineVersion: language === "en" ? null : "product-description-v3",
       generatedAt: language === "en" ? null : "2026-08-02T12:00:00+00:00",
       updatedAt: "2026-08-02T12:00:00+00:00",
       outdated: false,

@@ -36,6 +36,43 @@ describe("SellerClassifierReviewService", () => {
     });
   });
 
+  it("accepts an approved categoryless group with a consistent source", async () => {
+    const snapshot = reviewSnapshot();
+    snapshot.groups[0] = {
+      ...snapshot.groups[0]!,
+      status: "approved",
+      approvedCategorySlug: null,
+      approvedCategorySource: "reviewer_cleared",
+    };
+    const { service } = setup({ snapshot });
+
+    const result = await service.getReview(workflowId, sellerId);
+
+    expect(result.groups[0]).toMatchObject({
+      groupId,
+      status: "approved",
+      approvedCategorySlug: null,
+      approvedCategorySource: "reviewer_cleared",
+    });
+  });
+
+  it("rejects an inconsistent categoryless approved-category source", async () => {
+    const snapshot = reviewSnapshot();
+    snapshot.groups[0] = {
+      ...snapshot.groups[0]!,
+      status: "approved",
+      approvedCategorySlug: null,
+      approvedCategorySource: "machine_suggestion",
+    };
+    const { service } = setup({ snapshot });
+
+    await expectError(
+      service.getReview(workflowId, sellerId),
+      503,
+      "seller_classifier_unavailable",
+    );
+  });
+
   it("does not contact the classifier for another seller's workflow", async () => {
     const { repository, classifier, service } = setup();
     repository.findOwned.mockResolvedValueOnce(null);

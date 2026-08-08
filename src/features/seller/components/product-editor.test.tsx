@@ -43,18 +43,15 @@ vi.mock("@/features/seller/categories.functions", () => ({
   listProductCategories: mocks.listCategories,
 }));
 
-vi.mock("./image-upload", () => ({
-  ImageUpload: () => <div>Image upload</div>,
-}));
-
 import { ProductEditor } from "./product-editor";
 
 const productId = "00000000-0000-4000-8000-000000000001";
+const productCategoryId = "00000000-0000-4000-8000-000000000002";
 
 type InitialProduct = {
   id: string;
   title: string;
-  product_code: string;
+  product_code: string | null;
   title_source: "human" | "model" | null;
   description: string | null;
   category_id: string | null;
@@ -67,6 +64,7 @@ type InitialProduct = {
   trending: boolean;
   status: "draft" | "published" | "archived";
   imagePublicationMode?: "imported" | "direct";
+  imageSourceMode?: "classifier_import" | "seller_upload";
 };
 
 const initial: InitialProduct = {
@@ -85,11 +83,24 @@ const initial: InitialProduct = {
   trending: false,
   status: "draft" as const,
 };
+const completeInitial: InitialProduct = {
+  ...initial,
+  category_id: productCategoryId,
+};
 
 describe("ProductEditor title and description behavior", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.listCategories.mockResolvedValue({ categories: [] });
+    mocks.listCategories.mockResolvedValue({
+      categories: [
+        {
+          id: productCategoryId,
+          slug: "t-shirts",
+          name: "T-shirts",
+          parent_id: "00000000-0000-4000-8000-000000000003",
+        },
+      ],
+    });
     mocks.save.mockResolvedValue({
       id: productId,
       title: "Model title",
@@ -111,6 +122,11 @@ describe("ProductEditor title and description behavior", () => {
     renderEditor(null);
     expect(screen.queryByText("Product code:")).not.toBeInTheDocument();
     expect(screen.queryByText("SEL-F-TSH-ABCDEFGH")).not.toBeInTheDocument();
+  });
+
+  it("shows the publication-time fallback for an uncoded draft", () => {
+    renderEditor({ ...initial, product_code: null });
+    expect(screen.getByText("Assigned when publishing")).toBeVisible();
   });
 
   it("omits an untouched existing title", async () => {
@@ -233,7 +249,7 @@ describe("ProductEditor title and description behavior", () => {
 
   it("hides and omits the manual cover for an imported ProductDraft", async () => {
     renderEditor({
-      ...initial,
+      ...completeInitial,
       imagePublicationMode: "imported",
       cover_image_url: "https://public.example/stale.jpg",
     });
@@ -247,24 +263,62 @@ describe("ProductEditor title and description behavior", () => {
     expect(await screen.findByText("Publishing product and images")).toBeInTheDocument();
   });
 
-  it("keeps the direct cover control and uses synchronous publication", async () => {
-    mocks.publish.mockResolvedValueOnce({
-      ...publication("not_required"),
-      productStatus: "published",
-      publicProductUrl: `/p/${productId}`,
-    });
-    renderEditor({ ...initial, imagePublicationMode: "direct" });
-
-    expect(screen.getByText("Image upload")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Publish" }));
-
-    await waitFor(() =>
-      expect(mocks.publish.mock.calls[0]?.[0].data).toHaveProperty("cover_image_url", ""),
+  it("removes the direct public-cover control and requires a private gallery", async () => {
+    renderEditor(
+      {
+        ...completeInitial,
+        imagePublicationMode: "direct",
+        imageSourceMode: "seller_upload",
+      },
+      undefined,
+      undefined,
+      {
+        galleryState: {
+          activeImageCount: 0,
+          hasDurableImages: false,
+          hasAvailableCover: false,
+          incomplete: false,
+        },
+      },
     );
+
+    expect(screen.queryByText("Image upload")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
+    expect(screen.getByText("Add at least one product picture before publishing.")).toBeVisible();
+  });
+
+  it("keeps the durable publication path while the last private image needs recovery", async () => {
+    renderEditor(
+      {
+        ...completeInitial,
+        imagePublicationMode: "imported",
+        imageSourceMode: "seller_upload",
+      },
+      undefined,
+      undefined,
+      {
+        galleryState: {
+          activeImageCount: 0,
+          hasDurableImages: true,
+          hasAvailableCover: false,
+          incomplete: true,
+        },
+      },
+    );
+
+    await waitFor(() => expect(mocks.getPublication).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("Product publication")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
+    expect(
+      screen.getByText("Resolve pending, failed, or deleting product pictures before publishing."),
+    ).toBeVisible();
   });
 
   it("blocks publication while optional facts are dirty", async () => {
-    renderEditor({ ...initial, imagePublicationMode: "imported" }, { dirty: true, saving: false });
+    renderEditor(
+      { ...completeInitial, imagePublicationMode: "imported" },
+      { dirty: true, saving: false },
+    );
 
     expect(
       screen.getByText("Save product details and descriptions before publishing."),
@@ -276,7 +330,7 @@ describe("ProductEditor title and description behavior", () => {
 
   it("blocks publication while multilingual descriptions are dirty", async () => {
     renderEditor(
-      { ...initial, imagePublicationMode: "imported" },
+      { ...completeInitial, imagePublicationMode: "imported" },
       { dirty: false, saving: false },
       { dirty: true, saving: false },
     );
@@ -299,6 +353,18 @@ describe("ProductEditor title and description behavior", () => {
         publicationActive: true,
       }),
     );
+  });
+
+  it("keeps Save draft enabled while blocking publication without title or category", () => {
+    renderEditor({ ...initial, title: "", category_id: null });
+
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Enter a title and select a category before publishing. You can save the product as a draft without them.",
+      ),
+    ).toBeVisible();
   });
 
   it("reports unsaved product changes", async () => {
@@ -342,7 +408,7 @@ describe("ProductEditor title and description behavior", () => {
       failureReasonCode: "product_publication_transfer_failed",
       retryAllowed: true,
     });
-    renderEditor({ ...initial, imagePublicationMode: "imported" });
+    renderEditor({ ...completeInitial, imagePublicationMode: "imported" });
 
     await userEvent.click(await screen.findByRole("button", { name: "Retry publication" }));
 
@@ -399,7 +465,16 @@ describe("ProductEditor title and description behavior", () => {
     ],
   ])("shows actionable synchronous error %s", async (code, message) => {
     mocks.publish.mockRejectedValueOnce({ code });
-    renderEditor({ ...initial, imagePublicationMode: "imported" });
+    renderEditor(
+      {
+        ...completeInitial,
+        imagePublicationMode: "imported",
+        imageSourceMode: "classifier_import",
+      },
+      undefined,
+      undefined,
+      { galleryState: readyGalleryState },
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Publish" }));
 
@@ -453,6 +528,7 @@ function renderEditor(
   props: {
     onStateChange?: Parameters<typeof ProductEditor>[0]["onStateChange"];
     titleReplacement?: Parameters<typeof ProductEditor>[0]["titleReplacement"];
+    galleryState?: Parameters<typeof ProductEditor>[0]["galleryState"];
   } = {},
 ) {
   const queryClient = new QueryClient({
@@ -468,6 +544,7 @@ function renderEditor(
         descriptionState={descriptionState}
         onStateChange={nextProps.onStateChange}
         titleReplacement={nextProps.titleReplacement}
+        galleryState={nextProps.galleryState}
       />
     </QueryClientProvider>
   );
@@ -479,6 +556,13 @@ function renderEditor(
       result.rerender(renderUi(nextProduct, nextProps)),
   };
 }
+
+const readyGalleryState = {
+  activeImageCount: 1,
+  hasDurableImages: true,
+  hasAvailableCover: true,
+  incomplete: false,
+};
 
 function publication(
   status:

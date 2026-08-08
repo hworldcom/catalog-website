@@ -27,6 +27,43 @@ describe("SupabaseProductPublicationRepository", () => {
     });
   });
 
+  it("normalizes the publication category requirement and preserves allocation failures", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: [
+          {
+            result: "product_publication_category_required",
+            product_draft_id: uuid(1),
+            publication_status: null,
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            result: "product_code_allocation_failed",
+            product_draft_id: uuid(1),
+            publication_status: null,
+          },
+        ],
+        error: null,
+      });
+    const repository = new SupabaseProductPublicationRepository({
+      rpc,
+    } as unknown as SupabaseClient<Database>);
+
+    await expect(repository.authorize(authorization())).resolves.toEqual({
+      result: "category_required",
+      productDraftId: uuid(1),
+    });
+    await expect(repository.authorize(authorization())).resolves.toEqual({
+      result: "product_code_allocation_failed",
+      productDraftId: uuid(1),
+    });
+  });
+
   it("reads only the first ordered non-null item error", async () => {
     const query = fluentQuery({
       data: { error_code: "product_publication_transfer_failed" },

@@ -393,6 +393,31 @@ describe("SellerClassifierReviewScreenView", () => {
     expect(screen.getByText(/All groups are approved/)).toBeVisible();
   });
 
+  it("allows a valid categoryless group to be approved", async () => {
+    const snapshot = reviewSnapshot();
+    snapshot.groups[0] = {
+      ...snapshot.groups[0]!,
+      approvedCategorySlug: null,
+      approvedCategorySource: "reviewer_cleared",
+    };
+    const api = reviewClient({ snapshot });
+    const user = userEvent.setup();
+    renderReview(api);
+
+    await screen.findByRole("heading", { name: "Group 1" });
+    const firstGroup = reviewGroup(1);
+    expect(await within(firstGroup).findByText("Category not set")).toBeVisible();
+    expect(
+      within(firstGroup).getByText(/Category is optional for classifier approval/i),
+    ).toBeVisible();
+
+    const approve = within(firstGroup).getByRole("button", { name: "Approve group" });
+    expect(approve).toBeEnabled();
+    await user.click(approve);
+
+    expect(api.approveGroup).toHaveBeenCalledWith({ workflowId, groupId: groupOneId });
+  });
+
   it("serializes batch approval and navigates after an accepted import snapshot", async () => {
     const api = reviewClient({ snapshot: approvedSnapshot() });
     const onImportAccepted = vi.fn();

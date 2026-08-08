@@ -67,9 +67,7 @@ function snapshot(
   const generationEligibility =
     record.productStatus !== "draft"
       ? { eligible: false, reason: "product_not_draft" as const }
-      : record.categoryId
-        ? { eligible: true, reason: null }
-        : { eligible: false, reason: "category_missing" as const };
+      : { eligible: true, reason: null };
 
   return {
     productDraftId: record.productDraftId,

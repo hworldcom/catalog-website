@@ -42,7 +42,10 @@ export type ProductPublicationAuthorizationResult =
         | "title_required"
         | "title_invalid"
         | "description_invalid"
-        | "category_required";
+        | "category_required"
+        | "product_code_company_unconfigured"
+        | "product_code_category_unconfigured"
+        | "product_code_allocation_failed";
       productDraftId: string | null;
     };
 

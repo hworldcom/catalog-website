@@ -61,6 +61,50 @@ describe("ApprovedGroupsClient", () => {
     expect(snapshot.groups[0]?.approvedCategorySlug).toBe("trousers");
   });
 
+  it("accepts an explicit null approved category", async () => {
+    const payload = approvedPayload();
+    (payload.groups[0] as Record<string, unknown>).approvedCategorySlug = null;
+
+    const snapshot = await clientReturning(Response.json(payload)).getApprovedGroups(batchId);
+
+    expect(snapshot.groups[0]?.approvedCategorySlug).toBeNull();
+  });
+
+  it.each<{
+    label: string;
+    mutate: (payload: ReturnType<typeof approvedPayload>) => void;
+  }>([
+    {
+      label: "missing",
+      mutate: (payload) => {
+        const group = payload.groups[0] as Record<string, unknown>;
+        delete group.approvedCategorySlug;
+      },
+    },
+    {
+      label: "blank",
+      mutate: (payload) => {
+        payload.groups[0]!.approvedCategorySlug = "   ";
+      },
+    },
+    {
+      label: "invalid type",
+      mutate: (payload) => {
+        const group = payload.groups[0] as Record<string, unknown>;
+        group.approvedCategorySlug = 42;
+      },
+    },
+  ])("rejects a $label approved category", async ({ mutate }) => {
+    const payload = approvedPayload();
+    mutate(payload);
+
+    await expectImportError(
+      clientReturning(Response.json(payload)).getApprovedGroups(batchId),
+      "approved_groups_response_invalid",
+      false,
+    );
+  });
+
   it("maps known classifier client errors exactly", async () => {
     const client = clientReturning(
       Response.json(

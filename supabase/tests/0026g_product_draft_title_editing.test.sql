@@ -131,6 +131,15 @@ SELECT throws_ok(
   'a blank title cannot be published'
 );
 
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  '26000000-0000-0000-0000-000000000212',
+  'https://example.test/qa-0026g-published.jpg'
+);
+
 UPDATE public.products
 SET
   status = 'published',

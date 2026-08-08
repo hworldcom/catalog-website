@@ -522,7 +522,11 @@ function ProductDraftCard({
                 value={`${item.seller.name} (${item.seller.slug})`}
               />
               <Definition label={tr(S.sellerIdShort)} value={item.seller.id} mono />
-              <Definition label={tr(productCodeCopy.label)} value={item.productCode} mono />
+              <Definition
+                label={tr(productCodeCopy.label)}
+                value={item.productCode ?? tr(productCodeCopy.assignedWhenPublishing)}
+                mono={item.productCode !== null}
+              />
               <Definition
                 label={tr(S.category)}
                 value={

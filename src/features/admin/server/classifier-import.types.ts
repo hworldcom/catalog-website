@@ -13,7 +13,7 @@ export type ApprovedGroupImage = {
 
 export type ApprovedGroup = {
   groupId: string;
-  approvedCategorySlug: string;
+  approvedCategorySlug: string | null;
   suggestedCategorySlug: string | null;
   coverImageId: string;
   confidence: number | null;

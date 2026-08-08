@@ -1,6 +1,6 @@
 import type { ProductDraftImageDeliveryEngine } from "@/features/admin/server/product-draft-image-delivery.service";
 import type { ProductDraftImageDeliveryResult } from "@/features/admin/server/product-draft-image-delivery.types";
-import { parseStoredProductCode } from "@/features/product-code/product-code";
+import { parseStoredProductCodeOrNull } from "@/features/product-code/product-code";
 
 import {
   decodeSellerProductListCursor,
@@ -228,9 +228,9 @@ function validateDeliveryResponse(
 }
 
 function browserProduct(product: SellerProductListRecord, logger: SellerProductListLogger) {
-  let productCode: string;
+  let productCode: string | null;
   try {
-    productCode = parseStoredProductCode(product.product_code);
+    productCode = parseStoredProductCodeOrNull(product.product_code);
   } catch (error) {
     logger.error("seller_product_list_product_code_invalid", {
       exceptionClass: error instanceof Error ? error.constructor.name : "UnknownError",

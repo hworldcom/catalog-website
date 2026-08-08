@@ -106,8 +106,22 @@ VALUES (
   NULL,
   'draft',
   (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+  NULL
+);
+
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  '27a20000-0000-4000-8000-000000000101',
   'https://example.supabase.co/storage/v1/object/public/product-images/qa/0027a2-cover.jpg'
 );
+
+UPDATE public.products
+SET cover_image_url =
+  'https://example.supabase.co/storage/v1/object/public/product-images/qa/0027a2-cover.jpg'
+WHERE id = '27a20000-0000-4000-8000-000000000101';
 
 SELECT lives_ok(
   format(
@@ -524,8 +538,22 @@ VALUES (
   'human',
   'draft',
   (SELECT id FROM public.categories WHERE slug = 't-shirts'),
+  NULL
+);
+
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  '27a20000-0000-4000-8000-000000000103',
   'https://example.supabase.co/storage/v1/object/public/product-images/qa/0027a2-human-cover.jpg'
 );
+
+UPDATE public.products
+SET cover_image_url =
+  'https://example.supabase.co/storage/v1/object/public/product-images/qa/0027a2-human-cover.jpg'
+WHERE id = '27a20000-0000-4000-8000-000000000103';
 
 SELECT lives_ok(
   format(

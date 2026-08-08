@@ -99,9 +99,9 @@ VALUES
     '26000000-0000-0000-0000-000000000001',
     pg_temp.qa_product_code('26000000-0000-0000-0000-000000000102'),
     'Published product',
-    'published',
+    'draft',
     (SELECT id FROM public.categories WHERE slug = 't-shirts'),
-    'https://example.test/qa-0026e1-published.jpg'
+    NULL
   ),
   (
     '26000000-0000-0000-0000-000000000103',
@@ -112,6 +112,21 @@ VALUES
     (SELECT id FROM public.categories WHERE slug = 't-shirts'),
     NULL
   );
+
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  '26000000-0000-0000-0000-000000000102',
+  'https://example.test/qa-0026e1-published.jpg'
+);
+
+UPDATE public.products
+SET
+  status = 'published',
+  cover_image_url = 'https://example.test/qa-0026e1-published.jpg'
+WHERE id = '26000000-0000-0000-0000-000000000102';
 
 SELECT is(
   (
@@ -194,6 +209,15 @@ CREATE TEMP TABLE reviewed_facts_snapshot AS
 SELECT facts_json, facts_revision, created_at, updated_at
 FROM public.product_draft_facts
 WHERE product_draft_id = '26000000-0000-0000-0000-000000000104';
+
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  '26000000-0000-0000-0000-000000000104',
+  'https://example.test/qa-0026e1-reviewed.jpg'
+);
 
 UPDATE public.products
 SET

@@ -6,7 +6,7 @@ import {
 } from "@/features/product-draft-descriptions/product-draft-descriptions.types";
 import { PRODUCT_DRAFT_TITLE_MAX_LENGTH } from "@/features/product-draft-title/product-draft-title.types";
 
-export const PRODUCT_DESCRIPTION_PIPELINE_VERSION = "product-description-v2";
+export const PRODUCT_DESCRIPTION_PIPELINE_VERSION = "product-description-v3";
 export const PRODUCT_DESCRIPTION_PROVIDER_TIMEOUT_MS = 45_000;
 export const PRODUCT_DESCRIPTION_OPERATION_TIMEOUT_MS = 60_000;
 export const PRODUCT_DESCRIPTION_CLAIM_EXPIRY_SECONDS = 180;
@@ -141,10 +141,8 @@ export function normalizeProductDescriptionGenerationOutput(
     throw new ProductDescriptionGenerationImageNotUsableError();
   }
 
-  if (
-    parsed.data.descriptions === null ||
-    parsed.data.imageAssessment.observedDetails.length === 0
-  ) {
+  const parsedDescriptions = parsed.data.descriptions;
+  if (parsedDescriptions === null || parsed.data.imageAssessment.observedDetails.length === 0) {
     throw new ProductDescriptionGenerationOutputError();
   }
   for (const detail of parsed.data.imageAssessment.observedDetails) {
@@ -161,7 +159,7 @@ export function normalizeProductDescriptionGenerationOutput(
   const descriptions = Object.fromEntries(
     PRODUCT_DRAFT_DESCRIPTION_LANGUAGES.map((language) => [
       language,
-      normalizeGeneratedDescription(parsed.data.descriptions[language]),
+      normalizeGeneratedDescription(parsedDescriptions[language]),
     ]),
   ) as NormalizedProductDescriptionGenerationOutput["descriptions"];
 

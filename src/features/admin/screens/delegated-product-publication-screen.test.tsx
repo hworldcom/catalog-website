@@ -314,6 +314,7 @@ function draft(productOverrides: Partial<DelegatedProductDraftSnapshot["product"
     gallery: {
       status: "available" as const,
       errorCode: null,
+      galleryRevision: 0,
       images: [],
     },
   } satisfies DelegatedProductDraftSnapshot;

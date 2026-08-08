@@ -78,11 +78,10 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
       .safeParse(row.human_languages);
     const factsRevision = row.facts_revision;
     const cover = parseCover(row);
+    const category = parseCategory(row);
     if (
       !row.attempt_token ||
-      !row.category_id ||
-      !row.category_slug?.trim() ||
-      !row.category_name?.trim() ||
+      category === undefined ||
       typeof factsRevision !== "number" ||
       !Number.isInteger(factsRevision) ||
       factsRevision < 1 ||
@@ -98,11 +97,7 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
     return {
       result: "claimed",
       attemptToken: row.attempt_token,
-      category: {
-        id: row.category_id,
-        slug: row.category_slug,
-        name: row.category_name,
-      },
+      category,
       factsRevision,
       facts: facts.data,
       humanLanguages: humanLanguages.data,
@@ -118,7 +113,7 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
       p_product_draft_id: input.productDraftId,
       p_expected_seller_id: input.expectedSellerId,
       p_attempt_token: input.claim.attemptToken,
-      p_expected_category_id: input.claim.category.id,
+      p_expected_category_id: input.claim.category?.id ?? null,
       p_expected_facts_revision: input.claim.factsRevision,
       p_expected_cover_source: input.claim.cover.source,
       p_expected_cover_image_id:
@@ -228,9 +223,7 @@ function publicDescriptionSnapshot(value: Json): ProductDraftDescriptionSnapshot
   const generationEligibility =
     snapshot.productStatus !== "draft"
       ? { eligible: false, reason: "product_not_draft" as const }
-      : snapshot.categoryId
-        ? { eligible: true, reason: null }
-        : { eligible: false, reason: "category_missing" as const };
+      : { eligible: true, reason: null };
 
   return {
     productDraftId: snapshot.productDraftId,
@@ -238,6 +231,24 @@ function publicDescriptionSnapshot(value: Json): ProductDraftDescriptionSnapshot
     currentFactsRevision: snapshot.currentFactsRevision,
     generationEligibility,
     descriptions: snapshot.descriptions,
+  };
+}
+
+function parseCategory(row: {
+  category_id?: string | null;
+  category_slug?: string | null;
+  category_name?: string | null;
+}) {
+  if (row.category_id === null && row.category_slug === null && row.category_name === null) {
+    return null;
+  }
+  if (!row.category_id || !row.category_slug?.trim() || !row.category_name?.trim()) {
+    return undefined;
+  }
+  return {
+    id: row.category_id,
+    slug: row.category_slug,
+    name: row.category_name,
   };
 }
 

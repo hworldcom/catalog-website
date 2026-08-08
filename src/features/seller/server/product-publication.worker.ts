@@ -263,6 +263,7 @@ export class ProductPublicationWorker {
         createResult = await this.storage.createPublicObject({
           objectKey: item.destinationKey,
           bytes: source.bytes,
+          contentType: item.expectedContentType,
           metadata: {
             productDraftId: item.productDraftId,
             productDraftImageId: item.productDraftImageId,
@@ -298,7 +299,7 @@ export class ProductPublicationWorker {
 
     const destinationSha256 = sha256(destination.bytes);
     if (
-      destination.contentType !== "image/jpeg" ||
+      destination.contentType !== item.expectedContentType ||
       destination.bytes.byteLength !== item.expectedSourceSizeBytes ||
       destinationSha256 !== sourceSha256
     ) {

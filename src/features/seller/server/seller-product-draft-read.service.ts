@@ -1,20 +1,25 @@
 import { z } from "zod";
 
-import { parseStoredProductCode } from "@/features/product-code/product-code";
+import { parseStoredProductCodeOrNull } from "@/features/product-code/product-code";
 import type { Database } from "@/lib/supabase/types";
 
 import type { SellerProductDraftGallery } from "../product-draft-image-gallery.types";
 import type { SellerProductImagePublicationMode } from "../seller-product-publication.types";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
+export type SellerProductImageSourceMode = "seller_upload" | "classifier_import";
 export type SellerProductDraft = Product & {
   imagePublicationMode: SellerProductImagePublicationMode;
+  imageSourceMode: SellerProductImageSourceMode;
 };
 
 export interface SellerProductDraftReadRepository {
   findSellerId(userId: string): Promise<string | null>;
   findOwnedProduct(productDraftId: string, sellerId: string): Promise<Product | null>;
-  hasSourceMembership(productDraftId: string): Promise<boolean>;
+  getImageSourceState(productDraftId: string): Promise<{
+    imageSourceMode: SellerProductImageSourceMode;
+    usesDurableImagePublication: boolean;
+  }>;
 }
 
 export type SellerProductDraftReadResult = {
@@ -39,9 +44,9 @@ export class SellerProductDraftReadService {
     const product = await this.repository.findOwnedProduct(parsedId.data, sellerId);
     if (!product) return notFound();
 
-    let productCode: string;
+    let productCode: string | null;
     try {
-      productCode = parseStoredProductCode(product.product_code);
+      productCode = parseStoredProductCodeOrNull(product.product_code);
     } catch (error) {
       console.error("[Seller ProductDraft read] Stored product code is invalid.", {
         exceptionClass: error instanceof Error ? error.constructor.name : "UnknownError",
@@ -50,10 +55,8 @@ export class SellerProductDraftReadService {
       throw new Error("The seller product is temporarily unavailable.");
     }
 
-    const [imagePublicationMode, gallery] = await Promise.all([
-      this.repository
-        .hasSourceMembership(product.id)
-        .then((imported): SellerProductImagePublicationMode => (imported ? "imported" : "direct")),
+    const [imageSourceState, gallery] = await Promise.all([
+      this.repository.getImageSourceState(product.id),
       input.loadGallery(product),
     ]);
 
@@ -61,7 +64,8 @@ export class SellerProductDraftReadService {
       product: {
         ...product,
         product_code: productCode,
-        imagePublicationMode,
+        imagePublicationMode: imageSourceState.usesDurableImagePublication ? "imported" : "direct",
+        imageSourceMode: imageSourceState.imageSourceMode,
       },
       gallery,
     };

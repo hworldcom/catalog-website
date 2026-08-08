@@ -16,7 +16,7 @@ import {
 } from "../product-draft-description-generation.types";
 import type { ProductDescriptionGenerationConfig } from "./product-draft-description-generation.config";
 
-export const PRODUCT_DESCRIPTION_GENERATION_INSTRUCTIONS = `You create unreviewed multilingual product catalog draft text grounded in one product cover image, an approved category, and reviewed structured facts.
+export const PRODUCT_DESCRIPTION_GENERATION_INSTRUCTIONS = `You create unreviewed multilingual product catalog draft text grounded in one product cover image, optional approved category context, and reviewed structured facts.
 
 First inspect the cover image. Decide whether it clearly shows a catalog product that can support a product-specific description.
 
@@ -30,7 +30,8 @@ If the image is usable:
 - set imageAssessment.usable to true;
 - return between one and eight concise English observedDetails;
 - describe the specific product visible in the image, not the product category in general;
-- use the approved category only as taxonomy context;
+- when an approved category is present, use it only as optional taxonomy context;
+- when category is null, identify only visible product characteristics and do not infer, name, or select a taxonomy category;
 - use reviewed structured facts as authoritative when they provide a value;
 - mention only details supported by the image or reviewed facts.
 
@@ -43,6 +44,8 @@ Return descriptions in Polish, English, German, and Vietnamese. All four descrip
 Each description must be one concise plain-text catalog paragraph of at most 300 Unicode characters. Do not use headings, bullets, Markdown, HTML, line breaks, or other markup.
 
 Do not mention prices, stock, availability, delivery, promotions, seller contact details, calls to action, or invented branding.
+
+Generated text and title proposals never select, approve, or persist a product category.
 
 Return a concise English title proposal of at most 50 Unicode characters only when titleProposalRequested is true and the image is usable. Otherwise return null.`;
 
@@ -163,10 +166,12 @@ export function buildProviderInput(input: ProductDescriptionGenerationProviderIn
   if (Object.keys(includedSources).length > 0) reviewedFacts.fieldSources = includedSources;
 
   return {
-    category: {
-      slug: input.category.slug,
-      name: input.category.name,
-    },
+    category: input.category
+      ? {
+          slug: input.category.slug,
+          name: input.category.name,
+        }
+      : null,
     reviewedFacts,
     titleProposalRequested: input.titleProposalRequested,
   };

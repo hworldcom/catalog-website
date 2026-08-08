@@ -5,7 +5,7 @@ import {
   type AdminProductDraftIndexRequest,
   type AdminProductDraftPreview,
 } from "../admin-product-draft-index.types";
-import { parseStoredProductCode } from "@/features/product-code/product-code";
+import { parseStoredProductCodeOrNull } from "@/features/product-code/product-code";
 import {
   decodeAdminProductDraftIndexCursor,
   encodeAdminProductDraftIndexCursor,
@@ -145,7 +145,7 @@ function selectPreviewImages(
 
 function buildItem(
   product: AdminProductDraftIndexProductRecord,
-  productCodeByProduct: Map<string, string>,
+  productCodeByProduct: Map<string, string | null>,
   details: AdminProductDraftIndexDetails,
   previewImageIdByProduct: Map<string, string | null>,
   deliveryByProduct: Map<string, ProductDraftImageDeliveryResult>,
@@ -164,8 +164,8 @@ function buildItem(
   );
   const previewImageId = previewImageIdByProduct.get(product.id) ?? null;
   const delivery = deliveryByProduct.get(product.id);
-  const productCode = productCodeByProduct.get(product.id);
-  if (!productCode) throw adminProductDraftsUnavailable();
+  if (!productCodeByProduct.has(product.id)) throw adminProductDraftsUnavailable();
+  const productCode = productCodeByProduct.get(product.id) ?? null;
 
   return {
     productDraftId: product.id,
@@ -194,9 +194,9 @@ function buildItem(
   };
 }
 
-function readProductCode(product: AdminProductDraftIndexProductRecord): string {
+function readProductCode(product: AdminProductDraftIndexProductRecord): string | null {
   try {
-    return parseStoredProductCode(product.product_code);
+    return parseStoredProductCodeOrNull(product.product_code);
   } catch (error) {
     console.error("[Admin ProductDraft index] Stored product code is invalid.", {
       exceptionClass: error instanceof Error ? error.constructor.name : "UnknownError",

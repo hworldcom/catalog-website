@@ -30,8 +30,8 @@ const groupSchema = z
     status: z.enum(["proposed", "approved"]),
     confidence: z.number().finite().min(0).max(1).nullable(),
     coverImageId: z.string().uuid().nullable(),
-    suggestedCategorySlug: z.string().nullable(),
-    approvedCategorySlug: z.string().nullable(),
+    suggestedCategorySlug: z.string().trim().min(1).nullable(),
+    approvedCategorySlug: z.string().trim().min(1).nullable(),
     categorySuggestionStatus: z.enum(["pending", "ready", "unavailable"]).nullable(),
     approvedCategorySource: z
       .enum(["machine_suggestion", "reviewer_selection", "reviewer_cleared"])

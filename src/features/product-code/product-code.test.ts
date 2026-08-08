@@ -5,6 +5,7 @@ import {
   PRODUCT_CODE_PATTERN,
   StoredProductCodeError,
   parseStoredProductCode,
+  parseStoredProductCodeOrNull,
 } from "./product-code";
 
 describe("stored product codes", () => {
@@ -29,12 +30,24 @@ describe("stored product codes", () => {
     expect(() => parseStoredProductCode(value)).toThrow(StoredProductCodeError);
   });
 
+  it("accepts only null as the incomplete-draft product-code state", () => {
+    expect(parseStoredProductCodeOrNull(null)).toBeNull();
+    expect(() => parseStoredProductCodeOrNull(undefined)).toThrow(StoredProductCodeError);
+    expect(() => parseStoredProductCodeOrNull("")).toThrow(StoredProductCodeError);
+  });
+
   it("defines the required label in every supported language", () => {
     expect(productCodeCopy.label).toEqual({
       EN: "Product code",
       PL: "Kod produktu",
       DE: "Produktcode",
       VI: "Mã sản phẩm",
+    });
+    expect(productCodeCopy.assignedWhenPublishing).toEqual({
+      EN: "Assigned when publishing",
+      PL: "Przypisywany podczas publikacji",
+      DE: "Wird bei der Veröffentlichung zugewiesen",
+      VI: "Được gán khi xuất bản",
     });
   });
 });

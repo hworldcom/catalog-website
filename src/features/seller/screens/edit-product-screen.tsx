@@ -19,6 +19,7 @@ import { ProductDraftImageGallery } from "../components/product-draft-image-gall
 import {
   ProductEditor,
   type ProductEditorCoordinationState,
+  type ProductEditorGalleryState,
   type ProductEditorTitleReplacement,
   type SavedProductSnapshot,
 } from "../components/product-editor";
@@ -30,6 +31,12 @@ const cleanProductState: ProductEditorCoordinationState = {
 };
 
 const cleanEditorState = { dirty: false, saving: false };
+const emptyGalleryState: ProductEditorGalleryState = {
+  activeImageCount: 0,
+  hasDurableImages: false,
+  hasAvailableCover: false,
+  incomplete: false,
+};
 
 export function EditProductScreen({ productId }: { productId: string }) {
   const [productState, setProductState] =
@@ -44,6 +51,7 @@ export function EditProductScreen({ productId }: { productId: string }) {
   const [titleReplacement, setTitleReplacement] = useState<ProductEditorTitleReplacement | null>(
     null,
   );
+  const [galleryState, setGalleryState] = useState<ProductEditorGalleryState>(emptyGalleryState);
   const get = useServerFn(getMyProduct);
   const queryClient = useQueryClient();
   const { data, isError, isLoading } = useQuery({
@@ -85,6 +93,25 @@ export function EditProductScreen({ productId }: { productId: string }) {
     setDescriptionRefreshRequest((value) => value + 1);
   }, []);
 
+  const handleGalleryChange = useCallback(
+    (gallery: NonNullable<Awaited<ReturnType<typeof refreshGallery>>>) => {
+      const activeImages = gallery.images.filter(
+        (image) => image.sourceKind === "seller_upload" && image.durableStatus !== "deleting",
+      );
+      setGalleryState({
+        activeImageCount: activeImages.length,
+        hasDurableImages: gallery.images.some((image) => image.sourceKind === "seller_upload"),
+        hasAvailableCover: gallery.images.some(
+          (image) => image.isSourceCover && image.durableStatus === "available",
+        ),
+        incomplete:
+          gallery.status !== "available" ||
+          gallery.images.some((image) => image.durableStatus !== "available"),
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     setProductState(cleanProductState);
     setFactsState(cleanEditorState);
@@ -92,6 +119,7 @@ export function EditProductScreen({ productId }: { productId: string }) {
     setGenerationActive(false);
     setDisplayTitle(null);
     setTitleReplacement(null);
+    setGalleryState(emptyGalleryState);
   }, [productId]);
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
@@ -120,6 +148,11 @@ export function EditProductScreen({ productId }: { productId: string }) {
           initialGallery={data.gallery}
           productTitle={currentTitle}
           refresh={refreshGallery}
+          productDraftId={productId}
+          imageSourceMode={data.product.imageSourceMode}
+          productStatus={data.product.status}
+          disabled={generationActive || productState.publicationActive}
+          onGalleryChange={handleGalleryChange}
         />
       ) : null}
       <ProductEditor
@@ -128,6 +161,7 @@ export function EditProductScreen({ productId }: { productId: string }) {
         descriptionState={descriptionState}
         disabled={generationActive}
         titleReplacement={titleReplacement}
+        galleryState={galleryState}
         onStateChange={setProductState}
         onDisplayTitleChange={setDisplayTitle}
         onProductSaved={handleProductSaved}

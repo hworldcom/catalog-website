@@ -137,12 +137,16 @@ describe("SellerClassifierImportService", () => {
           {
             productDraftId,
             title: "Cotton shirt",
+            category: { slug: "t-shirts", name: "T-shirts" },
+            productCode: null,
             status: "draft" as const,
             imageStatus: "available" as const,
           },
           {
             productDraftId: failedProductDraftId,
             title: null,
+            category: null,
+            productCode: null,
             status: "draft" as const,
             imageStatus: "partially_available" as const,
           },

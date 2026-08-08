@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { PublicShell } from "@/components/layout/public-shell";
 import { formatPrice, getStockLabel } from "@/components/product/product-format";
@@ -16,14 +16,24 @@ const P = {
   packSize: t("Pack size", "Rozmiar opakowania", "Verpackungsgröße", "Kích cỡ gói"),
   supplier: t("Supplier", "Dostawca", "Lieferant", "Nhà cung cấp"),
   location: t("Location", "Lokalizacja", "Standort", "Vị trí"),
+  selectImage: t(
+    "Select product image",
+    "Wybierz zdjęcie produktu",
+    "Produktbild auswählen",
+    "Chọn hình ảnh sản phẩm",
+  ),
+  unavailableImage: t(
+    "Image unavailable",
+    "Zdjęcie niedostępne",
+    "Bild nicht verfügbar",
+    "Hình ảnh không khả dụng",
+  ),
 };
 
 export function ProductDetailScreen({ productId }: { productId: string }) {
   const { data } = useSuspenseQuery(productQueryOptions(productId));
   const { product, seller, images, category } = data;
   if (!product || !seller) return null;
-
-  const cover = product.cover_image_url ?? images[0]?.url ?? null;
 
   return (
     <PublicShell>
@@ -56,23 +66,11 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
 
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="space-y-3">
-            <div className="aspect-square w-full overflow-hidden border border-border/60 bg-muted">
-              {cover ? (
-                <img src={cover} alt={product.title} className="h-full w-full object-cover" />
-              ) : null}
-            </div>
-            {images.length > 1 ? (
-              <div className="grid grid-cols-4 gap-2">
-                {images.slice(0, 8).map((img) => (
-                  <div
-                    key={img.id}
-                    className="aspect-square overflow-hidden border border-border/60 bg-muted"
-                  >
-                    <img src={img.url} alt="" className="h-full w-full object-cover" />
-                  </div>
-                ))}
-              </div>
-            ) : null}
+            <PublicProductImageGallery
+              title={product.title}
+              coverUrl={product.cover_image_url}
+              images={images}
+            />
           </div>
 
           <div>
@@ -124,6 +122,103 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
         </div>
       </div>
     </PublicShell>
+  );
+}
+
+function PublicProductImageGallery({
+  title,
+  coverUrl,
+  images,
+}: {
+  title: string;
+  coverUrl: string | null;
+  images: Array<{ id: string; url: string }>;
+}) {
+  const gallery = useMemo(() => {
+    const unique = new Map(images.map((image) => [image.id, image]));
+    const ordered = [...unique.values()];
+    if (coverUrl && !ordered.some((image) => image.url === coverUrl)) {
+      ordered.unshift({ id: `cover:${coverUrl}`, url: coverUrl });
+    }
+    return ordered;
+  }, [coverUrl, images]);
+  const coverImage = gallery.find((image) => image.url === coverUrl) ?? gallery[0] ?? null;
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(coverImage?.id ?? null);
+  const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setSelectedImageId(coverImage?.id ?? null);
+    setFailedImageIds(new Set());
+  }, [coverImage?.id]);
+
+  const selected =
+    gallery.find((image) => image.id === selectedImageId && !failedImageIds.has(image.id)) ??
+    gallery.find((image) => !failedImageIds.has(image.id)) ??
+    null;
+
+  function markFailed(imageId: string) {
+    setFailedImageIds((current) => new Set(current).add(imageId));
+    if (selectedImageId !== imageId) return;
+    const fallback =
+      gallery.find(
+        (image) =>
+          image.id === coverImage?.id && image.id !== imageId && !failedImageIds.has(image.id),
+      ) ?? gallery.find((image) => image.id !== imageId && !failedImageIds.has(image.id));
+    setSelectedImageId(fallback?.id ?? null);
+  }
+
+  return (
+    <>
+      <div className="aspect-square w-full overflow-hidden border border-border/60 bg-muted">
+        {selected ? (
+          <img
+            key={selected.id}
+            src={selected.url}
+            alt={title}
+            className="h-full w-full object-cover"
+            onError={() => markFailed(selected.id)}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            {tr(P.unavailableImage)}
+          </div>
+        )}
+      </div>
+      {gallery.length > 1 ? (
+        <div className="grid grid-cols-4 gap-2">
+          {gallery.map((image, index) => {
+            const failed = failedImageIds.has(image.id);
+            const active = selected?.id === image.id;
+            return (
+              <button
+                key={image.id}
+                type="button"
+                aria-label={`${tr(P.selectImage)} ${index + 1}`}
+                aria-current={active ? "true" : undefined}
+                disabled={failed}
+                onClick={() => setSelectedImageId(image.id)}
+                className={`aspect-square overflow-hidden border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                  active ? "border-primary ring-1 ring-primary" : "border-border/60"
+                }`}
+              >
+                {failed ? (
+                  <span className="flex h-full items-center justify-center p-2 text-xs text-muted-foreground">
+                    {tr(P.unavailableImage)}
+                  </span>
+                ) : (
+                  <img
+                    src={image.url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={() => markFailed(image.id)}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </>
   );
 }
 

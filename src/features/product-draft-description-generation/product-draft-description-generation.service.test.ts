@@ -44,6 +44,46 @@ describe("ProductDescriptionGenerationService", () => {
     expect(result.titleSnapshot.title).toBe("Cotton T-shirt");
   });
 
+  it("generates from the cover and reviewed facts without category context", async () => {
+    const categorylessClaim = { ...claim(), category: null };
+    const repository = repositoryWith({ claimResult: categorylessClaim });
+    const provider = providerWith({ output: validOutput(null) });
+
+    await new ProductDescriptionGenerationService(
+      repository,
+      provider,
+      coverGatewayWith(),
+    ).generate(productDraftId, sellerId);
+
+    expect(provider.generate).toHaveBeenCalledWith(
+      expect.objectContaining({ category: null, titleProposalRequested: true }),
+      expect.any(AbortSignal),
+    );
+    expect(repository.finalize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        claim: categorylessClaim,
+        output: expect.objectContaining({ titleProposal: null }),
+        pipelineVersion: "product-description-v3",
+      }),
+    );
+  });
+
+  it("finalizes valid descriptions when an optional title proposal is overlong", async () => {
+    const repository = repositoryWith();
+    const provider = providerWith({ output: validOutput("x".repeat(51)) });
+
+    await new ProductDescriptionGenerationService(
+      repository,
+      provider,
+      coverGatewayWith(),
+    ).generate(productDraftId, sellerId);
+
+    expect(repository.finalize).toHaveBeenCalledWith(
+      expect.objectContaining({ output: expect.objectContaining({ titleProposal: null }) }),
+    );
+    expect(repository.fail).not.toHaveBeenCalled();
+  });
+
   it("does not call the provider when no writable target exists", async () => {
     const repository = repositoryWith({ claimResult: { result: "no_writable_targets" } });
     const provider = providerWith();

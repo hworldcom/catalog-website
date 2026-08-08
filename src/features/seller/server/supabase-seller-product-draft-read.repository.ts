@@ -33,14 +33,28 @@ export class SupabaseSellerProductDraftReadRepository implements SellerProductDr
     return result.data;
   }
 
-  async hasSourceMembership(productDraftId: string): Promise<boolean> {
-    const result = await this.adminDatabase
-      .from("product_draft_source_memberships")
-      .select("product_draft_id")
-      .eq("product_draft_id", productDraftId)
-      .limit(1)
-      .maybeSingle();
-    if (result.error) throw new Error(result.error.message);
-    return result.data !== null;
+  async getImageSourceState(productDraftId: string) {
+    const [membership, image] = await Promise.all([
+      this.adminDatabase
+        .from("product_draft_source_memberships")
+        .select("product_draft_id")
+        .eq("product_draft_id", productDraftId)
+        .limit(1)
+        .maybeSingle(),
+      this.adminDatabase
+        .from("product_draft_images")
+        .select("product_draft_id")
+        .eq("product_draft_id", productDraftId)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    if (membership.error) throw new Error(membership.error.message);
+    if (image.error) throw new Error(image.error.message);
+    return {
+      imageSourceMode: membership.data
+        ? ("classifier_import" as const)
+        : ("seller_upload" as const),
+      usesDurableImagePublication: membership.data !== null || image.data !== null,
+    };
   }
 }

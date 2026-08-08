@@ -5,11 +5,22 @@ export type SellerProductDraftGalleryRecord = {
   productDraftId: string;
   sourcePosition: number;
   durableStatus: ProductDraftImageDurableStatus;
+  sourceKind: "classifier_import" | "seller_upload";
+  clientUploadId: string | null;
+  originalFilename: string | null;
+  contentType: "image/jpeg" | "image/png" | "image/webp" | null;
+  sizeBytes: number | null;
+  lifecycleErrorCode: string | null;
+  recoveryAction: "retry_finalize" | "retry_upload" | "retry_cleanup" | null;
+  canRemove: boolean;
   isSourceCover: boolean;
 };
 
 export interface SellerProductDraftImageGalleryRepository {
-  list(productDraftId: string): Promise<SellerProductDraftGalleryRecord[]>;
+  list(productDraftId: string): Promise<{
+    galleryRevision: number;
+    records: SellerProductDraftGalleryRecord[];
+  }>;
 }
 
 export class SellerProductDraftImageGalleryRepositoryError extends Error {

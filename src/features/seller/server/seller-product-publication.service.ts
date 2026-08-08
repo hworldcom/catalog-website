@@ -47,6 +47,19 @@ export class SellerProductPublicationService {
         if (error instanceof ProductDraftTitleError) {
           if (error.code === "product_draft_title_required") throw publicationTitleRequired();
           if (error.code === "product_draft_title_invalid") throw publicationTitleInvalid();
+          if (error.code === "product_publication_category_required") {
+            throw publicationCategoryRequired();
+          }
+          if (error.code === "product_category_not_supported") {
+            throw publicationInvalid();
+          }
+          if (
+            error.code === "product_code_company_unconfigured" ||
+            error.code === "product_code_category_unconfigured"
+          ) {
+            throw publicationConfigurationInvalid();
+          }
+          if (error.code === "product_code_allocation_failed") throw publicationUnavailable();
         }
         throw error;
       }
@@ -166,7 +179,10 @@ function authorizationError(
     | "title_required"
     | "title_invalid"
     | "description_invalid"
-    | "category_required",
+    | "category_required"
+    | "product_code_company_unconfigured"
+    | "product_code_category_unconfigured"
+    | "product_code_allocation_failed",
 ): SellerProductPublicationError {
   if (result === "not_found") return productNotFound();
   if (result === "image_required") return publicationImageRequired();
@@ -181,6 +197,13 @@ function authorizationError(
   if (result === "title_invalid") return publicationTitleInvalid();
   if (result === "description_invalid") return publicationDescriptionInvalid();
   if (result === "category_required") return publicationCategoryRequired();
+  if (
+    result === "product_code_company_unconfigured" ||
+    result === "product_code_category_unconfigured"
+  ) {
+    return publicationConfigurationInvalid();
+  }
+  if (result === "product_code_allocation_failed") return publicationUnavailable();
   if (result === "cover_not_allowed" || result === "not_allowed" || result === "not_editable") {
     return publicationNotAllowed();
   }
@@ -222,6 +245,22 @@ function importedNotStarted(
 
 function productNotFound(): SellerProductPublicationError {
   return new SellerProductPublicationError(404, "product_not_found", "The product was not found.");
+}
+
+function publicationInvalid(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    400,
+    "product_publication_invalid",
+    "The selected product category is not supported.",
+  );
+}
+
+function publicationConfigurationInvalid(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    500,
+    "product_publication_configuration_invalid",
+    "Product publication is temporarily misconfigured.",
+  );
 }
 
 function publicationImageRequired(): SellerProductPublicationError {

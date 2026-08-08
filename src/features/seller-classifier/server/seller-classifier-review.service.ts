@@ -384,10 +384,15 @@ function safeReviewSnapshot(
       const cover = group.images.find((image) => image.imageId === group.coverImageId);
       if (!cover || cover.isDuplicate || cover.isRejected) throw classifierUnavailable();
     }
+    const categorySourceIsConsistent = group.approvedCategorySlug
+      ? group.approvedCategorySource === "machine_suggestion" ||
+        group.approvedCategorySource === "reviewer_selection"
+      : group.approvedCategorySource === null ||
+        group.approvedCategorySource === "reviewer_cleared";
+    if (!categorySourceIsConsistent) throw classifierUnavailable();
     if (
       group.status === "approved" &&
-      (!group.approvedCategorySlug ||
-        !group.coverImageId ||
+      (!group.coverImageId ||
         !group.images.some((image) => !image.isDuplicate && !image.isRejected))
     ) {
       throw classifierUnavailable();

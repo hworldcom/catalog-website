@@ -56,12 +56,18 @@ const S = {
     "Tạo mô tả sản phẩm",
   ),
   introduction: t(
-    "Generate concise draft text from the selected cover, reviewed category, and product facts. Review every result before using it.",
-    "Wygeneruj zwięzły tekst roboczy na podstawie wybranego zdjęcia głównego, sprawdzonej kategorii i danych produktu. Sprawdź każdy wynik przed użyciem.",
-    "Erstellen Sie einen kurzen Entwurf anhand des ausgewählten Titelbilds, der geprüften Kategorie und der Produktfakten. Prüfen Sie jedes Ergebnis vor der Verwendung.",
-    "Tạo bản nháp ngắn gọn từ ảnh bìa đã chọn, danh mục đã duyệt và thông tin sản phẩm. Hãy xem lại mọi kết quả trước khi sử dụng.",
+    "Generate concise draft text from the selected cover, optional category context, and reviewed product facts. Review every result before using it.",
+    "Wygeneruj zwięzły tekst roboczy na podstawie wybranego zdjęcia głównego, opcjonalnego kontekstu kategorii i sprawdzonych danych produktu. Sprawdź każdy wynik przed użyciem.",
+    "Erstellen Sie einen kurzen Entwurf anhand des ausgewählten Titelbilds, des optionalen Kategoriekontexts und der geprüften Produktfakten. Prüfen Sie jedes Ergebnis vor der Verwendung.",
+    "Tạo bản nháp ngắn gọn từ ảnh bìa đã chọn, ngữ cảnh danh mục không bắt buộc và thông tin sản phẩm đã duyệt. Hãy xem lại mọi kết quả trước khi sử dụng.",
   ),
   generate: t("Generate descriptions", "Generuj opisy", "Beschreibungen generieren", "Tạo mô tả"),
+  generateWithTitle: t(
+    "Generate title and descriptions",
+    "Generuj tytuł i opisy",
+    "Titel und Beschreibungen generieren",
+    "Tạo tiêu đề và mô tả",
+  ),
   generating: t("Generating…", "Generowanie…", "Wird generiert…", "Đang tạo…"),
   generated: t(
     "Draft descriptions were generated. Review and edit them before publication.",
@@ -94,10 +100,10 @@ const S = {
     "Chỉ có thể tạo mô tả cho sản phẩm nháp.",
   ),
   noTargets: t(
-    "All descriptions and the title are already owned by human edits.",
-    "Wszystkie opisy i tytuł zostały już poprawione przez człowieka.",
-    "Alle Beschreibungen und der Titel wurden bereits manuell bearbeitet.",
-    "Tất cả mô tả và tiêu đề đã được người dùng chỉnh sửa.",
+    "All descriptions are human-edited and the title is already set.",
+    "Wszystkie opisy zostały poprawione przez człowieka, a tytuł jest już ustawiony.",
+    "Alle Beschreibungen wurden manuell bearbeitet und der Titel ist bereits festgelegt.",
+    "Tất cả mô tả đã được người dùng chỉnh sửa và tiêu đề đã được đặt.",
   ),
   coverMissing: t(
     "Select and save a cover image before generating descriptions.",
@@ -319,6 +325,7 @@ export function SellerProductDraftDescriptionSectionView({
     title,
   });
   const hasModelText = snapshot?.descriptions.some((entry) => entry.source === "model") ?? false;
+  const generateLabel = title.trim() ? S.generate : S.generateWithTitle;
 
   async function generate() {
     if (disabledReason || generationActive || !snapshot) return;
@@ -385,7 +392,7 @@ export function SellerProductDraftDescriptionSectionView({
             <p className="text-sm text-muted-foreground">{disabledReason}</p>
           ) : null}
           <Button type="button" disabled={Boolean(disabledReason)} onClick={() => void generate()}>
-            {generationActive ? tr(S.generating) : tr(S.generate)}
+            {generationActive ? tr(S.generating) : tr(generateLabel)}
           </Button>
         </CardContent>
       </Card>
@@ -425,9 +432,7 @@ function generationDisabledReason({
   if (generationUnavailable) return tr(S.unavailable);
   if (readState.loading || !readState.available || !snapshot) return tr(S.descriptionsUnavailable);
   if (!snapshot.generationEligibility.eligible) {
-    return tr(
-      snapshot.generationEligibility.reason === "category_missing" ? S.categoryMissing : S.notDraft,
-    );
+    return tr(S.notDraft);
   }
   if (coordination.product.publicationActive) return tr(S.publicationActive);
   if (coordination.product.saving || coordination.facts.saving || editorState.saving)

@@ -56,7 +56,9 @@ export class ProductDraftTitleService {
     rejectBlankPublication(titleWrite, input.productFields.status);
 
     if (!input.productDraftId) {
-      if (!titleWrite) throw invalidProductDraftTitle();
+      if (input.productFields.status === "published" && !titleWrite) {
+        throw requiredProductDraftTitle();
+      }
       return createSnapshot(
         await this.repository.create(input.sellerId, titleWrite, input.productFields),
       );
@@ -114,6 +116,41 @@ function updateSnapshot(result: ProductDraftTitleUpdateResult): ProductDraftTitl
   }
   if (result.result === "title_required") throw requiredProductDraftTitle();
   if (result.result === "title_invalid") throw invalidProductDraftTitle();
+  if (result.result === "product_publication_category_required") {
+    throw new ProductDraftTitleError(
+      409,
+      result.result,
+      "Select a supported product category before publishing the product.",
+    );
+  }
+  if (result.result === "product_category_not_supported") {
+    throw new ProductDraftTitleError(
+      400,
+      result.result,
+      "The selected product category is not supported.",
+    );
+  }
+  if (result.result === "product_code_company_unconfigured") {
+    throw new ProductDraftTitleError(
+      409,
+      result.result,
+      "Configure the seller company code before publishing a product.",
+    );
+  }
+  if (result.result === "product_code_category_unconfigured") {
+    throw new ProductDraftTitleError(
+      500,
+      result.result,
+      "The selected category has no product-code configuration.",
+    );
+  }
+  if (result.result === "product_code_allocation_failed") {
+    throw new ProductDraftTitleError(
+      503,
+      result.result,
+      "A product code could not be allocated. Retry publication.",
+    );
+  }
   throw invalidProductDraftTitle();
 }
 
@@ -126,6 +163,13 @@ function createSnapshot(result: ProductDraftTitleCreateResult): ProductDraftTitl
       400,
       result.result,
       "Select a supported product category before creating the product.",
+    );
+  }
+  if (result.result === "product_publication_category_required") {
+    throw new ProductDraftTitleError(
+      409,
+      result.result,
+      "Select a supported product category before publishing the product.",
     );
   }
   if (result.result === "product_category_not_supported") {

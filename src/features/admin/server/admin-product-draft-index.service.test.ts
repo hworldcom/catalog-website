@@ -31,7 +31,12 @@ class MemoryRepository implements AdminProductDraftIndexRepository {
 
 describe("AdminProductDraftIndexService", () => {
   it("builds one stable page with cover and first-image previews", async () => {
-    const first = product(1, { title: "", cover_image_id: uuid(101) });
+    const first = product(1, {
+      title: "",
+      category_id: null,
+      product_code: null,
+      cover_image_id: uuid(101),
+    });
     const second = product(2, { seller_id: uuid(11) });
     const extra = product(3);
     const repository = new MemoryRepository(
@@ -87,9 +92,10 @@ describe("AdminProductDraftIndexService", () => {
     );
     expect(page.items[0]).toMatchObject({
       productDraftId: first.id,
+      productCode: null,
       title: "",
       seller: { name: "First Seller" },
-      category: { slug: "trousers" },
+      category: null,
       factsRevision: 4,
       coverImageId: uuid(101),
       previewImageId: uuid(101),

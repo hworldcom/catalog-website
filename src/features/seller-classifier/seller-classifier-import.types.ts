@@ -13,6 +13,11 @@ export type SellerClassifierProductDraftImageStatus =
 export type SellerClassifierProductDraftSummary = {
   productDraftId: string;
   title: string | null;
+  category: {
+    slug: string;
+    name: string;
+  } | null;
+  productCode: string | null;
   status: "draft" | "published" | "archived";
   imageStatus: SellerClassifierProductDraftImageStatus;
 };

@@ -24,13 +24,7 @@ export type EligibleDestinationSeller = {
 export type PreparedImportGroup =
   | { result: "prepared"; productDraftId: string }
   | {
-      result:
-        | "category_not_mapped"
-        | "product_category_not_supported"
-        | "product_code_company_unconfigured"
-        | "product_code_category_unconfigured"
-        | "product_code_allocation_failed"
-        | "product_draft_source_conflict";
+      result: "product_draft_source_conflict";
     }
   | { result: "claim_lost" };
 

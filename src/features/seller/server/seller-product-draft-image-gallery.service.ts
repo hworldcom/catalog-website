@@ -39,9 +39,12 @@ export class SellerProductDraftImageGalleryService {
   ): Promise<SellerProductDraftGallery> {
     const productDraftId = ownedProductDraft.id;
     let records: SellerProductDraftGalleryRecord[] = [];
+    let galleryRevision = 0;
     try {
-      records = await this.repository.list(productDraftId);
-      if (records.length === 0) return availableGallery([]);
+      const loaded = await this.repository.list(productDraftId);
+      records = loaded.records;
+      galleryRevision = loaded.galleryRevision;
+      if (records.length === 0) return availableGallery(galleryRevision, []);
 
       const response = await this.delivery.resolve([
         {
@@ -53,6 +56,7 @@ export class SellerProductDraftImageGalleryService {
       const resultByImageId = new Map(results.map((result) => [result.imageId, result]));
 
       return availableGallery(
+        galleryRevision,
         records.map((record) => mapImage(record, resultByImageId.get(record.imageId)!)),
       );
     } catch (error) {
@@ -63,6 +67,7 @@ export class SellerProductDraftImageGalleryService {
       return {
         status: "unavailable",
         errorCode: "product_draft_image_delivery_unavailable",
+        galleryRevision,
         images: records.map(unavailableImage),
       };
     }
@@ -99,6 +104,14 @@ function mapImage(
     imageId: record.imageId,
     sourcePosition: record.sourcePosition,
     durableStatus: record.durableStatus,
+    sourceKind: record.sourceKind,
+    clientUploadId: record.clientUploadId,
+    originalFilename: record.originalFilename,
+    contentType: record.contentType,
+    sizeBytes: record.sizeBytes,
+    lifecycleErrorCode: record.lifecycleErrorCode,
+    recoveryAction: record.recoveryAction,
+    canRemove: record.canRemove,
     deliveryStatus: result.deliveryStatus,
     deliveryErrorCode: result.deliveryErrorCode,
     url: result.url,
@@ -112,6 +125,14 @@ function unavailableImage(record: SellerProductDraftGalleryRecord): SellerProduc
     imageId: record.imageId,
     sourcePosition: record.sourcePosition,
     durableStatus: record.durableStatus,
+    sourceKind: record.sourceKind,
+    clientUploadId: record.clientUploadId,
+    originalFilename: record.originalFilename,
+    contentType: record.contentType,
+    sizeBytes: record.sizeBytes,
+    lifecycleErrorCode: record.lifecycleErrorCode,
+    recoveryAction: record.recoveryAction,
+    canRemove: record.canRemove,
     deliveryStatus: "unavailable",
     deliveryErrorCode: null,
     url: null,
@@ -120,10 +141,14 @@ function unavailableImage(record: SellerProductDraftGalleryRecord): SellerProduc
   };
 }
 
-function availableGallery(images: SellerProductDraftGalleryImage[]): SellerProductDraftGallery {
+function availableGallery(
+  galleryRevision: number,
+  images: SellerProductDraftGalleryImage[],
+): SellerProductDraftGallery {
   return {
     status: "available",
     errorCode: null,
+    galleryRevision,
     images,
   };
 }

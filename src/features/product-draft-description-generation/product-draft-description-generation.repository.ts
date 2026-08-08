@@ -25,7 +25,7 @@ export type ProductDescriptionGenerationClaim = {
     id: string;
     slug: string;
     name: string;
-  };
+  } | null;
   factsRevision: number;
   facts: ProductDraftFacts;
   humanLanguages: Array<"pl" | "en" | "de" | "vi">;

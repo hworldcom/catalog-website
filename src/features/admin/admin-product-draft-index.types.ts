@@ -35,7 +35,7 @@ export type AdminProductDraftPreview = {
 
 export type AdminProductDraftIndexItem = {
   productDraftId: string;
-  productCode: string;
+  productCode: string | null;
   title: string;
   status: AdminProductDraftStatus;
   seller: {

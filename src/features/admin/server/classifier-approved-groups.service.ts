@@ -15,7 +15,7 @@ const approvedGroupImageSchema = z.object({
 const approvedGroupSchema = z
   .object({
     groupId: z.string().uuid(),
-    approvedCategorySlug: z.string().trim().min(1),
+    approvedCategorySlug: z.string().trim().min(1).nullable(),
     suggestedCategorySlug: z.string().trim().min(1).nullable(),
     coverImageId: z.string().uuid(),
     confidence: z.number().min(0).max(1).nullable(),

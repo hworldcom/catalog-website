@@ -71,7 +71,7 @@ class MemoryRepository implements ProductDraftTitleRepository {
 
   async create(
     expectedSellerId: string,
-    titleWrite: HumanProductDraftTitleWrite,
+    titleWrite: HumanProductDraftTitleWrite | null,
     productFields: SellerProductFields,
   ) {
     this.expectedSellerIds.push(expectedSellerId);
@@ -153,6 +153,43 @@ describe("ProductDraftTitleService", () => {
       statusCode: 409,
       code: "product_draft_title_required",
     });
+  });
+
+  it("creates a draft when the title property is omitted", async () => {
+    const repository = new MemoryRepository();
+    repository.createResult = {
+      result: "created",
+      ...draftRecord,
+      title: "",
+      titleSource: null,
+    };
+    const service = new ProductDraftTitleService(repository);
+
+    await expect(
+      service.saveSellerProduct({
+        sellerId,
+        productFields: { status: "draft", category_id: null },
+      }),
+    ).resolves.toMatchObject({ title: "", titleSource: null });
+
+    expect(repository.titleWrites).toEqual([null]);
+    expect(repository.productFields).toEqual([{ status: "draft", category_id: null }]);
+  });
+
+  it("rejects create-and-publish when the title property is omitted", async () => {
+    const repository = new MemoryRepository();
+    const service = new ProductDraftTitleService(repository);
+
+    await expect(
+      service.saveSellerProduct({
+        sellerId,
+        productFields: { status: "published", category_id: productDraftId },
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: "product_draft_title_required",
+    });
+    expect(repository.titleWrites).toEqual([]);
   });
 
   it.each([

@@ -177,6 +177,9 @@ export class ProductDraftImageDeliveryEngine {
     if (record.status === "failed") {
       return stateResult(record.imageId, "failed", "failed");
     }
+    if (record.status === "deleting") {
+      return stateResult(record.imageId, "deleting", "deleting");
+    }
 
     if (record.reconciliationStatus && record.reconciliationStatus !== "completed") {
       return this.unavailable(
@@ -186,7 +189,7 @@ export class ProductDraftImageDeliveryEngine {
     }
     if (
       record.storageBucket !== PRODUCT_DRAFT_IMAGE_BUCKET ||
-      record.contentType !== "image/jpeg" ||
+      !["image/jpeg", "image/png", "image/webp"].includes(record.contentType ?? "") ||
       record.sizeBytes === null
     ) {
       return this.unavailable(record, "private_object_conflict");
@@ -289,7 +292,7 @@ function assertConfirmedAdministrator(authorization: ConfirmedPrototypeAdministr
 function stateResult(
   imageId: string,
   durableStatus: ProductDraftImageDeliveryResult["durableStatus"],
-  deliveryStatus: "pending" | "failed" | "missing",
+  deliveryStatus: "pending" | "deleting" | "failed" | "missing",
 ): ProductDraftImageDeliveryResult {
   return {
     imageId,

@@ -307,7 +307,9 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
                           {product.title.trim() || tr(S.untitled)}
                         </Link>
                       </td>
-                      <td className="select-text p-3 font-mono text-xs">{product.product_code}</td>
+                      <td className="select-text p-3 font-mono text-xs">
+                        {product.product_code ?? tr(productCodeCopy.assignedWhenPublishing)}
+                      </td>
                       <td className="p-3">
                         <span className={statusClass(product.status)}>
                           {localizedStatus(product.status)}

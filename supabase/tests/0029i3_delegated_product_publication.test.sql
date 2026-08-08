@@ -186,7 +186,7 @@ SELECT throws_ok(
     )
   $$,
   '23514',
-  'product_category_required',
+  'product_publication_category_required',
   'a published product requires a destination category'
 );
 

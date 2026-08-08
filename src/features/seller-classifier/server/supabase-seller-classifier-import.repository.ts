@@ -5,6 +5,7 @@ import type {
   ClassifierImportRun,
 } from "@/features/admin/server/classifier-import.types";
 import type { Database } from "@/lib/supabase/types";
+import { parseStoredProductCodeOrNull } from "@/features/product-code/product-code";
 
 import type {
   SellerClassifierProductDraftImageStatus,
@@ -113,7 +114,7 @@ export class SupabaseSellerClassifierImportRepository implements SellerClassifie
     const productDraftIds = products.map((product) => product.productDraftId);
     if (productDraftIds.length === 0) return [];
 
-    const [membershipsResponse, imagesResponse] = await Promise.all([
+    const [membershipsResponse, imagesResponse, productDetailsResponse] = await Promise.all([
       this.database
         .from("product_draft_source_memberships")
         .select("product_draft_id,classifier_image_id,promotion_required")
@@ -123,9 +124,34 @@ export class SupabaseSellerClassifierImportRepository implements SellerClassifie
         .from("product_draft_images")
         .select("product_draft_id,classifier_image_id,status")
         .in("product_draft_id", productDraftIds),
+      this.database
+        .from("products")
+        .select("id,category_id,product_code")
+        .eq("seller_id", sellerId)
+        .in("id", productDraftIds),
     ]);
     if (membershipsResponse.error) throw databaseError(membershipsResponse.error);
     if (imagesResponse.error) throw databaseError(imagesResponse.error);
+    if (productDetailsResponse.error) throw databaseError(productDetailsResponse.error);
+
+    const productDetails = new Map(
+      (productDetailsResponse.data ?? []).map((product) => [product.id, product]),
+    );
+    const categoryIds = [
+      ...new Set(
+        (productDetailsResponse.data ?? [])
+          .map((product) => product.category_id)
+          .filter((categoryId): categoryId is string => categoryId !== null),
+      ),
+    ];
+    const categoriesResponse =
+      categoryIds.length === 0
+        ? { data: [], error: null }
+        : await this.database.from("categories").select("id,slug,name").in("id", categoryIds);
+    if (categoriesResponse.error) throw databaseError(categoriesResponse.error);
+    const categories = new Map(
+      (categoriesResponse.data ?? []).map((category) => [category.id, category]),
+    );
 
     const memberships = membershipsResponse.data ?? [];
     const imageStatuses = new Map(
@@ -137,12 +163,22 @@ export class SupabaseSellerClassifierImportRepository implements SellerClassifie
 
     return products.map((product) => {
       const productDraftId = product.productDraftId;
+      const details = productDetails.get(productDraftId);
+      if (!details) {
+        throw new Error("Owned classifier import ProductDraft details are incomplete.");
+      }
+      const category = details.category_id ? categories.get(details.category_id) : null;
+      if (details.category_id && !category) {
+        throw new Error("Owned classifier import ProductDraft category is incomplete.");
+      }
       const required = memberships.filter(
         (membership) => membership.product_draft_id === productDraftId,
       );
       return {
         productDraftId,
         title: product.title.trim() || null,
+        category: category ? { slug: category.slug, name: category.name } : null,
+        productCode: parseStoredProductCodeOrNull(details.product_code),
         status: product.status,
         imageStatus: summarizeImageStatus(
           required.map(
@@ -231,7 +267,7 @@ function parseRetryResult(value: string): "requeued" | "noop" | "not_found" | "n
 }
 
 function summarizeImageStatus(
-  statuses: Array<"pending" | "available" | "failed" | null>,
+  statuses: Array<"pending" | "available" | "deleting" | "failed" | null>,
 ): SellerClassifierProductDraftImageStatus {
   if (statuses.length === 0) return "pending";
   const available = statuses.filter((status) => status === "available").length;

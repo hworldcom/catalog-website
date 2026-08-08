@@ -50,6 +50,17 @@ describe("ProductDraftDescriptionService", () => {
     });
   });
 
+  it("keeps an uncategorized draft eligible for explicit generation", async () => {
+    const repository = new MemoryRepository();
+    repository.record = { ...descriptionRecord(), categoryId: null };
+
+    await expect(
+      new ProductDraftDescriptionService(repository).get(productDraftId, access),
+    ).resolves.toMatchObject({
+      generationEligibility: { eligible: true, reason: null },
+    });
+  });
+
   it("maps terminal persistence outcomes to stable errors", async () => {
     const repository = new MemoryRepository();
     const service = new ProductDraftDescriptionService(repository);

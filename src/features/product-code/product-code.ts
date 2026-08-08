@@ -14,3 +14,7 @@ export function parseStoredProductCode(value: unknown): string {
   }
   return value;
 }
+
+export function parseStoredProductCodeOrNull(value: unknown): string | null {
+  return value === null ? null : parseStoredProductCode(value);
+}

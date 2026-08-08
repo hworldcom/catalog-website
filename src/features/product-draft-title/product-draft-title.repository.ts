@@ -34,6 +34,14 @@ export type ProductDraftTitleUpdateResult =
     }
   | { result: "title_required" }
   | { result: "title_invalid" }
+  | {
+      result:
+        | "product_publication_category_required"
+        | "product_category_not_supported"
+        | "product_code_company_unconfigured"
+        | "product_code_category_unconfigured"
+        | "product_code_allocation_failed";
+    }
   | { result: "invalid" };
 
 export type ProductDraftTitleCreateResult =
@@ -43,6 +51,7 @@ export type ProductDraftTitleCreateResult =
   | {
       result:
         | "product_category_required"
+        | "product_publication_category_required"
         | "product_category_not_supported"
         | "product_code_company_unconfigured"
         | "product_code_category_unconfigured"
@@ -71,7 +80,7 @@ export interface ProductDraftTitleRepository {
 
   create(
     sellerId: string,
-    titleWrite: HumanProductDraftTitleWrite,
+    titleWrite: HumanProductDraftTitleWrite | null,
     productFields: SellerProductFields,
   ): Promise<ProductDraftTitleCreateResult>;
 }

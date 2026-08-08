@@ -382,10 +382,10 @@ describe("ClassifierImportWorker", () => {
     expect(repository.eligibleSellerId).toBe(storedSellerId);
   });
 
-  it("fails only an unmapped group and completes the run with errors", async () => {
+  it("imports an explicitly categoryless approved group", async () => {
     const group = approvedGroup(groupOneId, "21");
+    group.approvedCategorySlug = null;
     const repository = new MemoryRepository(claimedRun());
-    repository.prepareFailures.set(group.groupId, "category_not_mapped");
     const worker = new ClassifierImportWorker(
       repository,
       reader(approvedSnapshot([group])),
@@ -394,14 +394,15 @@ describe("ClassifierImportWorker", () => {
     );
 
     await expect(worker.runNext()).resolves.toEqual({
-      status: "completed_with_errors",
+      status: "completed",
       importId: runId,
       operationKind: "import",
       attemptCount: 1,
     });
     expect(repository.groups.get(group.groupId)).toMatchObject({
-      status: "failed",
-      error_code: "category_not_mapped",
+      status: "complete",
+      approved_category_slug: null,
+      error_code: null,
     });
   });
 

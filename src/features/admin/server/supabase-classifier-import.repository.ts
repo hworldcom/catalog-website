@@ -244,15 +244,7 @@ export class SupabaseClassifierImportRepository implements ClassifierImportRepos
       }
       return { result: "prepared", productDraftId: row.product_draft_id };
     }
-    if (
-      row.result === "category_not_mapped" ||
-      row.result === "product_category_not_supported" ||
-      row.result === "product_code_company_unconfigured" ||
-      row.result === "product_code_category_unconfigured" ||
-      row.result === "product_code_allocation_failed" ||
-      row.result === "product_draft_source_conflict" ||
-      row.result === "claim_lost"
-    ) {
+    if (row.result === "product_draft_source_conflict" || row.result === "claim_lost") {
       return { result: row.result };
     }
     throw new Error(`Unexpected classifier import group result: ${row.result}`);

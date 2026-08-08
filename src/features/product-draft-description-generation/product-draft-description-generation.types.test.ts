@@ -96,7 +96,7 @@ describe("product description generation types", () => {
     ).toThrow(ProductDescriptionGenerationOutputError);
   });
 
-  it("enforces 300-character descriptions and 50-character title proposals", () => {
+  it("enforces 300-character descriptions and treats unusable optional titles as absent", () => {
     expect(() =>
       normalizeProductDescriptionGenerationOutput(
         {
@@ -110,9 +110,11 @@ describe("product description generation types", () => {
       ),
     ).toThrow(ProductDescriptionGenerationOutputError);
 
-    expect(
-      normalizeProductDescriptionGenerationOutput(validOutput("😀".repeat(51)), true).titleProposal,
-    ).toBeNull();
+    for (const proposal of [null, "   ", "😀".repeat(51)]) {
+      expect(
+        normalizeProductDescriptionGenerationOutput(validOutput(proposal), true).titleProposal,
+      ).toBeNull();
+    }
   });
 });
 

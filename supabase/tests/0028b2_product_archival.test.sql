@@ -156,13 +156,26 @@ BEGIN
     selected_product_code,
     p_title,
     CASE WHEN pg_catalog.btrim(p_title) = '' THEN NULL ELSE 'human' END,
-    p_status,
-    CASE
-      WHEN p_status = 'published'
-        THEN 'https://example.test/qa-0028b2-' || p_product_id::text || '.jpg'
-      ELSE NULL
-    END
+    CASE WHEN p_status = 'published' THEN 'draft' ELSE p_status END,
+    NULL
   );
+
+  IF p_status = 'published' THEN
+    INSERT INTO public.direct_product_legacy_cover_allowances (
+      product_draft_id,
+      recorded_cover_image_url
+    )
+    VALUES (
+      p_product_id,
+      'https://example.test/qa-0028b2-' || p_product_id::text || '.jpg'
+    );
+
+    UPDATE public.products
+    SET
+      status = 'published',
+      cover_image_url = 'https://example.test/qa-0028b2-' || p_product_id::text || '.jpg'
+    WHERE id = p_product_id;
+  END IF;
 
   RETURN p_product_id;
 END;

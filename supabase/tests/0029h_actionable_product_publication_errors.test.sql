@@ -136,8 +136,21 @@ VALUES (
   '',
   NULL,
   'draft',
+  NULL
+);
+
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  '29a00000-0000-0000-0000-000000000012',
   'https://images.example/qa-0029h.jpg'
 );
+
+UPDATE public.products
+SET cover_image_url = 'https://images.example/qa-0029h.jpg'
+WHERE id = '29a00000-0000-0000-0000-000000000012';
 
 CREATE TEMP TABLE existing_direct_blank_result AS
 SELECT *

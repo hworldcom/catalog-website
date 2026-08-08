@@ -37,7 +37,7 @@ describe("SellerProductListService", () => {
     });
     const selectedProduct = product(2, { cover_image_id: uuid(202) });
     const firstImageProduct = product(3);
-    const emptyProduct = product(4);
+    const emptyProduct = product(4, { product_code: null });
     const extra = product(5);
     const products = new MemoryProducts([
       publicProduct,
@@ -93,6 +93,7 @@ describe("SellerProductListService", () => {
         expiresAt: null,
       },
     ]);
+    expect(page.products[3]?.product_code).toBeNull();
     expect(page.nextCursor).toEqual(expect.any(String));
     expect(page.previewDelivery).toEqual({ status: "available", errorCode: null });
   });

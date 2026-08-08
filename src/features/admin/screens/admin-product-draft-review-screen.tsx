@@ -529,7 +529,11 @@ function ProductSummary({
             value={`${review.seller.name} (${review.seller.slug})`}
           />
           <Definition label={tr(S.sellerId)} value={review.seller.id} mono />
-          <Definition label={tr(productCodeCopy.label)} value={review.productCode} mono />
+          <Definition
+            label={tr(productCodeCopy.label)}
+            value={review.productCode ?? tr(productCodeCopy.assignedWhenPublishing)}
+            mono={review.productCode !== null}
+          />
           <Definition
             label={tr(S.category)}
             value={

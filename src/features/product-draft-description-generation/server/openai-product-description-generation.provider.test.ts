@@ -44,6 +44,8 @@ describe("OpenAIProductDescriptionGenerationProvider", () => {
     expect(request.instructions).toContain("Do not infer fiber composition");
     expect(request.instructions).toContain("at most 300 Unicode characters");
     expect(request.instructions).toContain("at most 50 Unicode characters");
+    expect(request.instructions).toContain("when category is null");
+    expect(request.instructions).toContain("never select, approve, or persist a product category");
     expect(request.input[0]?.content[0]).toEqual({
       type: "input_image",
       image_url: "data:image/jpeg;base64,/9j/2Q==",
@@ -132,6 +134,19 @@ describe("buildProviderInput", () => {
       reviewedFacts: {
         schemaVersion: 2,
         uncertainFields: ["colors", "materialComposition"],
+      },
+      titleProposalRequested: true,
+    });
+  });
+
+  it("sends explicit null category context without fabricating taxonomy", () => {
+    expect(buildProviderInput({ ...providerInput(), category: null })).toEqual({
+      category: null,
+      reviewedFacts: {
+        schemaVersion: 2,
+        uncertainFields: ["materialComposition"],
+        colors: ["Blue"],
+        fieldSources: { colors: "human" },
       },
       titleProposalRequested: true,
     });

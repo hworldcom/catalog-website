@@ -20,6 +20,25 @@ describe("SupabaseSellerProductDraftReadRepository", () => {
     expect(products.neq).toHaveBeenCalledWith("status", "archived");
     expect(products.maybeSingle).toHaveBeenCalledOnce();
   });
+
+  it("keeps an empty direct draft in seller-upload mode", async () => {
+    const membership = query({ data: null, error: null });
+    const images = query({ data: null, error: null });
+    const admin = {
+      from: vi.fn((table: string) =>
+        table === "product_draft_source_memberships" ? membership : images,
+      ),
+    } as unknown as SupabaseClient<Database>;
+    const repository = new SupabaseSellerProductDraftReadRepository(
+      {} as SupabaseClient<Database>,
+      admin,
+    );
+
+    await expect(repository.getImageSourceState(uuid(1))).resolves.toEqual({
+      imageSourceMode: "seller_upload",
+      usesDurableImagePublication: false,
+    });
+  });
 });
 
 function query(result: { data: null; error: null }) {
@@ -27,11 +46,13 @@ function query(result: { data: null; error: null }) {
     select: vi.fn(),
     eq: vi.fn(),
     neq: vi.fn(),
+    limit: vi.fn(),
     maybeSingle: vi.fn(async () => result),
   };
   builder.select.mockReturnValue(builder);
   builder.eq.mockReturnValue(builder);
   builder.neq.mockReturnValue(builder);
+  builder.limit.mockReturnValue(builder);
   return builder;
 }
 

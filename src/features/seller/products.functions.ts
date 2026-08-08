@@ -149,6 +149,40 @@ export const saveMyProduct = createServerFn({ method: "POST" })
             "The product title must contain at most 50 characters.",
           );
         }
+        if (
+          error.code === "product_category_required" ||
+          error.code === "product_publication_category_required"
+        ) {
+          throw new SellerProductPublicationError(
+            409,
+            "product_publication_category_required",
+            "A product category is required before publication.",
+          );
+        }
+        if (error.code === "product_category_not_supported") {
+          throw new SellerProductPublicationError(
+            400,
+            "product_publication_invalid",
+            "The selected product category is not supported.",
+          );
+        }
+        if (
+          error.code === "product_code_company_unconfigured" ||
+          error.code === "product_code_category_unconfigured"
+        ) {
+          throw new SellerProductPublicationError(
+            500,
+            "product_publication_configuration_invalid",
+            "Product publication is temporarily misconfigured.",
+          );
+        }
+        if (error.code === "product_code_allocation_failed") {
+          throw new SellerProductPublicationError(
+            503,
+            "product_publication_unavailable",
+            "Product publication is temporarily unavailable.",
+          );
+        }
       }
       throw error;
     }

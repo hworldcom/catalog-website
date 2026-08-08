@@ -82,6 +82,10 @@ describe("SellerProductPublicationService", () => {
     ["title_required", 409, "product_publication_title_required"],
     ["title_invalid", 400, "product_publication_title_invalid"],
     ["description_invalid", 400, "product_publication_description_invalid"],
+    ["category_required", 409, "product_publication_category_required"],
+    ["product_code_company_unconfigured", 500, "product_publication_configuration_invalid"],
+    ["product_code_category_unconfigured", 500, "product_publication_configuration_invalid"],
+    ["product_code_allocation_failed", 503, "product_publication_unavailable"],
   ] as const)("maps imported database result %s", async (result, statusCode, code) => {
     const publications = publicationService();
     publications.authorize.mockResolvedValueOnce({

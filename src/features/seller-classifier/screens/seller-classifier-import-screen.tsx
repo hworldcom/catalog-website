@@ -113,6 +113,20 @@ const S = {
     "Produktentwurf-ID",
     "Mã bản nháp sản phẩm",
   ),
+  category: t("Category", "Kategoria", "Kategorie", "Danh mục"),
+  categoryNotSet: t(
+    "Category not set",
+    "Kategoria nieustawiona",
+    "Kategorie nicht festgelegt",
+    "Chưa đặt danh mục",
+  ),
+  productCode: t("Product code", "Kod produktu", "Produktcode", "Mã sản phẩm"),
+  assignedWhenPublishing: t(
+    "Assigned when publishing",
+    "Przypisywany przy publikacji",
+    "Wird bei Veröffentlichung zugewiesen",
+    "Được gán khi xuất bản",
+  ),
   readOnlyOutcome: t(
     "This outcome is read-only in the delegated workflow.",
     "Ten wynik jest tylko do odczytu w procesie delegowanym.",
@@ -682,6 +696,18 @@ export function SellerClassifierImportScreenView({
                       <Definition
                         label={tr(S.imageStatus)}
                         value={imageStatusLabel(draft.imageStatus)}
+                      />
+                      <Definition
+                        label={tr(S.category)}
+                        value={
+                          draft.category
+                            ? `${draft.category.name} (${draft.category.slug})`
+                            : tr(S.categoryNotSet)
+                        }
+                      />
+                      <Definition
+                        label={tr(S.productCode)}
+                        value={draft.productCode ?? tr(S.assignedWhenPublishing)}
                       />
                       {showProductDraftId ? (
                         <Definition label={tr(S.productDraftId)} value={draft.productDraftId} />

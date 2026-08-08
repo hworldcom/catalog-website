@@ -315,6 +315,15 @@ SELECT is(
   'clearing English deletes the authoritative language row'
 );
 
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  '27000000-0000-0000-0000-000000000101',
+  'https://example.test/qa-0027a1-published.jpg'
+);
+
 UPDATE public.products
 SET
   status = 'published',
@@ -474,6 +483,15 @@ SELECT is(
   (SELECT english_description FROM seller_clear),
   NULL::text,
   'an explicit seller clear returns the cleared English projection'
+);
+
+INSERT INTO public.direct_product_legacy_cover_allowances (
+  product_draft_id,
+  recorded_cover_image_url
+)
+VALUES (
+  (SELECT product_draft_id FROM seller_create),
+  'https://example.test/qa-0027a1-seller-published.jpg'
 );
 
 CREATE TEMP TABLE seller_publish AS

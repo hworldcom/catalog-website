@@ -6,6 +6,8 @@ export type ProductPublicationObject = {
   etag: string | null;
 };
 
+export type ProductPublicationImageContentType = "image/jpeg" | "image/png" | "image/webp";
+
 export interface ProductPublicationStorage {
   read(
     bucket: ProductPublicationStorageBucket,
@@ -15,6 +17,7 @@ export interface ProductPublicationStorage {
   createPublicObject(input: {
     objectKey: string;
     bytes: Uint8Array;
+    contentType: ProductPublicationImageContentType;
     metadata: Record<string, string>;
     signal: AbortSignal;
   }): Promise<"created" | "already_exists">;
@@ -72,12 +75,13 @@ export class SupabaseProductPublicationStorage implements ProductPublicationStor
   async createPublicObject(input: {
     objectKey: string;
     bytes: Uint8Array;
+    contentType: ProductPublicationImageContentType;
     metadata: Record<string, string>;
     signal: AbortSignal;
   }): Promise<"created" | "already_exists"> {
     const headers = this.authorizationHeaders();
     headers.set("cache-control", "max-age=31536000, immutable");
-    headers.set("content-type", "image/jpeg");
+    headers.set("content-type", input.contentType);
     headers.set("x-upsert", "false");
     headers.set(
       "x-metadata",

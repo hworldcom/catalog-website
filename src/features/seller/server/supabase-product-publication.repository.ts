@@ -68,6 +68,13 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       };
     }
 
+    if (result.result === "product_publication_category_required") {
+      return {
+        result: "category_required",
+        productDraftId: result.product_draft_id,
+      };
+    }
+
     if (
       result.result === "not_found" ||
       result.result === "not_allowed" ||
@@ -80,7 +87,10 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       result.result === "title_required" ||
       result.result === "title_invalid" ||
       result.result === "description_invalid" ||
-      result.result === "category_required"
+      result.result === "category_required" ||
+      result.result === "product_code_company_unconfigured" ||
+      result.result === "product_code_category_unconfigured" ||
+      result.result === "product_code_allocation_failed"
     ) {
       return {
         result: result.result,
@@ -333,7 +343,10 @@ function mapRun(row: RunRow): ProductPublicationRun {
 }
 
 function mapItem(row: ItemRow): ProductPublicationItem {
-  if (row.source_bucket !== "product-draft-images" || row.expected_content_type !== "image/jpeg") {
+  if (
+    row.source_bucket !== "product-draft-images" ||
+    !["image/jpeg", "image/png", "image/webp"].includes(row.expected_content_type)
+  ) {
     throw new Error("Product publication item has unsupported source metadata.");
   }
   return {
@@ -346,7 +359,7 @@ function mapItem(row: ItemRow): ProductPublicationItem {
     publicationOrder: row.publication_order,
     isCover: row.is_cover,
     expectedSourceSizeBytes: row.expected_source_size_bytes,
-    expectedContentType: row.expected_content_type,
+    expectedContentType: row.expected_content_type as ProductPublicationItem["expectedContentType"],
     sourceSha256: row.source_sha256,
     status: parseItemStatus(row.status),
     attemptToken: row.attempt_token,

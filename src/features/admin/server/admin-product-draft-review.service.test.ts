@@ -26,7 +26,14 @@ class MemoryRepository implements AdminProductDraftReviewRepository {
 describe("AdminProductDraftReviewService", () => {
   it("builds durable context and resolves the ordered gallery once", async () => {
     const data = reviewData({
-      product: { ...reviewData().product, title: "", cover_image_id: uuid(102) },
+      product: {
+        ...reviewData().product,
+        title: "",
+        title_source: null,
+        category_id: null,
+        product_code: null,
+        cover_image_id: uuid(102),
+      },
       sources: [source(), source()],
       images: [
         image(102, { source_position: 1, status: "available" }),
@@ -53,10 +60,11 @@ describe("AdminProductDraftReviewService", () => {
     );
     expect(review).toMatchObject({
       productDraftId: data.product.id,
+      productCode: null,
       title: "",
-      titleSource: "human",
+      titleSource: null,
       seller: { name: "Seller" },
-      category: { slug: "trousers" },
+      category: null,
       source: {
         classifierOrganizationId: uuid(700),
         classifierBatchId: uuid(701),

@@ -1,6 +1,8 @@
 export type ProductPublicationStatus =
   "pending" | "running" | "failed" | "cleanup_required" | "completed";
 
+export type ProductPublicationImageContentType = "image/jpeg" | "image/png" | "image/webp";
+
 export type ProductPublicationItemStatus =
   "pending" | "copying" | "verified" | "failed" | "cleanup_required" | "completed";
 
@@ -52,7 +54,7 @@ export type ProductPublicationItem = {
   publicationOrder: number;
   isCover: boolean;
   expectedSourceSizeBytes: number;
-  expectedContentType: "image/jpeg";
+  expectedContentType: ProductPublicationImageContentType;
   sourceSha256: string | null;
   status: ProductPublicationItemStatus;
   attemptToken: string | null;

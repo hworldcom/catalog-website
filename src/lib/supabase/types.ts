@@ -76,7 +76,7 @@ export type Database = {
       };
       classifier_import_group_outcomes: {
         Row: {
-          approved_category_slug: string;
+          approved_category_slug: string | null;
           classifier_group_id: string;
           classifier_import_run_id: string;
           created_at: string;
@@ -89,7 +89,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          approved_category_slug: string;
+          approved_category_slug?: string | null;
           classifier_group_id: string;
           classifier_import_run_id: string;
           created_at?: string;
@@ -102,7 +102,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          approved_category_slug?: string;
+          approved_category_slug?: string | null;
           classifier_group_id?: string;
           classifier_import_run_id?: string;
           created_at?: string;
@@ -647,39 +647,51 @@ export type Database = {
       };
       product_draft_images: {
         Row: {
-          classifier_image_id: string;
+          classifier_image_id: string | null;
+          client_upload_id: string | null;
           content_type: string | null;
           created_at: string;
           destination_key: string;
           id: string;
+          lifecycle_error_code: string | null;
+          original_filename: string | null;
           product_draft_id: string;
           size_bytes: number | null;
+          source_kind: string;
           source_position: number;
           status: Database["public"]["Enums"]["product_draft_image_status"];
           storage_bucket: string;
           updated_at: string;
         };
         Insert: {
-          classifier_image_id: string;
+          classifier_image_id?: string | null;
+          client_upload_id?: string | null;
           content_type?: string | null;
           created_at?: string;
           destination_key: string;
           id?: string;
+          lifecycle_error_code?: string | null;
+          original_filename?: string | null;
           product_draft_id: string;
           size_bytes?: number | null;
+          source_kind?: string;
           source_position: number;
           status?: Database["public"]["Enums"]["product_draft_image_status"];
           storage_bucket?: string;
           updated_at?: string;
         };
         Update: {
-          classifier_image_id?: string;
+          classifier_image_id?: string | null;
+          client_upload_id?: string | null;
           content_type?: string | null;
           created_at?: string;
           destination_key?: string;
           id?: string;
+          lifecycle_error_code?: string | null;
+          original_filename?: string | null;
           product_draft_id?: string;
           size_bytes?: number | null;
+          source_kind?: string;
           source_position?: number;
           status?: Database["public"]["Enums"]["product_draft_image_status"];
           storage_bucket?: string;
@@ -1016,7 +1028,7 @@ export type Database = {
       };
       products: {
         Row: {
-          category_id: string;
+          category_id: string | null;
           classifier_group_id: string | null;
           classifier_organization_id: string | null;
           cover_image_id: string | null;
@@ -1025,10 +1037,11 @@ export type Database = {
           currency: string;
           description: string | null;
           id: string;
+          image_gallery_revision: number;
           moq: number | null;
           pack_size: string | null;
           price: number | null;
-          product_code: string;
+          product_code: string | null;
           seller_id: string;
           status: Database["public"]["Enums"]["product_status"];
           stock: Database["public"]["Enums"]["stock_status"];
@@ -1038,7 +1051,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          category_id: string;
+          category_id?: string | null;
           classifier_group_id?: string | null;
           classifier_organization_id?: string | null;
           cover_image_id?: string | null;
@@ -1047,10 +1060,11 @@ export type Database = {
           currency?: string;
           description?: string | null;
           id?: string;
+          image_gallery_revision?: number;
           moq?: number | null;
           pack_size?: string | null;
           price?: number | null;
-          product_code: string;
+          product_code?: string | null;
           seller_id: string;
           status?: Database["public"]["Enums"]["product_status"];
           stock?: Database["public"]["Enums"]["stock_status"];
@@ -1060,7 +1074,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          category_id?: string;
+          category_id?: string | null;
           classifier_group_id?: string | null;
           classifier_organization_id?: string | null;
           cover_image_id?: string | null;
@@ -1069,10 +1083,11 @@ export type Database = {
           currency?: string;
           description?: string | null;
           id?: string;
+          image_gallery_revision?: number;
           moq?: number | null;
           pack_size?: string | null;
           price?: number | null;
-          product_code?: string;
+          product_code?: string | null;
           seller_id?: string;
           status?: Database["public"]["Enums"]["product_status"];
           stock?: Database["public"]["Enums"]["stock_status"];
@@ -1286,6 +1301,79 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      begin_seller_product_draft_image_removal: {
+        Args: {
+          p_expected_gallery_revision: number;
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+          p_seller_id: string;
+        };
+        Returns: Json;
+      };
+      complete_seller_product_draft_image_removal: {
+        Args: {
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+          p_seller_id: string;
+        };
+        Returns: Json;
+      };
+      complete_seller_product_draft_image_upload_cleanup: {
+        Args: {
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+          p_seller_id: string;
+        };
+        Returns: Json;
+      };
+      fail_seller_product_draft_image_removal: {
+        Args: {
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+          p_seller_id: string;
+        };
+        Returns: Json;
+      };
+      fail_seller_product_draft_image_upload_cleanup: {
+        Args: {
+          p_product_draft_id: string;
+          p_product_draft_image_id: string;
+          p_seller_id: string;
+        };
+        Returns: Json;
+      };
+      finalize_seller_product_draft_image_uploads: {
+        Args: {
+          p_product_draft_id: string;
+          p_results: Json;
+          p_seller_id: string;
+        };
+        Returns: Json;
+      };
+      prepare_seller_product_draft_image_uploads: {
+        Args: {
+          p_expected_gallery_revision: number;
+          p_files: Json;
+          p_product_draft_id: string;
+          p_seller_id: string;
+          p_verified_absent_image_ids?: string[];
+        };
+        Returns: Json;
+      };
+      product_draft_image_gallery_snapshot: {
+        Args: { p_product_draft_id: string };
+        Returns: Json;
+      };
+      update_seller_product_draft_image_gallery: {
+        Args: {
+          p_cover_image_id: string;
+          p_expected_gallery_revision: number;
+          p_ordered_available_image_ids: string[];
+          p_product_draft_id: string;
+          p_seller_id: string;
+        };
+        Returns: Json;
+      };
       claim_delegated_administrator_action: {
         Args: {
           p_action_type: string;
@@ -1763,7 +1851,7 @@ export type Database = {
         Args: {
           p_attempt_token: string;
           p_descriptions: Json;
-          p_expected_category_id: string;
+          p_expected_category_id: string | null;
           p_expected_cover_content_type: string | null;
           p_expected_cover_image_id: string | null;
           p_expected_cover_image_url: string | null;
@@ -2185,7 +2273,7 @@ export type Database = {
       };
       prepare_classifier_import_group: {
         Args: {
-          p_approved_category_slug: string;
+          p_approved_category_slug: string | null;
           p_attempt_token: string;
           p_classifier_group_id: string;
           p_import_id: string;
@@ -2198,7 +2286,7 @@ export type Database = {
       };
       prepare_classifier_import_group_at_position: {
         Args: {
-          p_approved_category_slug: string;
+          p_approved_category_slug: string | null;
           p_attempt_token: string;
           p_classifier_group_id: string;
           p_import_id: string;
@@ -2302,7 +2390,7 @@ export type Database = {
       product_status: "draft" | "published" | "archived";
       product_draft_image_public_object_state: "unchecked" | "absent" | "deleted" | "unresolved";
       product_draft_image_promotion_status: "pending" | "started" | "promoted" | "failed";
-      product_draft_image_status: "pending" | "available" | "failed";
+      product_draft_image_status: "pending" | "available" | "failed" | "deleting";
       product_draft_image_storage_cutover_scan_phase: "reconciliation" | "discovery" | "confirming";
       product_draft_image_storage_cutover_status: "pending" | "running" | "completed" | "failed";
       product_draft_image_storage_reconciliation_status:
@@ -2443,7 +2531,7 @@ export const Constants = {
       lead_source: ["form", "whatsapp"],
       product_status: ["draft", "published", "archived"],
       product_draft_image_promotion_status: ["pending", "started", "promoted", "failed"],
-      product_draft_image_status: ["pending", "available", "failed"],
+      product_draft_image_status: ["pending", "available", "failed", "deleting"],
       stock_status: ["in_stock", "low_stock", "out_of_stock", "made_to_order"],
     },
   },

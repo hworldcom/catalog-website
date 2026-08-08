@@ -55,6 +55,8 @@ describe("SellerClassifierImportScreenView", () => {
     await waitFor(() => expect(heading).toHaveFocus());
     expect(screen.getByText("Product drafts are ready")).toBeVisible();
     expect(screen.getByText("Untitled product draft 1")).toBeVisible();
+    expect(screen.getByText("Category not set")).toBeVisible();
+    expect(screen.getByText("Assigned when publishing")).toBeVisible();
     expect(screen.getByRole("link", { name: "Edit draft" })).toHaveAttribute(
       "href",
       `/seller/products/${productDraftId}?lang=DE`,
@@ -160,6 +162,8 @@ describe("SellerClassifierImportScreenView", () => {
         {
           productDraftId,
           title: "Published shirt",
+          category: { slug: "t-shirts", name: "T-shirts" },
+          productCode: "ABC-F-TSH-ABCDEFGH",
           status: "published",
           imageStatus: "available",
         },
@@ -271,6 +275,8 @@ function pendingSnapshot({
           {
             productDraftId,
             title: "Cotton shirt",
+            category: { slug: "t-shirts", name: "T-shirts" },
+            productCode: null,
             status: "draft",
             imageStatus: "pending",
           },
@@ -295,6 +301,8 @@ function readySnapshot(): SellerClassifierDraftImportSnapshot {
       {
         productDraftId,
         title: null,
+        category: null,
+        productCode: null,
         status: "draft",
         imageStatus: "available",
       },
@@ -318,6 +326,8 @@ function partialSnapshot(): SellerClassifierDraftImportSnapshot {
       {
         productDraftId,
         title: "Cotton shirt",
+        category: { slug: "t-shirts", name: "T-shirts" },
+        productCode: null,
         status: "draft",
         imageStatus: "partially_available",
       },

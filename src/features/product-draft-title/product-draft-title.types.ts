@@ -33,6 +33,7 @@ export class ProductDraftTitleError extends Error {
       | "product_draft_not_found"
       | "product_draft_title_not_editable"
       | "product_category_required"
+      | "product_publication_category_required"
       | "product_category_not_supported"
       | "product_code_company_unconfigured"
       | "product_code_category_unconfigured"

@@ -26,7 +26,7 @@ export type ProductDraftImageDurableStatus =
   Database["public"]["Enums"]["product_draft_image_status"];
 
 export type ProductDraftImageDeliveryStatus =
-  "available" | "pending" | "failed" | "missing" | "unavailable";
+  "available" | "pending" | "failed" | "deleting" | "missing" | "unavailable";
 
 export type ProductDraftImageRuntimeDeliveryErrorCode =
   "private_object_missing" | "private_object_conflict" | "private_object_signing_failed";

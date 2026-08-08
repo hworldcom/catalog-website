@@ -7,7 +7,7 @@ export type ProductDescriptionGenerationProviderInput = {
     id: string;
     slug: string;
     name: string;
-  };
+  } | null;
   facts: ProductDraftFacts;
   coverImage: {
     mediaType: "image/jpeg" | "image/png" | "image/webp";

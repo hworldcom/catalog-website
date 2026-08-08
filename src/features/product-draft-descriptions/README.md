@@ -2,9 +2,9 @@
 
 This feature owns authoritative multilingual ProductDraft descriptions. The
 adjacent `product-draft-description-generation` feature owns the explicit
-seller-authorized provider call from tickets 0027a2 and 0027c. The saved seller-product
-page exposes explicit generation and multilingual review controls through this
-feature.
+seller-authorized provider call from tickets 0027a2, 0027c, and 0035b. The saved
+seller-product page exposes explicit generation and multilingual review controls
+through this feature.
 
 ## Languages And Provenance
 
@@ -55,14 +55,16 @@ that value is not stored or backfilled.
 `generateMyProductDraftDescriptions({ productDraftId })` resolves the current
 seller and validates server-only OpenAI configuration before claiming work. It
 makes one bounded strict-schema multimodal request with the persisted selected
-cover, approved category, and reviewed facts for Polish, English, German, and
-Vietnamese text. It then atomically preserves human rows and writes only missing
-or model-owned rows. A source-controlled `product-description-v2` pipeline
-version records the cover-grounded generation policy used. Missing, unavailable,
-unsupported, or unusable covers fail explicitly; generation never falls back to
-category-only prose or another gallery image. Generated descriptions use the
-same 300-character limit, and model title proposals use the shared 50-character
-title limit.
+cover, optional approved category context, and one valid reviewed facts record
+for Polish, English, German, and Vietnamese text. Individual facts may remain
+empty or unknown. It then atomically preserves human rows and writes only
+missing or model-owned rows. A source-controlled `product-description-v3`
+pipeline version records the category-optional cover-grounded generation policy
+used. Missing, unavailable, unsupported, or unusable covers fail explicitly;
+generation never falls back to category-only prose or another gallery image.
+Generated descriptions use the same 300-character limit, and optional model
+title proposals use the shared 50-character title limit. A missing, blank, or
+overlong proposal leaves the title blank without blocking valid descriptions.
 
 Generation is synchronous and explicit. Upload, import, page reads, and facts
 edits never start it. Durable attempt tokens prevent expired or superseded

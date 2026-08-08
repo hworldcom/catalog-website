@@ -67,6 +67,60 @@ describe("SupabaseProductDraftTitleRepository", () => {
     });
   });
 
+  it("creates an incomplete draft without a title patch or product code", async () => {
+    const rpc = vi.fn(async () => ({
+      data: [
+        {
+          result: "created",
+          product_draft_id: uuid(1),
+          product_code: null,
+          title: "",
+          title_source: null,
+          product_status: "draft",
+          english_description: null,
+        },
+      ],
+      error: null,
+    }));
+    const repository = new SupabaseProductDraftTitleRepository({
+      rpc,
+    } as unknown as SupabaseClient<Database>);
+
+    await expect(
+      repository.create(uuid(2), null, {
+        category_id: null,
+        currency: "EUR",
+        stock: "in_stock",
+        trending: false,
+        status: "draft",
+      }),
+    ).resolves.toEqual({
+      result: "created",
+      productDraftId: uuid(1),
+      title: "",
+      titleSource: null,
+      productStatus: "draft",
+    });
+
+    expect(rpc).toHaveBeenCalledWith("create_seller_product_with_description", {
+      p_seller_id: uuid(2),
+      p_title_patch_present: false,
+      p_title: null,
+      p_description_patch_present: false,
+      p_description: null,
+      p_category_id: null,
+      p_moq: null,
+      p_pack_size: null,
+      p_price: null,
+      p_currency: "EUR",
+      p_stock: "in_stock",
+      p_cover_image_url_patch_present: false,
+      p_cover_image_url: null,
+      p_trending: false,
+      p_status: "draft",
+    });
+  });
+
   it("returns stable product-code allocation failures from direct creation", async () => {
     const repository = new SupabaseProductDraftTitleRepository({
       rpc: vi.fn(async () => ({

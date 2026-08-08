@@ -32,8 +32,9 @@ describe("SellerProductDraftReadService", () => {
   });
 
   it("does not load the gallery when the requester has no seller or does not own the product", async () => {
-    const noSellerRepository = memoryRepository();
-    noSellerRepository.findSellerId.mockResolvedValue(null);
+    const noSellerRepository = memoryRepository({
+      findSellerId: vi.fn(async () => null),
+    });
     const noSellerGallery = vi.fn();
 
     await expect(
@@ -46,8 +47,9 @@ describe("SellerProductDraftReadService", () => {
     expect(noSellerRepository.findOwnedProduct).not.toHaveBeenCalled();
     expect(noSellerGallery).not.toHaveBeenCalled();
 
-    const foreignProductRepository = memoryRepository();
-    foreignProductRepository.findOwnedProduct.mockResolvedValue(null);
+    const foreignProductRepository = memoryRepository({
+      findOwnedProduct: vi.fn(async () => null),
+    });
     const foreignProductGallery = vi.fn();
     await expect(
       new SellerProductDraftReadService(foreignProductRepository).get({
@@ -61,7 +63,7 @@ describe("SellerProductDraftReadService", () => {
 
   it("loads service-role gallery data only after requester-scoped ownership succeeds", async () => {
     const calls: string[] = [];
-    const product = productRow();
+    const product = productRow({ category_id: null, product_code: null });
     const repository: SellerProductDraftReadRepository = {
       findSellerId: vi.fn(async () => {
         calls.push("seller");
@@ -71,9 +73,12 @@ describe("SellerProductDraftReadService", () => {
         calls.push("product");
         return product;
       }),
-      hasSourceMembership: vi.fn(async () => {
+      getImageSourceState: vi.fn(async () => {
         calls.push("provenance");
-        return true;
+        return {
+          imageSourceMode: "classifier_import" as const,
+          usesDurableImagePublication: true,
+        };
       }),
     };
     const loadGallery = vi.fn(async () => {
@@ -81,6 +86,7 @@ describe("SellerProductDraftReadService", () => {
       return {
         status: "available" as const,
         errorCode: null,
+        galleryRevision: 0,
         images: [],
       };
     });
@@ -95,10 +101,12 @@ describe("SellerProductDraftReadService", () => {
       product: {
         ...product,
         imagePublicationMode: "imported",
+        imageSourceMode: "classifier_import",
       },
       gallery: {
         status: "available",
         errorCode: null,
+        galleryRevision: 0,
         images: [],
       },
     });
@@ -109,10 +117,9 @@ describe("SellerProductDraftReadService", () => {
   });
 
   it("stops before gallery access when the stored product code is malformed", async () => {
-    const repository = memoryRepository();
-    repository.findOwnedProduct.mockResolvedValue(
-      productRow({ product_code: "private-malformed-value" }),
-    );
+    const repository = memoryRepository({
+      findOwnedProduct: vi.fn(async () => productRow({ product_code: "private-malformed-value" })),
+    });
     const loadGallery = vi.fn();
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
@@ -134,11 +141,17 @@ describe("SellerProductDraftReadService", () => {
   });
 });
 
-function memoryRepository() {
+function memoryRepository(
+  overrides: Partial<SellerProductDraftReadRepository> = {},
+): SellerProductDraftReadRepository {
   return {
     findSellerId: vi.fn(async () => sellerId),
     findOwnedProduct: vi.fn(async () => productRow()),
-    hasSourceMembership: vi.fn(async () => false),
+    getImageSourceState: vi.fn(async () => ({
+      imageSourceMode: "seller_upload" as const,
+      usesDurableImagePublication: false,
+    })),
+    ...overrides,
   };
 }
 
@@ -155,6 +168,7 @@ function productRow(overrides: Partial<Product> = {}): Product {
     classifier_organization_id: null,
     cover_image_id: null,
     cover_image_url: null,
+    image_gallery_revision: 0,
     moq: null,
     pack_size: null,
     price: null,

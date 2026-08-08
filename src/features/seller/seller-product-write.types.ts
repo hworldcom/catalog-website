@@ -26,20 +26,10 @@ const sellerProductFieldsSchema = z
   })
   .strict();
 
-export const sellerProductSaveSchema = sellerProductFieldsSchema
-  .extend({
-    id: sellerProductIdSchema.optional(),
-    publish: z.boolean().default(false),
-  })
-  .superRefine((product, context) => {
-    if (!product.id && product.title === undefined) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["title"],
-        message: "A title value is required when creating a product.",
-      });
-    }
-  });
+export const sellerProductSaveSchema = sellerProductFieldsSchema.extend({
+  id: sellerProductIdSchema.optional(),
+  publish: z.boolean().default(false),
+});
 
 export const sellerProductPublicationSchema = sellerProductFieldsSchema.extend({
   id: sellerProductIdSchema,
