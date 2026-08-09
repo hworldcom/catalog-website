@@ -1,6 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}));
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -54,6 +59,21 @@ describe("SellerClassifierProcessingScreen", () => {
       `/seller/classifier-batches/${uuid(1)}/review`,
     );
     expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("offers manual ingestion when processing state is unavailable from the classifier", async () => {
+    mocks.get.mockRejectedValueOnce(
+      Object.assign(new Error("The classifier is temporarily unavailable."), {
+        code: "seller_classifier_unavailable",
+      }),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByRole("link", { name: "Add product manually" })).toHaveAttribute(
+      "href",
+      "/seller/products/new",
+    );
   });
 });
 

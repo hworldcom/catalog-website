@@ -20,6 +20,7 @@ import type {
   SellerClassifierDraftImportStatus,
   SellerClassifierProductDraftImageStatus,
 } from "../seller-classifier-import.types";
+import { SellerClassifierManualRecovery } from "../seller-classifier-manual-recovery";
 
 const POLL_INTERVAL_MS = 2_000;
 
@@ -278,6 +279,7 @@ export type SellerClassifierImportClient = {
 type PageError = {
   message: string;
   retryable: boolean;
+  source: unknown;
 };
 
 type MutationAction = "continue" | "retry";
@@ -353,6 +355,7 @@ export function SellerClassifierImportScreenView({
   const [readError, setReadError] = useState<PageError | null>(null);
   const [mutationAction, setMutationAction] = useState<MutationAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionErrorSource, setActionErrorSource] = useState<unknown>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [conflictAction, setConflictAction] = useState<MutationAction | null>(null);
   const mounted = useRef(true);
@@ -436,7 +439,7 @@ export function SellerClassifierImportScreenView({
       completionConfirmationAttempted.current = true;
       void readSnapshot().then((next) => {
         if (mounted.current && hasCompletionMismatch(next)) {
-          setReadError({ message: tr(S.transitionMismatch), retryable: true });
+          setReadError({ message: tr(S.transitionMismatch), retryable: true, source: null });
         }
       });
     }
@@ -446,7 +449,7 @@ export function SellerClassifierImportScreenView({
     if (mutationAction) return;
     const next = await readSnapshot();
     if (mounted.current && hasCompletionMismatch(next)) {
-      setReadError({ message: tr(S.transitionMismatch), retryable: true });
+      setReadError({ message: tr(S.transitionMismatch), retryable: true, source: null });
     }
   }, [mutationAction, readSnapshot]);
 
@@ -455,6 +458,7 @@ export function SellerClassifierImportScreenView({
       if (mutationAction || isReading) return;
       setMutationAction(action);
       setActionError(null);
+      setActionErrorSource(null);
       setActionSuccess(null);
       setConflictAction(null);
       try {
@@ -480,7 +484,7 @@ export function SellerClassifierImportScreenView({
           code === "seller_classifier_batch_not_found" ||
           code === "delegated_upload_workflow_not_found"
         ) {
-          setReadError({ message: tr(S.notFound), retryable: false });
+          setReadError({ message: tr(S.notFound), retryable: false, source: error });
         } else if (
           code === "seller_classifier_import_retry_not_allowed" ||
           code === "delegated_import_retry_not_allowed"
@@ -489,9 +493,11 @@ export function SellerClassifierImportScreenView({
           setActionSuccess(tr(S.stateChanged));
         } else if (code === "delegated_action_request_conflict") {
           setActionError(tr(S.actionConflict));
+          setActionErrorSource(null);
           setConflictAction(action);
         } else {
           setActionError(importActionError(error));
+          setActionErrorSource(error);
         }
       } finally {
         if (mounted.current) setMutationAction(null);
@@ -509,12 +515,13 @@ export function SellerClassifierImportScreenView({
   }
 
   if (!snapshot) {
-    const error = readError ?? { message: tr(S.unavailable), retryable: true };
+    const error = readError ?? { message: tr(S.unavailable), retryable: true, source: null };
     return (
       <Alert variant="destructive">
         <AlertTitle>{tr(S.unavailableTitle)}</AlertTitle>
         <AlertDescription className="space-y-3">
           <p>{error.message}</p>
+          <SellerClassifierManualRecovery error={error.source} />
           {error.retryable ? (
             <Button
               type="button"
@@ -587,6 +594,7 @@ export function SellerClassifierImportScreenView({
           <AlertTitle>{tr(S.unavailableTitle)}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>{readError.message}</p>
+            <SellerClassifierManualRecovery error={readError.source} />
             {readError.retryable ? (
               <Button
                 type="button"
@@ -611,6 +619,7 @@ export function SellerClassifierImportScreenView({
           <AlertTitle>{tr(S.unavailableTitle)}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>{actionError}</p>
+            <SellerClassifierManualRecovery error={actionErrorSource} />
             {conflictAction ? (
               <Button
                 type="button"
@@ -753,19 +762,19 @@ function importErrorCode(error: unknown): string | null {
 function importPageError(error: unknown): PageError {
   switch (importErrorCode(error)) {
     case "seller_classifier_approval_invalid":
-      return { message: tr(S.invalid), retryable: false };
+      return { message: tr(S.invalid), retryable: false, source: error };
     case "seller_classifier_batch_not_found":
     case "seller_not_found":
     case "delegated_upload_workflow_not_found":
-      return { message: tr(S.notFound), retryable: false };
+      return { message: tr(S.notFound), retryable: false, source: error };
     case "seller_classifier_configuration_invalid":
     case "delegated_action_configuration_invalid":
     case "prototype_administrator_configuration_invalid":
-      return { message: tr(S.setupError), retryable: false };
+      return { message: tr(S.setupError), retryable: false, source: error };
     case "prototype_administrator_required":
-      return { message: tr(S.administratorRequired), retryable: false };
+      return { message: tr(S.administratorRequired), retryable: false, source: error };
     default:
-      return { message: tr(S.unavailable), retryable: true };
+      return { message: tr(S.unavailable), retryable: true, source: error };
   }
 }
 

@@ -18,6 +18,7 @@ import {
   newSellerClassifierCreationSession,
   saveSellerClassifierCreationSession,
 } from "../seller-classifier-creation-session";
+import { SellerClassifierManualRecovery } from "../seller-classifier-manual-recovery";
 
 const S = {
   title: t(
@@ -60,7 +61,7 @@ export function SellerClassifierNewScreen() {
   const retryBatch = useServerFn(retryMyClassifierBatchProvisioning);
   const [workflow, setWorkflow] = useState<SellerClassifierBatchSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const navigateToUpload = useCallback(
     (workflowId: string) => {
       navigate({
@@ -86,7 +87,7 @@ export function SellerClassifierNewScreen() {
         }
       })
       .catch((loadError: unknown) => {
-        if (!cancelled) setError(errorMessage(loadError));
+        if (!cancelled) setError(loadError);
       })
       .finally(() => {
         if (!cancelled) setBusy(false);
@@ -111,7 +112,7 @@ export function SellerClassifierNewScreen() {
       setWorkflow(snapshot);
       if (snapshot.provisioningStatus === "ready") navigateToUpload(snapshot.workflowId);
     } catch (startError) {
-      setError(errorMessage(startError));
+      setError(startError);
     } finally {
       setBusy(false);
     }
@@ -126,11 +127,17 @@ export function SellerClassifierNewScreen() {
       setWorkflow(snapshot);
       if (snapshot.provisioningStatus === "ready") navigateToUpload(snapshot.workflowId);
     } catch (retryError) {
-      setError(errorMessage(retryError));
+      setError(retryError);
     } finally {
       setBusy(false);
     }
   }
+
+  const displayedError =
+    error ??
+    (workflow?.provisioningStatus === "failed" && workflow.errorCode
+      ? { code: workflow.errorCode }
+      : null);
 
   return (
     <Card>
@@ -139,10 +146,13 @@ export function SellerClassifierNewScreen() {
         <CardDescription>{tr(S.description)}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error ? (
+        {displayedError ? (
           <Alert variant="destructive">
             <AlertTitle>{tr(S.failed)}</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="space-y-3">
+              <p>{errorMessage(displayedError)}</p>
+              <SellerClassifierManualRecovery error={displayedError} />
+            </AlertDescription>
           </Alert>
         ) : null}
         {workflow?.provisioningStatus === "failed" && workflow.retryAllowed ? (
@@ -160,6 +170,7 @@ export function SellerClassifierNewScreen() {
 }
 
 function errorMessage(error: unknown): string {
+  if (typeof error === "string" && error.trim()) return error;
   return error instanceof Error && error.message.trim()
     ? error.message
     : "Classifier upload is temporarily unavailable.";

@@ -102,7 +102,7 @@ export type DelegatedProductDraftSnapshot = {
     stock: "in_stock" | "low_stock" | "out_of_stock" | "made_to_order";
     trending: boolean;
     coverImageId: string | null;
-    imagePublicationMode: "imported";
+    imagePublicationMode: "durable";
     editable: boolean;
   };
   gallery: SellerProductDraftGallery;

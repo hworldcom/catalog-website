@@ -59,17 +59,27 @@ export class SellerProductDraftReadService {
       this.repository.getImageSourceState(product.id),
       input.loadGallery(product),
     ]);
+    if (
+      claimsClassifierProvenance(product) &&
+      imageSourceState.imageSourceMode !== "classifier_import"
+    ) {
+      throw new Error("The seller product is temporarily unavailable.");
+    }
 
     return {
       product: {
         ...product,
         product_code: productCode,
-        imagePublicationMode: imageSourceState.usesDurableImagePublication ? "imported" : "direct",
+        imagePublicationMode: imageSourceState.usesDurableImagePublication ? "durable" : "direct",
         imageSourceMode: imageSourceState.imageSourceMode,
       },
       gallery,
     };
   }
+}
+
+function claimsClassifierProvenance(product: Product): boolean {
+  return product.classifier_group_id !== null || product.classifier_organization_id !== null;
 }
 
 function notFound(): SellerProductDraftReadResult {

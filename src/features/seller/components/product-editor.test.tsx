@@ -63,7 +63,7 @@ type InitialProduct = {
   cover_image_url: string | null;
   trending: boolean;
   status: "draft" | "published" | "archived";
-  imagePublicationMode?: "imported" | "direct";
+  imagePublicationMode?: "durable" | "direct";
   imageSourceMode?: "classifier_import" | "seller_upload";
 };
 
@@ -250,7 +250,7 @@ describe("ProductEditor title and description behavior", () => {
   it("hides and omits the manual cover for an imported ProductDraft", async () => {
     renderEditor({
       ...completeInitial,
-      imagePublicationMode: "imported",
+      imagePublicationMode: "durable",
       cover_image_url: "https://public.example/stale.jpg",
     });
 
@@ -291,7 +291,7 @@ describe("ProductEditor title and description behavior", () => {
     renderEditor(
       {
         ...completeInitial,
-        imagePublicationMode: "imported",
+        imagePublicationMode: "durable",
         imageSourceMode: "seller_upload",
       },
       undefined,
@@ -316,7 +316,7 @@ describe("ProductEditor title and description behavior", () => {
 
   it("blocks publication while optional facts are dirty", async () => {
     renderEditor(
-      { ...completeInitial, imagePublicationMode: "imported" },
+      { ...completeInitial, imagePublicationMode: "durable" },
       { dirty: true, saving: false },
     );
 
@@ -330,7 +330,7 @@ describe("ProductEditor title and description behavior", () => {
 
   it("blocks publication while multilingual descriptions are dirty", async () => {
     renderEditor(
-      { ...completeInitial, imagePublicationMode: "imported" },
+      { ...completeInitial, imagePublicationMode: "durable" },
       { dirty: false, saving: false },
       { dirty: true, saving: false },
     );
@@ -342,7 +342,7 @@ describe("ProductEditor title and description behavior", () => {
   it("reports durable publication state", async () => {
     mocks.getPublication.mockResolvedValueOnce(publication("pending"));
     const onStateChange = vi.fn();
-    renderEditor({ ...initial, imagePublicationMode: "imported" }, undefined, undefined, {
+    renderEditor({ ...initial, imagePublicationMode: "durable" }, undefined, undefined, {
       onStateChange,
     });
 
@@ -408,7 +408,7 @@ describe("ProductEditor title and description behavior", () => {
       failureReasonCode: "product_publication_transfer_failed",
       retryAllowed: true,
     });
-    renderEditor({ ...completeInitial, imagePublicationMode: "imported" });
+    renderEditor({ ...completeInitial, imagePublicationMode: "durable" });
 
     await userEvent.click(await screen.findByRole("button", { name: "Retry publication" }));
 
@@ -426,7 +426,7 @@ describe("ProductEditor title and description behavior", () => {
       failureReasonCode: "product_publication_source_unavailable",
       retryAllowed: true,
     });
-    renderEditor({ ...initial, imagePublicationMode: "imported" });
+    renderEditor({ ...initial, imagePublicationMode: "durable" });
 
     expect(
       await screen.findByText(
@@ -442,7 +442,7 @@ describe("ProductEditor title and description behavior", () => {
       failureReasonCode: "product_publication_finalization_failed",
       retryAllowed: false,
     });
-    renderEditor({ ...initial, imagePublicationMode: "imported" });
+    renderEditor({ ...initial, imagePublicationMode: "durable" });
 
     expect(
       await screen.findByText(
@@ -468,7 +468,7 @@ describe("ProductEditor title and description behavior", () => {
     renderEditor(
       {
         ...completeInitial,
-        imagePublicationMode: "imported",
+        imagePublicationMode: "durable",
         imageSourceMode: "classifier_import",
       },
       undefined,
@@ -489,7 +489,7 @@ describe("ProductEditor title and description behavior", () => {
     });
     const { queryClient } = renderEditor({
       ...initial,
-      imagePublicationMode: "imported",
+      imagePublicationMode: "durable",
     });
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -511,7 +511,7 @@ describe("ProductEditor title and description behavior", () => {
     renderEditor({
       ...initial,
       status: "published",
-      imagePublicationMode: "imported",
+      imagePublicationMode: "durable",
     });
 
     expect(screen.queryByRole("button", { name: "Publish" })).not.toBeInTheDocument();

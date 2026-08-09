@@ -82,8 +82,8 @@ describe("SellerProductListService", () => {
         url: "https://public.test/cover.jpg",
         expiresAt: null,
       },
-      expect.objectContaining({ source: "imported_private", imageId: uuid(202) }),
-      expect.objectContaining({ source: "imported_private", imageId: uuid(301) }),
+      expect.objectContaining({ source: "private_draft", imageId: uuid(202) }),
+      expect.objectContaining({ source: "private_draft", imageId: uuid(301) }),
       {
         source: "none",
         imageId: null,
@@ -117,12 +117,12 @@ describe("SellerProductListService", () => {
     expect(page.products).toHaveLength(3);
     expect(page.products[0]?.preview.source).toBe("public_cover");
     expect(page.products[1]?.preview).toMatchObject({
-      source: "imported_private",
+      source: "private_draft",
       imageId: uuid(202),
       deliveryStatus: "unavailable",
     });
     expect(page.products[2]?.preview).toMatchObject({
-      source: "imported_private",
+      source: "private_draft",
       imageId: uuid(301),
       deliveryStatus: "unavailable",
     });

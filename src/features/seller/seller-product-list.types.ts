@@ -15,8 +15,7 @@ export type SellerProductListRequest = {
   cursor: string | null;
 };
 
-export type SellerProductPreviewSource =
-  "public_cover" | "imported_private" | "none" | "unavailable";
+export type SellerProductPreviewSource = "public_cover" | "private_draft" | "none" | "unavailable";
 
 export type SellerProductPreview = {
   source: SellerProductPreviewSource;

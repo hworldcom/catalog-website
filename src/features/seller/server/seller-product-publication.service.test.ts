@@ -42,7 +42,7 @@ describe("SellerProductPublicationService", () => {
   it("authorizes imported publication with server-derived provenance and no cover patch", async () => {
     const publications = publicationService();
     const service = new SellerProductPublicationService(
-      productRepository({ imagePublicationMode: "imported" }),
+      productRepository({ imagePublicationMode: "durable" }),
       publications,
       vi.fn(),
     );
@@ -93,7 +93,7 @@ describe("SellerProductPublicationService", () => {
       productDraftId,
     });
     const service = new SellerProductPublicationService(
-      productRepository({ imagePublicationMode: "imported" }),
+      productRepository({ imagePublicationMode: "durable" }),
       publications,
       vi.fn(),
     );
@@ -111,7 +111,7 @@ describe("SellerProductPublicationService", () => {
       productDraftId,
     });
     const service = new SellerProductPublicationService(
-      productRepository({ imagePublicationMode: "imported" }),
+      productRepository({ imagePublicationMode: "durable" }),
       publications,
       vi.fn(),
     );
@@ -156,7 +156,7 @@ describe("SellerProductPublicationService", () => {
     });
     publications.retry.mockResolvedValue("requeued");
     const service = new SellerProductPublicationService(
-      productRepository({ imagePublicationMode: "imported" }),
+      productRepository({ imagePublicationMode: "durable" }),
       publications,
       vi.fn(),
     );
@@ -201,7 +201,7 @@ describe("SellerProductPublicationService", () => {
     const publications = publicationService();
     publications.retry.mockResolvedValueOnce(result);
     const service = new SellerProductPublicationService(
-      productRepository({ imagePublicationMode: "imported" }),
+      productRepository({ imagePublicationMode: "durable" }),
       publications,
       vi.fn(),
     );
@@ -224,7 +224,7 @@ function productRepository(
       categoryId: uuid(3),
       productStatus: "draft",
       coverImageUrl: null,
-      imagePublicationMode: "imported",
+      imagePublicationMode: "durable",
       ...overrides,
     })),
   };

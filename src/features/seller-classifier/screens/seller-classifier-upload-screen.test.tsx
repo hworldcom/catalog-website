@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ vi.mock("@tanstack/react-start", () => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
+  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
 }));
 
 vi.mock("../seller-classifier-batch.functions", () => ({
@@ -149,6 +151,29 @@ describe("SellerClassifierUploadScreen", () => {
     expect(mocks.finalize).toHaveBeenCalledWith({ data: { workflowId: uuid(1) } });
     expect(await screen.findByText("object_missing")).toBeInTheDocument();
     expect(screen.getByText("Select the original file")).toBeInTheDocument();
+  });
+
+  it("offers manual ingestion only when an upload operation returns classifier unavailable", async () => {
+    mocks.getUploads.mockResolvedValueOnce(createdUploadSnapshot());
+    mocks.register.mockRejectedValueOnce(
+      Object.assign(new Error("The classifier is temporarily unavailable."), {
+        code: "seller_classifier_unavailable",
+      }),
+    );
+    const user = userEvent.setup();
+    const view = renderScreen();
+
+    await screen.findByRole("button", { name: "Upload images" });
+    await user.upload(
+      view.container.querySelector('input[type="file"]') as HTMLInputElement,
+      jpeg("front.jpg", 100),
+    );
+    await user.click(screen.getByRole("button", { name: "Upload images" }));
+
+    expect(await screen.findByRole("link", { name: "Add product manually" })).toHaveAttribute(
+      "href",
+      "/seller/products/new",
+    );
   });
 });
 

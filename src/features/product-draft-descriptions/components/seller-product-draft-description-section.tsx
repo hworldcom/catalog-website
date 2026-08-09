@@ -112,10 +112,10 @@ const S = {
     "Chọn và lưu ảnh bìa trước khi tạo mô tả.",
   ),
   coverNotReady: t(
-    "The selected imported cover is not ready yet. Wait for image processing or recover the image before trying again.",
-    "Wybrane zaimportowane zdjęcie główne nie jest jeszcze gotowe. Poczekaj na przetworzenie lub odzyskaj zdjęcie przed ponowną próbą.",
-    "Das ausgewählte importierte Titelbild ist noch nicht bereit. Warten Sie auf die Bildverarbeitung oder stellen Sie das Bild vor einem neuen Versuch wieder her.",
-    "Ảnh bìa đã nhập chưa sẵn sàng. Hãy chờ xử lý hoặc khôi phục ảnh trước khi thử lại.",
+    "The selected cover is not ready yet. Wait for image processing or recover the image before trying again.",
+    "Wybrane zdjęcie główne nie jest jeszcze gotowe. Poczekaj na przetworzenie lub odzyskaj zdjęcie przed ponowną próbą.",
+    "Das ausgewählte Titelbild ist noch nicht bereit. Warten Sie auf die Bildverarbeitung oder stellen Sie das Bild vor einem neuen Versuch wieder her.",
+    "Ảnh bìa đã chọn chưa sẵn sàng. Hãy chờ xử lý hoặc khôi phục ảnh trước khi thử lại.",
   ),
   coverUnsupported: t(
     "This cover address cannot be used for generation. Upload the cover through Bazoria and save it before trying again.",

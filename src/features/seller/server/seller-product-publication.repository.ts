@@ -5,7 +5,7 @@ export type SellerProductPublicationProduct = {
   categoryId: string | null;
   productStatus: "draft" | "published" | "archived";
   coverImageUrl: string | null;
-  imagePublicationMode: "imported" | "direct";
+  imagePublicationMode: "durable" | "direct";
 };
 
 export interface SellerProductPublicationRepository {

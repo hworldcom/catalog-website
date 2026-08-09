@@ -57,10 +57,10 @@ const S = {
     "Sản phẩm và hình ảnh hiện đã được công khai.",
   ),
   introduction: t(
-    "Publishing creates stable public copies of the approved imported images.",
-    "Publikowanie tworzy trwałe publiczne kopie zatwierdzonych importowanych zdjęć.",
-    "Beim Veröffentlichen werden dauerhafte öffentliche Kopien der genehmigten importierten Bilder erstellt.",
-    "Việc xuất bản tạo các bản sao công khai ổn định của hình ảnh nhập đã được phê duyệt.",
+    "Publishing creates stable public copies of the selected product pictures.",
+    "Publikowanie tworzy trwałe publiczne kopie wybranych zdjęć produktu.",
+    "Beim Veröffentlichen werden dauerhafte öffentliche Kopien der ausgewählten Produktbilder erstellt.",
+    "Việc xuất bản tạo các bản sao công khai ổn định của hình ảnh sản phẩm đã chọn.",
   ),
   cleanupGuidance: t(
     "Temporary public-image files must be cleaned up before publication can be retried.",

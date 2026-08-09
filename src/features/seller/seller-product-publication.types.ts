@@ -1,6 +1,6 @@
 import type { ProductPublicationFailureReasonCode } from "./server/product-publication.types";
 
-export type SellerProductImagePublicationMode = "imported" | "direct";
+export type SellerProductImagePublicationMode = "durable" | "direct";
 
 export type SellerProductPublicationStatus =
   | "not_started"

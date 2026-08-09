@@ -105,7 +105,7 @@ export class SellerProductPublicationService {
     }
 
     const run = await this.publications.get(productDraftId);
-    if (!run) return importedNotStarted(product.productDraftId, product.productStatus);
+    if (!run) return durableNotStarted(product.productDraftId, product.productStatus);
     if (run.sellerId !== sellerId) throw publicationUnavailable();
 
     const currentProduct =
@@ -130,7 +130,7 @@ export class SellerProductPublicationService {
     delegatedAction: ProductPublicationCorrelation | null = null,
   ): Promise<SellerProductPublicationSnapshot> {
     const product = await this.requireOwnedProduct(productDraftId, sellerId);
-    if (product.imagePublicationMode !== "imported") {
+    if (product.imagePublicationMode !== "durable") {
       throw publicationNotAllowed();
     }
     if (!product.categoryId) throw publicationCategoryRequired();
@@ -190,7 +190,7 @@ function authorizationError(
     return new SellerProductPublicationError(
       409,
       "product_publication_images_not_ready",
-      "The imported product images are not ready for publication.",
+      "The product images are not ready for publication.",
     );
   }
   if (result === "title_required") return publicationTitleRequired();
@@ -228,7 +228,7 @@ function directSnapshot(
   };
 }
 
-function importedNotStarted(
+function durableNotStarted(
   productDraftId: string,
   productStatus: "draft" | "published" | "archived",
 ): SellerProductPublicationSnapshot {

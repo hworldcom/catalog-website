@@ -21,7 +21,18 @@ const S = {
     "Produktentwürfe sind erst nach der Veröffentlichung sichtbar.",
     "Sản phẩm nháp chưa hiển thị cho đến khi bạn xuất bản.",
   ),
-  newProduct: t("+ New product", "+ Nowy produkt", "+ Neues Produkt", "+ Sản phẩm mới"),
+  addManually: t(
+    "Add product manually",
+    "Dodaj produkt ręcznie",
+    "Produkt manuell hinzufügen",
+    "Thêm sản phẩm thủ công",
+  ),
+  automaticGrouping: t(
+    "Upload photos for automatic grouping",
+    "Prześlij zdjęcia do automatycznego grupowania",
+    "Fotos zur automatischen Gruppierung hochladen",
+    "Tải ảnh lên để tự động nhóm",
+  ),
   loading: t("Loading…", "Ładowanie…", "Wird geladen…", "Đang tải…"),
   refreshing: t(
     "Refreshing images…",
@@ -78,12 +89,6 @@ const S = {
     "Nie ma jeszcze produktów.",
     "Noch keine Produkte.",
     "Chưa có sản phẩm.",
-  ),
-  addFirst: t(
-    "Add your first product",
-    "Dodaj pierwszy produkt",
-    "Erstes Produkt hinzufügen",
-    "Thêm sản phẩm đầu tiên",
   ),
   firstPage: t("First page", "Pierwsza strona", "Erste Seite", "Trang đầu"),
   nextPage: t("Next page", "Następna strona", "Nächste Seite", "Trang tiếp"),
@@ -155,7 +160,7 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
     setLocallyUnavailable((current) => new Set([...current, ...keys]));
   }, []);
 
-  const refreshImportedPreviews = useCallback(
+  const refreshPrivatePreviews = useCallback(
     (imageIds: string[]) => {
       for (const imageId of imageIds) {
         if (replacementPendingImageIds.current.has(imageId)) {
@@ -193,7 +198,7 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
   useEffect(() => {
     const available = (data?.products ?? []).flatMap((product) => {
       const preview = product.preview;
-      return preview.source === "imported_private" &&
+      return preview.source === "private_draft" &&
         preview.deliveryStatus === "available" &&
         preview.imageId &&
         preview.expiresAt &&
@@ -208,11 +213,11 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
       .filter((preview) => preview.expiresAt <= earliestExpiry)
       .map((preview) => preview.imageId);
     const timer = window.setTimeout(
-      () => void refreshImportedPreviews(expiringImageIds),
+      () => void refreshPrivatePreviews(expiringImageIds),
       Math.min(2_147_483_647, Math.max(0, earliestExpiry - Date.now())),
     );
     return () => window.clearTimeout(timer);
-  }, [data, locallyUnavailable, refreshImportedPreviews]);
+  }, [data, locallyUnavailable, refreshPrivatePreviews]);
 
   async function handleArchive(id: string) {
     if (!window.confirm(tr(S.archiveConfirm))) return;
@@ -246,12 +251,7 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
           <h1 className="font-display text-2xl font-semibold">{tr(S.products)}</h1>
           <p className="text-sm text-muted-foreground">{tr(S.description)}</p>
         </div>
-        <Link
-          to="/seller/products/new"
-          className="bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          {tr(S.newProduct)}
-        </Link>
+        <ProductEntryActions />
       </div>
 
       {query.isLoading ? (
@@ -291,9 +291,9 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
                         <ProductPreview
                           product={product}
                           locallyUnavailable={locallyUnavailable}
-                          onImportedError={(imageId) => void refreshImportedPreviews([imageId])}
+                          onPrivateError={(imageId) => void refreshPrivatePreviews([imageId])}
                           onPublicError={() => markUnavailable([publicPreviewKey(product.id)])}
-                          onImportedLoad={(imageId) =>
+                          onPrivateLoad={(imageId) =>
                             replacementPendingImageIds.current.delete(imageId)
                           }
                         />
@@ -345,12 +345,9 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
           ) : (
             <div className="border border-dashed border-border/60 p-8 text-center">
               <p className="text-sm text-muted-foreground">{tr(S.noProducts)}</p>
-              <Link
-                to="/seller/products/new"
-                className="mt-3 inline-flex bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                {tr(S.addFirst)}
-              </Link>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <ProductEntryActions />
+              </div>
             </div>
           )}
 
@@ -389,6 +386,25 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
   );
 }
 
+function ProductEntryActions() {
+  return (
+    <div className="flex flex-wrap gap-3">
+      <Link
+        to="/seller/products/new"
+        className="bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+      >
+        {tr(S.addManually)}
+      </Link>
+      <Link
+        to="/seller/classifier-batches/new"
+        className="border border-border bg-card px-4 py-2 text-sm font-medium hover:border-primary"
+      >
+        {tr(S.automaticGrouping)}
+      </Link>
+    </div>
+  );
+}
+
 function productArchiveErrorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null && "code" in error) {
     if (error.code === "product_not_found") return tr(S.productNotFound);
@@ -401,19 +417,19 @@ function productArchiveErrorMessage(error: unknown): string {
 function ProductPreview({
   product,
   locallyUnavailable,
-  onImportedError,
+  onPrivateError,
   onPublicError,
-  onImportedLoad,
+  onPrivateLoad,
 }: {
   product: SellerProductListItem;
   locallyUnavailable: Set<string>;
-  onImportedError(imageId: string): void;
+  onPrivateError(imageId: string): void;
   onPublicError(): void;
-  onImportedLoad(imageId: string): void;
+  onPrivateLoad(imageId: string): void;
 }) {
   const preview = product.preview;
   const localKey =
-    preview.source === "imported_private" && preview.imageId
+    preview.source === "private_draft" && preview.imageId
       ? preview.imageId
       : publicPreviewKey(product.id);
   const available =
@@ -434,13 +450,13 @@ function ProductPreview({
       alt={title}
       className="h-16 w-16 border border-border object-cover"
       onLoad={() => {
-        if (preview.source === "imported_private" && preview.imageId) {
-          onImportedLoad(preview.imageId);
+        if (preview.source === "private_draft" && preview.imageId) {
+          onPrivateLoad(preview.imageId);
         }
       }}
       onError={() => {
-        if (preview.source === "imported_private" && preview.imageId) {
-          onImportedError(preview.imageId);
+        if (preview.source === "private_draft" && preview.imageId) {
+          onPrivateError(preview.imageId);
         } else {
           onPublicError();
         }

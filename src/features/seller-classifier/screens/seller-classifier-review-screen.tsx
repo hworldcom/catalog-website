@@ -31,6 +31,7 @@ import type {
   SellerClassifierComparisonFailureCode,
   SellerClassifierComparisonSnapshot,
 } from "../seller-classifier-comparison.types";
+import { SellerClassifierManualRecovery } from "../seller-classifier-manual-recovery";
 import {
   approveMyClassifierGroup,
   createMyClassifierGroup,
@@ -531,6 +532,7 @@ type ThumbnailDependencies = {
 type PageError = {
   message: string;
   retryable: boolean;
+  source: unknown;
 };
 
 type MutationOperation = () => Promise<SellerClassifierReviewSnapshot>;
@@ -660,6 +662,7 @@ export function SellerClassifierReviewScreenView({
   const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionErrorSource, setActionErrorSource] = useState<unknown>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(() => new Set());
   const [mergeTargetGroupId, setMergeTargetGroupId] = useState("");
@@ -843,8 +846,10 @@ export function SellerClassifierReviewScreenView({
       if (initialNoticePending.current) {
         initialNoticePending.current = false;
         setActionError(tr(S.staleReview));
+        setActionErrorSource(null);
       } else {
         setActionError(null);
+        setActionErrorSource(null);
       }
     } catch (error) {
       if (requestId !== loadRequest.current) return;
@@ -918,6 +923,7 @@ export function SellerClassifierReviewScreenView({
         const next = await client.getReview(workflowId);
         acceptSnapshot(next);
         setActionError(message);
+        setActionErrorSource(null);
       } catch (error) {
         if (
           reviewErrorCode(error) === "seller_classifier_batch_not_found" ||
@@ -927,6 +933,7 @@ export function SellerClassifierReviewScreenView({
           return;
         }
         setActionError(tr(S.unavailable));
+        setActionErrorSource(error);
       }
     },
     [acceptSnapshot, client, workflowId],
@@ -1001,6 +1008,7 @@ export function SellerClassifierReviewScreenView({
       mutationLock.current = true;
       setBusyAction(label);
       setActionError(null);
+      setActionErrorSource(null);
       setActionSuccess(null);
       setConflictRetry(null);
       try {
@@ -1025,9 +1033,11 @@ export function SellerClassifierReviewScreenView({
           setPageError(reviewPageError(error));
         } else if (code === "delegated_action_request_conflict" && retryAsNewAction) {
           setActionError(tr(S.actionConflict));
+          setActionErrorSource(null);
           setConflictRetry(() => retryAsNewAction);
         } else {
           setActionError(reviewActionError(error));
+          setActionErrorSource(error);
         }
       } finally {
         mutationLock.current = false;
@@ -1043,6 +1053,7 @@ export function SellerClassifierReviewScreenView({
       mutationLock.current = true;
       setBusyAction(labels?.creatingDrafts ?? tr(S.creatingDrafts));
       setActionError(null);
+      setActionErrorSource(null);
       setActionSuccess(null);
       setConflictRetry(null);
       try {
@@ -1066,9 +1077,11 @@ export function SellerClassifierReviewScreenView({
           setPageError(reviewPageError(error));
         } else if (code === "delegated_action_request_conflict") {
           setActionError(tr(S.actionConflict));
+          setActionErrorSource(null);
           setConflictRetry(() => () => void approveAndCreateDrafts(true));
         } else {
           setActionError(reviewImportActionError(error));
+          setActionErrorSource(error);
         }
       } finally {
         mutationLock.current = false;
@@ -1096,12 +1109,13 @@ export function SellerClassifierReviewScreenView({
   }
 
   if (pageError || !snapshot || !categories) {
-    const error = pageError ?? { message: tr(S.unavailable), retryable: true };
+    const error = pageError ?? { message: tr(S.unavailable), retryable: true, source: null };
     return (
       <Alert variant="destructive">
         <AlertTitle>{tr(S.loadErrorTitle)}</AlertTitle>
         <AlertDescription className="space-y-3">
           <p>{error.message}</p>
+          <SellerClassifierManualRecovery error={error.source} />
           {error.retryable ? (
             <Button type="button" variant="outline" onClick={() => void loadPage()}>
               {tr(S.retry)}
@@ -1389,6 +1403,7 @@ export function SellerClassifierReviewScreenView({
           <AlertTitle>{tr(S.loadErrorTitle)}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>{actionError}</p>
+            <SellerClassifierManualRecovery error={actionErrorSource} />
             {conflictRetry ? (
               <Button type="button" variant="outline" onClick={conflictRetry}>
                 {tr(S.submitNewAction)}
@@ -2217,15 +2232,15 @@ function reviewPageError(error: unknown): PageError {
     case "seller_classifier_batch_not_found":
     case "seller_not_found":
     case "delegated_upload_workflow_not_found":
-      return { message: tr(S.notFound), retryable: false };
+      return { message: tr(S.notFound), retryable: false, source: error };
     case "seller_classifier_configuration_invalid":
     case "delegated_action_configuration_invalid":
     case "prototype_administrator_configuration_invalid":
-      return { message: tr(S.setupError), retryable: false };
+      return { message: tr(S.setupError), retryable: false, source: error };
     case "prototype_administrator_required":
-      return { message: tr(S.administratorRequired), retryable: false };
+      return { message: tr(S.administratorRequired), retryable: false, source: error };
     default:
-      return { message: tr(S.unavailable), retryable: true };
+      return { message: tr(S.unavailable), retryable: true, source: error };
   }
 }
 

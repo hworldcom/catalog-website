@@ -1,6 +1,11 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}));
 
 import type { SellerClassifierDraftImportSnapshot } from "../seller-classifier-import.types";
 import {
@@ -140,6 +145,17 @@ describe("SellerClassifierImportScreenView", () => {
 
     expect(await screen.findByText("This classifier workflow was not found.")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it("offers manual ingestion when the classifier import read is unavailable", async () => {
+    const client = importClient(approvedSnapshot());
+    client.getImport.mockRejectedValueOnce(codedError("seller_classifier_unavailable"));
+    renderImport(client);
+
+    expect(await screen.findByRole("link", { name: "Add product manually" })).toHaveAttribute(
+      "href",
+      "/seller/products/new",
+    );
   });
 
   it("states that a terminal import created no drafts without showing partial-success copy", async () => {

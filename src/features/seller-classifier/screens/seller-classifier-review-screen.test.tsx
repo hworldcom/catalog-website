@@ -1,6 +1,11 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}));
 
 import type {
   SellerClassifierReviewGroup,
@@ -58,6 +63,18 @@ describe("SellerClassifierReviewScreenView", () => {
           Authorization: "Bearer seller-access-token",
         },
       }),
+    );
+  });
+
+  it("offers manual ingestion when the classifier review cannot be loaded", async () => {
+    const api = reviewClient();
+    api.getReview.mockRejectedValueOnce(codedError("seller_classifier_unavailable"));
+
+    renderReview(api, thumbnailDependencies());
+
+    expect(await screen.findByRole("link", { name: "Add product manually" })).toHaveAttribute(
+      "href",
+      "/seller/products/new",
     );
   });
 

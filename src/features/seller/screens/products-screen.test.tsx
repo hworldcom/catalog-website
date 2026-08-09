@@ -42,6 +42,33 @@ describe("ProductsScreen", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
+  it("always presents manual and classifier-assisted ingestion as peer actions", async () => {
+    mocks.list.mockResolvedValue(page());
+    const populated = renderScreen();
+
+    await screen.findByText("Cotton shirt");
+    expect(screen.getByRole("link", { name: "Add product manually" })).toHaveAttribute(
+      "href",
+      "/seller/products/new",
+    );
+    expect(
+      screen.getByRole("link", { name: "Upload photos for automatic grouping" }),
+    ).toHaveAttribute("href", "/seller/classifier-batches/new");
+
+    populated.unmount();
+    mocks.list.mockResolvedValue({
+      ...page(),
+      products: [],
+    });
+    renderScreen();
+
+    expect(await screen.findByText("No products yet.")).toBeVisible();
+    expect(screen.getAllByRole("link", { name: "Add product manually" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("link", { name: "Upload photos for automatic grouping" }),
+    ).toHaveLength(2);
+  });
+
   it("uses the page-bound query key and navigates to the returned next cursor", async () => {
     mocks.list.mockResolvedValue(page({ nextCursor: "next-page" }));
     const onRequestChange = vi.fn();
@@ -160,7 +187,7 @@ function page({
         status: "draft",
         created_at: "2026-07-27T10:00:00.000Z",
         preview: {
-          source: "imported_private",
+          source: "private_draft",
           imageId: uuid(101),
           deliveryStatus: "available",
           deliveryErrorCode: null,

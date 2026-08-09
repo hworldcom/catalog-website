@@ -29,7 +29,7 @@ describe("DelegatedProductPublicationService", () => {
       product: {
         title: "Cotton shirt",
         categoryId,
-        imagePublicationMode: "imported",
+        imagePublicationMode: "durable",
         editable: true,
       },
       gallery: { status: "available", images: [] },

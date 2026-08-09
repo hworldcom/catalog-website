@@ -139,7 +139,7 @@ export class SellerProductListService {
         response.entries,
       );
       for (const [productId, result] of deliveryByProduct) {
-        previews.set(productId, importedPrivatePreview(result));
+        previews.set(productId, privateDraftPreview(result));
       }
 
       return {
@@ -157,7 +157,7 @@ export class SellerProductListService {
           const selectedImageId = privateCandidateByProduct.get(product.id);
           previews.set(
             product.id,
-            selectedImageId ? importedPrivateUnavailable(selectedImageId) : unavailablePreview(),
+            selectedImageId ? privateDraftUnavailable(selectedImageId) : unavailablePreview(),
           );
         }
       }
@@ -265,9 +265,9 @@ function publicCoverPreview(url: string): SellerProductPreview {
   };
 }
 
-function importedPrivatePreview(result: ProductDraftImageDeliveryResult): SellerProductPreview {
+function privateDraftPreview(result: ProductDraftImageDeliveryResult): SellerProductPreview {
   return {
-    source: "imported_private",
+    source: "private_draft",
     imageId: result.imageId,
     deliveryStatus: result.deliveryStatus,
     deliveryErrorCode: result.deliveryErrorCode,
@@ -276,9 +276,9 @@ function importedPrivatePreview(result: ProductDraftImageDeliveryResult): Seller
   };
 }
 
-function importedPrivateUnavailable(imageId: string): SellerProductPreview {
+function privateDraftUnavailable(imageId: string): SellerProductPreview {
   return {
-    source: "imported_private",
+    source: "private_draft",
     imageId,
     deliveryStatus: "unavailable",
     deliveryErrorCode: null,

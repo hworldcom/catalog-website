@@ -279,7 +279,7 @@ export class DelegatedProductPublicationService {
         stock: product.stock,
         trending: product.trending,
         coverImageId: product.cover_image_id,
-        imagePublicationMode: "imported",
+        imagePublicationMode: "durable",
         editable: product.status === "draft",
       },
       gallery: await this.gallery.get(product),

@@ -14,6 +14,7 @@ import {
   startMyClassifierProcessing,
 } from "../seller-classifier-batch.functions";
 import type { SellerClassifierProcessingSnapshot } from "../seller-classifier-workflow.types";
+import { SellerClassifierManualRecovery } from "../seller-classifier-manual-recovery";
 
 const S = {
   title: t(
@@ -100,7 +101,7 @@ export function ClassifierProcessingScreenView({
   queryScope: string;
   onReadyForReview?(): void;
 }) {
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<unknown>(null);
   const [retrying, setRetrying] = useState(false);
   const query = useQuery({
     queryKey: [queryScope, "classifier-processing", workflowId],
@@ -125,7 +126,7 @@ export function ClassifierProcessingScreenView({
       await client.startProcessing(workflowId);
       await query.refetch();
     } catch (error) {
-      setActionError(errorMessage(error));
+      setActionError(error);
     } finally {
       setRetrying(false);
     }
@@ -136,7 +137,10 @@ export function ClassifierProcessingScreenView({
     return (
       <Alert variant="destructive">
         <AlertTitle>{tr(S.unavailable)}</AlertTitle>
-        <AlertDescription>{errorMessage(query.error)}</AlertDescription>
+        <AlertDescription className="space-y-3">
+          <p>{errorMessage(query.error)}</p>
+          <SellerClassifierManualRecovery error={query.error} />
+        </AlertDescription>
       </Alert>
     );
   }
@@ -161,7 +165,10 @@ export function ClassifierProcessingScreenView({
           {actionError ? (
             <Alert variant="destructive">
               <AlertTitle>{tr(S.unavailable)}</AlertTitle>
-              <AlertDescription>{actionError}</AlertDescription>
+              <AlertDescription className="space-y-3">
+                <p>{errorMessage(actionError)}</p>
+                <SellerClassifierManualRecovery error={actionError} />
+              </AlertDescription>
             </Alert>
           ) : null}
           <div className="space-y-2">
@@ -234,6 +241,7 @@ export function ClassifierProcessingScreenView({
 }
 
 function errorMessage(error: unknown): string {
+  if (typeof error === "string" && error.trim()) return error;
   return error instanceof Error && error.message.trim()
     ? error.message
     : "Classifier processing is temporarily unavailable.";

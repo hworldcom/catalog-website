@@ -100,7 +100,7 @@ describe("SellerProductDraftReadService", () => {
     ).resolves.toEqual({
       product: {
         ...product,
-        imagePublicationMode: "imported",
+        imagePublicationMode: "durable",
         imageSourceMode: "classifier_import",
       },
       gallery: {
@@ -138,6 +138,46 @@ describe("SellerProductDraftReadService", () => {
     });
     expect(JSON.stringify(log.mock.calls)).not.toContain("private-malformed-value");
     log.mockRestore();
+  });
+
+  it("accepts missing classifier membership for manual products but rejects claimed classifier provenance", async () => {
+    const manualRepository = memoryRepository();
+    const manualGallery = vi.fn(async () => ({
+      status: "available" as const,
+      errorCode: null,
+      galleryRevision: 0,
+      images: [],
+    }));
+
+    await expect(
+      new SellerProductDraftReadService(manualRepository).get({
+        routeProductDraftId: productDraftId,
+        userId,
+        loadGallery: manualGallery,
+      }),
+    ).resolves.toMatchObject({
+      product: {
+        imagePublicationMode: "direct",
+        imageSourceMode: "seller_upload",
+      },
+    });
+
+    const brokenImportedRepository = memoryRepository({
+      findOwnedProduct: vi.fn(async () =>
+        productRow({
+          classifier_group_id: uuid(10),
+          classifier_organization_id: uuid(11),
+        }),
+      ),
+    });
+
+    await expect(
+      new SellerProductDraftReadService(brokenImportedRepository).get({
+        routeProductDraftId: productDraftId,
+        userId,
+        loadGallery: manualGallery,
+      }),
+    ).rejects.toThrow("temporarily unavailable");
   });
 });
 

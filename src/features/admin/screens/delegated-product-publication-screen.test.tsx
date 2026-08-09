@@ -307,7 +307,7 @@ function draft(productOverrides: Partial<DelegatedProductDraftSnapshot["product"
       stock: "in_stock" as const,
       trending: false,
       coverImageId: uuid(7),
-      imagePublicationMode: "imported" as const,
+      imagePublicationMode: "durable" as const,
       editable: true,
       ...productOverrides,
     },

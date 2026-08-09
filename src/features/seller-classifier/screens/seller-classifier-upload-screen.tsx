@@ -34,6 +34,7 @@ import type {
   SellerClassifierUploadRegistration,
   SellerClassifierUploadSnapshot,
 } from "../seller-classifier-workflow.types";
+import { SellerClassifierManualRecovery } from "../seller-classifier-manual-recovery";
 
 const S = {
   title: t(
@@ -175,7 +176,7 @@ export function ClassifierUploadScreenView({
   const [directUploads, setDirectUploads] = useState<SellerClassifierDirectUpload[] | null>(null);
   const [retryFiles, setRetryFiles] = useState<Map<string, File>>(new Map());
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const queuedContinuationAttempted = useRef(false);
   const queryKey = [queryScope, "classifier-uploads", workflowId] as const;
 
@@ -211,7 +212,7 @@ export function ClassifierUploadScreenView({
     client
       .startProcessing(workflowId)
       .then(() => onOpenProcessing())
-      .catch((continuationError: unknown) => setError(errorMessage(continuationError)))
+      .catch((continuationError: unknown) => setError(continuationError))
       .finally(() => setBusy(false));
   }, [client, onOpenProcessing, snapshot?.status, workflowId]);
 
@@ -256,7 +257,7 @@ export function ClassifierUploadScreenView({
       setDirectUploads(completed);
       await finalizeAndContinue();
     } catch (uploadError) {
-      setError(errorMessage(uploadError));
+      setError(uploadError);
       await uploadQuery.refetch();
     } finally {
       setBusy(false);
@@ -322,7 +323,7 @@ export function ClassifierUploadScreenView({
       setDirectUploads(completed);
       await finalizeAndContinue();
     } catch (retryError) {
-      setError(errorMessage(retryError));
+      setError(retryError);
       await uploadQuery.refetch();
     } finally {
       setBusy(false);
@@ -336,7 +337,7 @@ export function ClassifierUploadScreenView({
       await client.startProcessing(workflowId);
       onOpenProcessing();
     } catch (processingError) {
-      setError(errorMessage(processingError));
+      setError(processingError);
     } finally {
       setBusy(false);
     }
@@ -346,7 +347,7 @@ export function ClassifierUploadScreenView({
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
   if (workflowQuery.isError || uploadQuery.isError || !workflow || !snapshot || !limits) {
-    return <ErrorAlert message={errorMessage(workflowQuery.error ?? uploadQuery.error)} />;
+    return <ErrorAlert error={workflowQuery.error ?? uploadQuery.error} />;
   }
 
   const retryableImages = snapshot.images.filter((image) => image.retryAllowed);
@@ -363,7 +364,7 @@ export function ClassifierUploadScreenView({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          {error ? <ErrorAlert message={error} /> : null}
+          {error ? <ErrorAlert error={error} /> : null}
 
           {snapshot.status === "created" ? (
             <div className="space-y-4">
@@ -483,16 +484,20 @@ function mergeDisplayRows(
   }));
 }
 
-function ErrorAlert({ message }: { message: string }) {
+function ErrorAlert({ error }: { error: unknown }) {
   return (
     <Alert variant="destructive">
       <AlertTitle>{tr(S.failed)}</AlertTitle>
-      <AlertDescription>{message}</AlertDescription>
+      <AlertDescription className="space-y-3">
+        <p>{errorMessage(error)}</p>
+        <SellerClassifierManualRecovery error={error} />
+      </AlertDescription>
     </Alert>
   );
 }
 
 function errorMessage(error: unknown): string {
+  if (typeof error === "string" && error.trim()) return error;
   return error instanceof Error && error.message.trim()
     ? error.message
     : "Classifier upload is temporarily unavailable.";
