@@ -4,6 +4,10 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import type { Database } from "@/lib/supabase/types";
+import {
+  hasProductAudienceValidationIssue,
+  productAudienceInvalid,
+} from "@/features/product-audience/product-audience.types";
 
 import {
   SellerProductPublicationError,
@@ -19,14 +23,16 @@ export const publishMyProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(parsePublicationInput)
   .handler(async ({ data, context }) =>
-    withPublicationService(context, (service, sellerId) => service.publish(sellerId, data)),
+    withPublicationService(context, data.id, (service, sellerId) =>
+      service.publish(sellerId, data),
+    ),
   );
 
 export const getMyProductPublication = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator(parseProductIdentifier)
   .handler(async ({ data, context }) =>
-    withPublicationService(context, (service, sellerId) =>
+    withPublicationService(context, data.productDraftId, (service, sellerId) =>
       service.get(data.productDraftId, sellerId),
     ),
   );
@@ -35,13 +41,16 @@ export const retryMyProductPublication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(parseProductIdentifier)
   .handler(async ({ data, context }) =>
-    withPublicationService(context, (service, sellerId) =>
+    withPublicationService(context, data.productDraftId, (service, sellerId) =>
       service.retry(data.productDraftId, sellerId),
     ),
   );
 
 function parsePublicationInput(input: unknown) {
   const parsed = sellerProductPublicationSchema.safeParse(input);
+  if (!parsed.success && hasProductAudienceValidationIssue(parsed.error)) {
+    throw productAudienceInvalid();
+  }
   if (!parsed.success) throw invalidPublication();
   return parsed.data;
 }
@@ -54,6 +63,7 @@ function parseProductIdentifier(input: unknown) {
 
 async function withPublicationService(
   context: unknown,
+  productDraftId: string,
   operation: (
     service: SellerProductPublicationService,
     sellerId: string,
@@ -65,6 +75,16 @@ async function withPublicationService(
   };
   const sellerId = await getCurrentSellerId({ supabase, userId });
   if (!sellerId) {
+    throw new SellerProductPublicationError(404, "product_not_found", "The product was not found.");
+  }
+  const ownedProduct = await supabase
+    .from("products")
+    .select("id")
+    .eq("id", productDraftId)
+    .eq("seller_id", sellerId)
+    .maybeSingle();
+  if (ownedProduct.error) throw new Error(ownedProduct.error.message);
+  if (!ownedProduct.data) {
     throw new SellerProductPublicationError(404, "product_not_found", "The product was not found.");
   }
 

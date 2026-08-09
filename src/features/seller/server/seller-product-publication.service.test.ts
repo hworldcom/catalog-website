@@ -78,6 +78,21 @@ describe("SellerProductPublicationService", () => {
     });
   });
 
+  it("requires at least one audience before publication", async () => {
+    const service = new SellerProductPublicationService(
+      productRepository({ imagePublicationMode: "durable" }),
+      publicationService(),
+      vi.fn(),
+    );
+
+    await expect(
+      service.publish(sellerId, { ...productInput(), audiences: [] }),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: "product_publication_audience_required",
+    });
+  });
+
   it.each([
     ["title_required", 409, "product_publication_title_required"],
     ["title_invalid", 400, "product_publication_title_invalid"],
@@ -262,6 +277,7 @@ function publicationService() {
 function productInput() {
   return {
     id: productDraftId,
+    audiences: ["women" as const],
     category_id: uuid(3),
     currency: "EUR",
     stock: "in_stock" as const,

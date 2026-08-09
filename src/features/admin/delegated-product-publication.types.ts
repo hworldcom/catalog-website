@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import {
+  hasProductAudienceValidationIssue,
+  productAudienceInvalid,
+  productAudienceSetSchema,
+  type ProductAudience,
+} from "@/features/product-audience/product-audience.types";
+import {
   normalizeProductDraftDescriptionPatch,
   type ProductDraftDescriptionPatch,
 } from "@/features/product-draft-descriptions/product-draft-descriptions.types";
@@ -20,6 +26,7 @@ const stockSchema = z.enum(["in_stock", "low_stock", "out_of_stock", "made_to_or
 
 export const delegatedProductFieldsSchema = z
   .object({
+    audiences: productAudienceSetSchema,
     title: z.string(),
     categoryId: uuidSchema.nullable(),
     minimumOrderQuantity: z.number().int().min(0).nullable(),
@@ -91,6 +98,7 @@ export type DelegatedProductDraftSnapshot = {
     classifierGroupId: string;
   };
   product: {
+    audiences: ProductAudience[];
     status: "draft" | "published" | "archived";
     title: string;
     titleSource: ProductDraftTitleSource;
@@ -194,5 +202,6 @@ export function delegatedProductDraftUnavailable(): DelegatedProductDraftError {
 function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
+  if (hasProductAudienceValidationIssue(result.error)) throw productAudienceInvalid();
   throw delegatedProductDraftInvalid();
 }

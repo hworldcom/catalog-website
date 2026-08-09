@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  productAudienceInvalid,
+  productAudienceUnavailable,
+} from "@/features/product-audience/product-audience.types";
 import type { Database } from "@/lib/supabase/types";
 
 import type {
@@ -44,9 +48,13 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       productFields,
     );
     if (result.result === "not_found") return result;
+    if (result.result === "product_audience_product_not_found") return result;
     if (result.result === "not_editable") return result;
     if (result.result === "title_required" || result.result === "title_invalid") return result;
     if (
+      result.result === "product_audience_invalid" ||
+      result.result === "product_audience_moderation_required" ||
+      result.result === "product_publication_audience_required" ||
       result.result === "product_publication_category_required" ||
       result.result === "product_category_not_supported" ||
       result.result === "product_code_company_unconfigured" ||
@@ -74,7 +82,8 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     titleWrite: HumanProductDraftTitleWrite | null,
     productFields: SellerProductFields,
   ): Promise<ProductDraftTitleCreateResult> {
-    const response = await this.database.rpc("create_seller_product_with_description", {
+    const response = await this.database.rpc("save_seller_product_with_description", {
+      p_product_draft_id: null,
       p_seller_id: sellerId,
       p_title_patch_present: titleWrite !== null,
       p_title: titleWrite?.title ?? null,
@@ -90,9 +99,12 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       p_cover_image_url: productFields.cover_image_url ?? null,
       p_trending: productFields.trending ?? false,
       p_status: productFields.status ?? "draft",
+      p_audiences: productFields.audiences ?? null,
     });
     if (response.error) {
       if (isTitleInvalid(response.error)) return { result: "invalid" };
+      if (isAudienceInvalid(response.error)) throw productAudienceInvalid();
+      if (productFields.audiences !== undefined) throw productAudienceUnavailable();
       throwDatabaseError(response.error);
     }
 
@@ -100,7 +112,10 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     if (!row) throw new Error("Seller ProductDraft creation returned no result.");
     if (
       row.result === "title_required" ||
+      row.result === "product_audience_product_not_found" ||
       row.result === "title_invalid" ||
+      row.result === "product_audience_invalid" ||
+      row.result === "product_publication_audience_required" ||
       row.result === "product_category_required" ||
       row.result === "product_publication_category_required" ||
       row.result === "product_category_not_supported" ||
@@ -137,6 +152,7 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     | ({ result: "created" } & ProductDraftTitleRecord)
     | ({ result: "updated" } & ProductDraftTitleRecord)
     | { result: "not_found" }
+    | { result: "product_audience_product_not_found" }
     | {
         result: "not_editable";
         productDraftId: string;
@@ -147,6 +163,9 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     | { result: "title_invalid" }
     | {
         result:
+          | "product_audience_invalid"
+          | "product_audience_moderation_required"
+          | "product_publication_audience_required"
           | "product_publication_category_required"
           | "product_category_not_supported"
           | "product_code_company_unconfigured"
@@ -172,9 +191,12 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       p_cover_image_url: productFields.cover_image_url ?? null,
       p_trending: productFields.trending ?? false,
       p_status: productFields.status ?? "draft",
+      p_audiences: productFields.audiences ?? null,
     });
     if (response.error) {
       if (isTitleInvalid(response.error)) return { result: "invalid" };
+      if (isAudienceInvalid(response.error)) throw productAudienceInvalid();
+      if (productFields.audiences !== undefined) throw productAudienceUnavailable();
       throwDatabaseError(response.error);
     }
 
@@ -182,9 +204,13 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     if (!result) throw new Error("Seller ProductDraft save returned no result.");
     if (
       result.result === "not_found" ||
+      result.result === "product_audience_product_not_found" ||
       result.result === "facts_missing" ||
       result.result === "title_required" ||
       result.result === "title_invalid" ||
+      result.result === "product_audience_invalid" ||
+      result.result === "product_audience_moderation_required" ||
+      result.result === "product_publication_audience_required" ||
       result.result === "product_publication_category_required" ||
       result.result === "product_category_not_supported" ||
       result.result === "product_code_company_unconfigured" ||
@@ -292,6 +318,10 @@ function isTitleInvalid(error: { message: string }): boolean {
 
 function isTitleNotEditable(error: { message: string }): boolean {
   return error.message.includes("product_draft_title_not_editable");
+}
+
+function isAudienceInvalid(error: { message: string }): boolean {
+  return error.message.includes("product_audience_invalid");
 }
 
 function throwDatabaseError(error: { message: string }): never {

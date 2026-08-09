@@ -75,21 +75,32 @@ export class SupabaseDelegatedProductPublicationRepository implements DelegatedP
     if (outcomes.data?.length !== 1) return null;
     const outcome = outcomes.data[0]!;
 
-    const [productResponse, sellerResponse, membershipsResponse] = await Promise.all([
-      this.database.from("products").select("*").eq("id", productDraftId).maybeSingle(),
-      this.database
-        .from("sellers")
-        .select("id,name,slug,published")
-        .eq("id", workflow.sellerId)
-        .maybeSingle(),
-      this.database
-        .from("product_draft_source_memberships")
-        .select(
-          "classifier_organization_id,classifier_batch_id,classifier_group_id,product_draft_id",
-        )
-        .eq("product_draft_id", productDraftId),
-    ]);
-    for (const response of [productResponse, sellerResponse, membershipsResponse]) {
+    const [productResponse, sellerResponse, membershipsResponse, audiencesResponse] =
+      await Promise.all([
+        this.database.from("products").select("*").eq("id", productDraftId).maybeSingle(),
+        this.database
+          .from("sellers")
+          .select("id,name,slug,published")
+          .eq("id", workflow.sellerId)
+          .maybeSingle(),
+        this.database
+          .from("product_draft_source_memberships")
+          .select(
+            "classifier_organization_id,classifier_batch_id,classifier_group_id,product_draft_id",
+          )
+          .eq("product_draft_id", productDraftId),
+        this.database
+          .from("product_audience_memberships")
+          .select("audience")
+          .eq("product_id", productDraftId)
+          .order("audience"),
+      ]);
+    for (const response of [
+      productResponse,
+      sellerResponse,
+      membershipsResponse,
+      audiencesResponse,
+    ]) {
       if (response.error) throw databaseError(response.error);
     }
     if (
@@ -121,6 +132,7 @@ export class SupabaseDelegatedProductPublicationRepository implements DelegatedP
         classifierGroupId: outcome.classifier_group_id,
       },
       product: productResponse.data,
+      audiences: (audiencesResponse.data ?? []).map((membership) => membership.audience),
     };
   }
 

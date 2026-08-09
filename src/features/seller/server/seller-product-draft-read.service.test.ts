@@ -80,6 +80,10 @@ describe("SellerProductDraftReadService", () => {
           usesDurableImagePublication: true,
         };
       }),
+      getAudiences: vi.fn(async () => {
+        calls.push("audiences");
+        return ["women", "men"];
+      }),
     };
     const loadGallery = vi.fn(async () => {
       calls.push("gallery");
@@ -100,6 +104,7 @@ describe("SellerProductDraftReadService", () => {
     ).resolves.toEqual({
       product: {
         ...product,
+        audiences: ["women", "men"],
         imagePublicationMode: "durable",
         imageSourceMode: "classifier_import",
       },
@@ -111,7 +116,7 @@ describe("SellerProductDraftReadService", () => {
       },
     });
 
-    expect(calls).toEqual(["seller", "product", "provenance", "gallery"]);
+    expect(calls).toEqual(["seller", "product", "provenance", "audiences", "gallery"]);
     expect(repository.findOwnedProduct).toHaveBeenCalledWith(productDraftId, sellerId);
     expect(loadGallery).toHaveBeenCalledWith(product);
   });
@@ -191,6 +196,7 @@ function memoryRepository(
       imageSourceMode: "seller_upload" as const,
       usesDurableImagePublication: false,
     })),
+    getAudiences: vi.fn(async () => []),
     ...overrides,
   };
 }

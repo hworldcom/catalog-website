@@ -25,6 +25,7 @@ import {
 } from "../delegated-product-publication.types";
 import type { ProductDraftDescriptionService } from "@/features/product-draft-descriptions/product-draft-descriptions.service";
 import type { ProductDraftFactsService } from "@/features/product-draft-facts/product-draft-facts.service";
+import { parseStoredProductAudiences } from "@/features/product-audience/product-audience.types";
 import type { ProductDraftTitleService } from "@/features/product-draft-title/product-draft-title.service";
 import {
   normalizeProductDraftTitle,
@@ -154,6 +155,7 @@ export class DelegatedProductPublicationService {
             resolved.seller.id,
             {
               id: input.productDraftId,
+              audiences: fields.audiences,
               title: fields.title,
               category_id: fields.categoryId,
               moq: fields.minimumOrderQuantity,
@@ -268,6 +270,7 @@ export class DelegatedProductPublicationService {
       },
       source: resolved.source,
       product: {
+        audiences: parseStoredProductAudiences(resolved.audiences),
         status: product.status,
         title: product.title,
         titleSource: parseStoredProductDraftTitleSource(product.title_source),
@@ -309,6 +312,7 @@ function normalizeFields(input: DelegatedProductFields): DelegatedProductFields 
 
 function sellerFields(fields: DelegatedProductFields) {
   return {
+    audiences: fields.audiences,
     category_id: fields.categoryId,
     moq: fields.minimumOrderQuantity,
     pack_size: fields.packSize,
@@ -322,6 +326,7 @@ function sellerFields(fields: DelegatedProductFields) {
 
 function publicationPayload(fields: DelegatedProductFields): DelegatedActionPayload {
   return {
+    audiences: fields.audiences,
     categoryId: fields.categoryId,
     currency: fields.currency,
     minimumOrderQuantity: fields.minimumOrderQuantity,
@@ -346,6 +351,7 @@ const terminalPublicationCodes = new Set<SellerProductPublicationErrorCode>([
   "product_publication_title_required",
   "product_publication_title_invalid",
   "product_publication_description_invalid",
+  "product_publication_audience_required",
   "product_publication_category_required",
   "product_publication_image_required",
   "product_publication_images_not_ready",
@@ -375,6 +381,7 @@ function restorePublicationError(errorCode: string | null): Error {
     product_publication_title_required: 409,
     product_publication_title_invalid: 400,
     product_publication_description_invalid: 400,
+    product_publication_audience_required: 409,
     product_publication_category_required: 409,
     product_publication_image_required: 409,
     product_publication_images_not_ready: 409,

@@ -44,6 +44,7 @@ vi.mock("@/features/seller/categories.functions", () => ({
 }));
 
 import { ProductEditor } from "./product-editor";
+import type { ProductAudience } from "@/features/product-audience/product-audience.types";
 
 const productId = "00000000-0000-4000-8000-000000000001";
 const productCategoryId = "00000000-0000-4000-8000-000000000002";
@@ -54,6 +55,7 @@ type InitialProduct = {
   product_code: string | null;
   title_source: "human" | "model" | null;
   description: string | null;
+  audiences: ProductAudience[];
   category_id: string | null;
   moq: number | null;
   pack_size: string | null;
@@ -73,6 +75,7 @@ const initial: InitialProduct = {
   product_code: "SEL-F-TSH-ABCDEFGH",
   title_source: "model" as const,
   description: null,
+  audiences: ["women"],
   category_id: null,
   moq: null,
   pack_size: null,
@@ -135,6 +138,18 @@ describe("ProductEditor title and description behavior", () => {
 
     await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
     expect(mocks.save.mock.calls[0]?.[0].data).not.toHaveProperty("title");
+  });
+
+  it("saves the complete selected audience set in canonical order", async () => {
+    renderEditor(initial);
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Men" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
+    expect(mocks.save.mock.calls[0]?.[0].data).toMatchObject({
+      audiences: ["women", "men"],
+    });
   });
 
   it("includes a changed or explicitly cleared title", async () => {

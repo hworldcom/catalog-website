@@ -27,6 +27,7 @@ describe("DelegatedProductPublicationService", () => {
         classifierGroupId: uuid(6),
       },
       product: {
+        audiences: ["women"],
         title: "Cotton shirt",
         categoryId,
         imagePublicationMode: "durable",
@@ -46,6 +47,7 @@ describe("DelegatedProductPublicationService", () => {
       workflowId,
       productDraftId,
       title: "  Cotton \n shirt ",
+      audiences: ["women"],
       categoryId,
       minimumOrderQuantity: 10,
       packSize: " box ",
@@ -60,6 +62,7 @@ describe("DelegatedProductPublicationService", () => {
       sellerId,
       title: "Cotton shirt",
       productFields: {
+        audiences: ["women"],
         category_id: categoryId,
         moq: 10,
         pack_size: "box",
@@ -95,6 +98,7 @@ describe("DelegatedProductPublicationService", () => {
         productDraftId,
         requestId,
         title: " Cotton shirt ",
+        audiences: ["women"],
         categoryId,
         minimumOrderQuantity: null,
         packSize: null,
@@ -121,6 +125,7 @@ describe("DelegatedProductPublicationService", () => {
       sellerId,
       expect.objectContaining({
         id: productDraftId,
+        audiences: ["women"],
         title: "Cotton shirt",
         category_id: categoryId,
       }),
@@ -151,6 +156,7 @@ describe("DelegatedProductPublicationService", () => {
           productDraftId,
           requestId,
           title: "Cotton shirt",
+          audiences: ["women"],
           categoryId,
           minimumOrderQuantity: null,
           packSize: null,
@@ -251,6 +257,7 @@ function record(): DelegatedProductDraftRecord {
       classifierBatchId: uuid(5),
       classifierGroupId: uuid(6),
     },
+    audiences: ["women"],
     product: {
       id: productDraftId,
       seller_id: sellerId,

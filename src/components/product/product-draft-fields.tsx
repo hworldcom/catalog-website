@@ -1,9 +1,14 @@
 import type { ReactNode } from "react";
 
+import {
+  PRODUCT_AUDIENCES,
+  type ProductAudience,
+} from "@/features/product-audience/product-audience.types";
 import { PRODUCT_DRAFT_TITLE_MAX_LENGTH } from "@/features/product-draft-title/product-draft-title.types";
 import { t, tr } from "@/lib/i18n";
 
 export type ProductDraftFieldsValue = {
+  audiences: ProductAudience[];
   title: string;
   categoryId: string;
   minimumOrderQuantity: string;
@@ -25,6 +30,16 @@ const S = {
   human: t("Human", "Człowiek", "Mensch", "Con người"),
   model: t("Model suggestion", "Sugestia modelu", "Modellvorschlag", "Đề xuất mô hình"),
   category: t("Category", "Kategoria", "Kategorie", "Danh mục"),
+  audience: t("Audience", "Odbiorcy", "Zielgruppe", "Đối tượng"),
+  audienceHelp: t(
+    "Select every audience this product is intended for.",
+    "Wybierz wszystkie grupy odbiorców, dla których przeznaczony jest produkt.",
+    "Wählen Sie alle Zielgruppen aus, für die dieses Produkt bestimmt ist.",
+    "Chọn tất cả đối tượng mà sản phẩm này hướng đến.",
+  ),
+  women: t("Women", "Kobiety", "Damen", "Nữ"),
+  men: t("Men", "Mężczyźni", "Herren", "Nam"),
+  kids: t("Kids", "Dzieci", "Kinder", "Trẻ em"),
   noCategory: t("No category", "Brak kategorii", "Keine Kategorie", "Không có danh mục"),
   stock: t("Stock", "Stan magazynowy", "Bestand", "Tồn kho"),
   inStock: t("In stock", "W magazynie", "Auf Lager", "Còn hàng"),
@@ -60,6 +75,7 @@ export function ProductDraftFields({
   titleSource,
   disabled = false,
   titleDisabled = disabled,
+  audienceDisabled = disabled,
   onChange,
 }: {
   value: ProductDraftFieldsValue;
@@ -67,8 +83,10 @@ export function ProductDraftFields({
   titleSource: "human" | "model" | null;
   disabled?: boolean;
   titleDisabled?: boolean;
+  audienceDisabled?: boolean;
   onChange(value: ProductDraftFieldsValue): void;
 }) {
+  const audiences = value.audiences ?? [];
   const inputClassName =
     "border border-border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70";
 
@@ -110,6 +128,34 @@ export function ProductDraftFields({
           ))}
         </select>
       </Field>
+
+      <fieldset className="flex flex-col gap-2 md:col-span-2">
+        <legend className="text-xs uppercase tracking-wide text-muted-foreground">
+          {tr(S.audience)}
+        </legend>
+        <span className="text-xs text-muted-foreground">{tr(S.audienceHelp)}</span>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {PRODUCT_AUDIENCES.map((audience) => (
+            <label key={audience} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={audiences.includes(audience)}
+                onChange={(event) =>
+                  change({
+                    audiences: event.target.checked
+                      ? PRODUCT_AUDIENCES.filter(
+                          (candidate) => candidate === audience || audiences.includes(candidate),
+                        )
+                      : audiences.filter((candidate) => candidate !== audience),
+                  })
+                }
+                disabled={audienceDisabled}
+              />
+              {tr(S[audience])}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <Field label={tr(S.stock)}>
         <select

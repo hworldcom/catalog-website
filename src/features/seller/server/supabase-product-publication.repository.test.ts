@@ -107,6 +107,7 @@ function authorization() {
   return {
     productDraftId: uuid(1),
     sellerId: uuid(2),
+    audiences: ["women" as const],
     titlePatchPresent: false,
     title: null,
     descriptionPatchPresent: false,

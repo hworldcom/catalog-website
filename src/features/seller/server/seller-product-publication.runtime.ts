@@ -27,6 +27,7 @@ export async function createSellerProductPublicationService(): Promise<SellerPro
 
 function directProductFields(product: SellerProductPublicationInput) {
   return {
+    audiences: product.audiences,
     ...("description" in product ? { description: product.description } : {}),
     category_id: product.category_id ?? null,
     moq: product.moq ?? null,

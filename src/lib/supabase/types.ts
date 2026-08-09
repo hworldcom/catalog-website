@@ -757,6 +757,32 @@ export type Database = {
           },
         ];
       };
+      product_audience_memberships: {
+        Row: {
+          audience: string;
+          created_at: string;
+          product_id: string;
+        };
+        Insert: {
+          audience: string;
+          created_at?: string;
+          product_id: string;
+        };
+        Update: {
+          audience?: string;
+          created_at?: string;
+          product_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_audience_memberships_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       product_image_publication_cutover_changes: {
         Row: {
           cover_changed: boolean;
@@ -1896,6 +1922,7 @@ export type Database = {
       };
       save_seller_product_with_description: {
         Args: {
+          p_audiences: string[] | null;
           p_category_id: string | null;
           p_cover_image_url: string | null;
           p_cover_image_url_patch_present: boolean;
@@ -1993,6 +2020,7 @@ export type Database = {
       };
       authorize_product_publication_with_correlation: {
         Args: {
+          p_audiences: string[];
           p_category_id: string | null;
           p_cover_image_url: string | null;
           p_cover_image_url_patch_present: boolean;
@@ -2103,6 +2131,21 @@ export type Database = {
           p_seller_id: string;
         };
         Returns: string;
+      };
+      replace_product_audience_memberships: {
+        Args: {
+          p_audiences: string[];
+          p_product_id: string;
+          p_seller_id: string;
+        };
+        Returns: {
+          audiences: string[] | null;
+          result: string;
+        }[];
+      };
+      validate_product_audience_release_preflight: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
       };
       verify_product_image_publication_item: {
         Args: {

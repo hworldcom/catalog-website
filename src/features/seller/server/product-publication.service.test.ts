@@ -228,6 +228,7 @@ function authorization(): ProductPublicationAuthorizationInput {
   return {
     productDraftId: uuid(1),
     sellerId: uuid(2),
+    audiences: ["women"],
     titlePatchPresent: false,
     title: null,
     descriptionPatchPresent: false,

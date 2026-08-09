@@ -15,7 +15,7 @@ import {
   emptySellerProductSummary,
   parseSellerProductListRequest,
 } from "./seller-product-list.types";
-import { sellerProductSaveSchema } from "./seller-product-write.types";
+import { parseSellerProductSave } from "./seller-product-write.types";
 import { SellerProductPublicationError } from "./seller-product-publication.types";
 
 export const listMyProducts = createServerFn({ method: "GET" })
@@ -94,7 +94,7 @@ export const getMyProduct = createServerFn({ method: "GET" })
 
 export const saveMyProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input) => sellerProductSaveSchema.parse(input))
+  .validator(parseSellerProductSave)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as {
       supabase: import("@supabase/supabase-js").SupabaseClient;
@@ -105,8 +105,25 @@ export const saveMyProduct = createServerFn({ method: "POST" })
       ? await getCurrentSellerId({ supabase, userId })
       : await requireCurrentSellerId({ supabase, userId });
     if (!sellerId) throw new Error("Product not found");
+    if (data.id) {
+      const ownedProduct = await supabase
+        .from("products")
+        .select("id")
+        .eq("id", data.id)
+        .eq("seller_id", sellerId)
+        .maybeSingle();
+      if (ownedProduct.error) throw new Error(ownedProduct.error.message);
+      if (!ownedProduct.data) {
+        throw new ProductDraftTitleError(
+          404,
+          "product_audience_product_not_found",
+          "The product was not found.",
+        );
+      }
+    }
 
     const productFields = {
+      ...(data.audiences !== undefined ? { audiences: data.audiences } : {}),
       ...(data.description !== undefined ? { description: data.description } : {}),
       category_id: data.category_id || null,
       moq: data.moq ?? null,
@@ -147,6 +164,19 @@ export const saveMyProduct = createServerFn({ method: "POST" })
             400,
             "product_publication_title_invalid",
             "The product title must contain at most 50 characters.",
+          );
+        }
+        if (
+          error.code === "product_audience_invalid" ||
+          error.code === "product_audience_moderation_required"
+        ) {
+          throw error;
+        }
+        if (error.code === "product_publication_audience_required") {
+          throw new SellerProductPublicationError(
+            409,
+            "product_publication_audience_required",
+            "Select at least one audience before publication.",
           );
         }
         if (

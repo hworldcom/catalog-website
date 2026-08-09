@@ -57,4 +57,14 @@ export class SupabaseSellerProductDraftReadRepository implements SellerProductDr
       usesDurableImagePublication: membership.data !== null || image.data !== null,
     };
   }
+
+  async getAudiences(productDraftId: string): Promise<string[]> {
+    const response = await this.adminDatabase
+      .from("product_audience_memberships")
+      .select("audience")
+      .eq("product_id", productDraftId)
+      .order("audience");
+    if (response.error) throw new Error(response.error.message);
+    return (response.data ?? []).map((membership) => membership.audience);
+  }
 }

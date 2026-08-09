@@ -302,6 +302,12 @@ const S = {
     "Wählen Sie vor der Veröffentlichung eine Kategorie.",
     "Chọn danh mục trước khi xuất bản.",
   ),
+  audienceRequired: t(
+    "Select at least one audience before publishing.",
+    "Wybierz co najmniej jedną grupę odbiorców przed publikacją.",
+    "Wählen Sie vor der Veröffentlichung mindestens eine Zielgruppe aus.",
+    "Chọn ít nhất một đối tượng trước khi xuất bản.",
+  ),
   imagesNotReady: t(
     "One or more imported product pictures are not ready yet.",
     "Co najmniej jedno importowane zdjęcie produktu nie jest jeszcze gotowe.",
@@ -557,6 +563,7 @@ export function DelegatedProductPublicationScreenView({
     snapshot !== null &&
     normalizedForm !== null &&
     !samePayload(normalizedForm, fieldsFromSnapshot(snapshot));
+  const audienceMissing = normalizedForm?.audiences.length === 0;
   const pendingPublishPayload = delegatedProductFieldsSchema.safeParse(
     pendingPublish?.normalizedPayload,
   );
@@ -909,6 +916,10 @@ export function DelegatedProductPublicationScreenView({
               <p className="text-sm text-amber-700">{tr(S.unsavedEditors)}</p>
             ) : null}
 
+            {audienceMissing && !published ? (
+              <p className="text-sm text-amber-700">{tr(S.audienceRequired)}</p>
+            ) : null}
+
             {!published ? (
               <div className="flex justify-end">
                 <AlertDialog>
@@ -919,6 +930,7 @@ export function DelegatedProductPublicationScreenView({
                         busy ||
                         publicationActive ||
                         coordinatedEditorBusy ||
+                        audienceMissing ||
                         Boolean(pendingPublish)
                       }
                     >
@@ -951,6 +963,7 @@ export function DelegatedProductPublicationScreenView({
 
 function formFromSnapshot(snapshot: DelegatedProductDraftSnapshot): ProductDraftFieldsValue {
   return {
+    audiences: snapshot.product.audiences,
     title: snapshot.product.title,
     categoryId: snapshot.product.categoryId ?? "",
     minimumOrderQuantity:
@@ -967,6 +980,7 @@ function formFromSnapshot(snapshot: DelegatedProductDraftSnapshot): ProductDraft
 
 function fieldsFromSnapshot(snapshot: DelegatedProductDraftSnapshot): DelegatedProductFields {
   return {
+    audiences: snapshot.product.audiences,
     title: snapshot.product.title,
     categoryId: snapshot.product.categoryId,
     minimumOrderQuantity: snapshot.product.minimumOrderQuantity,
@@ -986,6 +1000,7 @@ function tryNormalizeForm(form: ProductDraftFieldsValue): {
     const minimumOrderQuantity = nullableNumber(form.minimumOrderQuantity, true);
     const price = nullableNumber(form.price, false);
     const candidate = {
+      audiences: form.audiences,
       title: normalizeProductDraftTitle(form.title),
       categoryId: form.categoryId || null,
       minimumOrderQuantity,
@@ -1050,11 +1065,13 @@ function pageErrorFrom(error: unknown): PageError {
 function actionErrorMessage(error: unknown, fallback: string): string {
   switch (errorCode(error)) {
     case "delegated_product_draft_invalid":
+    case "product_audience_invalid":
     case "product_publication_invalid":
       return tr(S.invalidFields);
     case "delegated_product_draft_not_found":
       return tr(S.notFound);
     case "delegated_product_draft_not_editable":
+    case "product_audience_moderation_required":
     case "product_publication_not_allowed":
       return tr(S.notEditable);
     case "product_publication_title_required":
@@ -1065,6 +1082,8 @@ function actionErrorMessage(error: unknown, fallback: string): string {
       return tr(S.descriptionInvalid);
     case "product_publication_category_required":
       return tr(S.categoryRequired);
+    case "product_publication_audience_required":
+      return tr(S.audienceRequired);
     case "product_publication_image_required":
     case "product_publication_images_not_ready":
       return tr(S.imagesNotReady);
@@ -1077,6 +1096,7 @@ function actionErrorMessage(error: unknown, fallback: string): string {
     case "prototype_administrator_required":
       return tr(S.administratorRequired);
     case "delegated_product_draft_unavailable":
+    case "product_audience_unavailable":
     case "product_publication_configuration_invalid":
     case "product_publication_unavailable":
       return tr(S.unavailable);

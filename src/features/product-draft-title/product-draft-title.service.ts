@@ -107,6 +107,9 @@ function snapshot(record: {
 function updateSnapshot(result: ProductDraftTitleUpdateResult): ProductDraftTitleSnapshot {
   if (result.result === "updated") return snapshot(result);
   if (result.result === "not_found") throw productDraftNotFound();
+  if (result.result === "product_audience_product_not_found") {
+    throw new ProductDraftTitleError(404, result.result, "The product was not found.");
+  }
   if (result.result === "not_editable") {
     throw new ProductDraftTitleError(
       409,
@@ -116,6 +119,27 @@ function updateSnapshot(result: ProductDraftTitleUpdateResult): ProductDraftTitl
   }
   if (result.result === "title_required") throw requiredProductDraftTitle();
   if (result.result === "title_invalid") throw invalidProductDraftTitle();
+  if (result.result === "product_audience_invalid") {
+    throw new ProductDraftTitleError(
+      400,
+      result.result,
+      "The selected product audience is invalid.",
+    );
+  }
+  if (result.result === "product_audience_moderation_required") {
+    throw new ProductDraftTitleError(
+      409,
+      result.result,
+      "Published product audiences must be changed through moderation.",
+    );
+  }
+  if (result.result === "product_publication_audience_required") {
+    throw new ProductDraftTitleError(
+      409,
+      result.result,
+      "Select at least one audience before publishing the product.",
+    );
+  }
   if (result.result === "product_publication_category_required") {
     throw new ProductDraftTitleError(
       409,
@@ -156,8 +180,25 @@ function updateSnapshot(result: ProductDraftTitleUpdateResult): ProductDraftTitl
 
 function createSnapshot(result: ProductDraftTitleCreateResult): ProductDraftTitleSnapshot {
   if (result.result === "created") return snapshot(result);
+  if (result.result === "product_audience_product_not_found") {
+    throw new ProductDraftTitleError(404, result.result, "The product was not found.");
+  }
   if (result.result === "title_required") throw requiredProductDraftTitle();
   if (result.result === "title_invalid") throw invalidProductDraftTitle();
+  if (result.result === "product_audience_invalid") {
+    throw new ProductDraftTitleError(
+      400,
+      result.result,
+      "The selected product audience is invalid.",
+    );
+  }
+  if (result.result === "product_publication_audience_required") {
+    throw new ProductDraftTitleError(
+      409,
+      result.result,
+      "Select at least one audience before publishing the product.",
+    );
+  }
   if (result.result === "product_category_required") {
     throw new ProductDraftTitleError(
       400,

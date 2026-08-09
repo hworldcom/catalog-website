@@ -29,6 +29,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
       uuid(2),
       { title: "Blue cotton shirt", titleSource: "human" },
       {
+        audiences: ["women", "men"],
         category_id: uuid(3),
         moq: 2,
         pack_size: "4",
@@ -41,7 +42,8 @@ describe("SupabaseProductDraftTitleRepository", () => {
       },
     );
 
-    expect(rpc).toHaveBeenCalledWith("create_seller_product_with_description", {
+    expect(rpc).toHaveBeenCalledWith("save_seller_product_with_description", {
+      p_product_draft_id: null,
       p_seller_id: uuid(2),
       p_title_patch_present: true,
       p_title: "Blue cotton shirt",
@@ -57,6 +59,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
       p_cover_image_url: null,
       p_trending: false,
       p_status: "draft",
+      p_audiences: ["women", "men"],
     });
     expect(result).toEqual({
       result: "created",
@@ -102,7 +105,8 @@ describe("SupabaseProductDraftTitleRepository", () => {
       productStatus: "draft",
     });
 
-    expect(rpc).toHaveBeenCalledWith("create_seller_product_with_description", {
+    expect(rpc).toHaveBeenCalledWith("save_seller_product_with_description", {
+      p_product_draft_id: null,
       p_seller_id: uuid(2),
       p_title_patch_present: false,
       p_title: null,
@@ -118,6 +122,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
       p_cover_image_url: null,
       p_trending: false,
       p_status: "draft",
+      p_audiences: null,
     });
   });
 
@@ -180,6 +185,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
         titleSource: "human",
       },
       {
+        audiences: ["kids"],
         description: "Lightweight shirt",
         category_id: uuid(3),
         moq: 2,
@@ -211,6 +217,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
       p_cover_image_url: null,
       p_trending: false,
       p_status: "draft",
+      p_audiences: ["kids"],
     });
     expect(result).toEqual({
       result: "updated",

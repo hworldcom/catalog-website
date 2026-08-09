@@ -126,6 +126,7 @@ describe("DelegatedProductPublicationScreenView", () => {
         productDraftId,
         requestId: uuid(90),
         title: "Revised cotton shirt",
+        audiences: ["women"],
         categoryId,
         minimumOrderQuantity: 10,
         packSize: "12 per box",
@@ -296,6 +297,7 @@ function draft(productOverrides: Partial<DelegatedProductDraftSnapshot["product"
       classifierGroupId: uuid(6),
     },
     product: {
+      audiences: ["women"],
       status: "draft" as const,
       title: "Cotton shirt",
       titleSource: "model" as const,
@@ -323,6 +325,7 @@ function draft(productOverrides: Partial<DelegatedProductDraftSnapshot["product"
 function fields(overrides: Partial<DelegatedProductFields> = {}): DelegatedProductFields {
   return {
     title: "Cotton shirt",
+    audiences: ["women"],
     categoryId,
     minimumOrderQuantity: 10,
     packSize: "12 per box",

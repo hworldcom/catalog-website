@@ -1,14 +1,24 @@
 import { z } from "zod";
 
 import { parseStoredProductCodeOrNull } from "@/features/product-code/product-code";
+import {
+  parseStoredProductAudiences,
+  type ProductAudience,
+} from "@/features/product-audience/product-audience.types";
 import type { Database } from "@/lib/supabase/types";
+import {
+  parseStoredProductDraftTitleSource,
+  type ProductDraftTitleSource,
+} from "@/features/product-draft-title/product-draft-title.types";
 
 import type { SellerProductDraftGallery } from "../product-draft-image-gallery.types";
 import type { SellerProductImagePublicationMode } from "../seller-product-publication.types";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 export type SellerProductImageSourceMode = "seller_upload" | "classifier_import";
-export type SellerProductDraft = Product & {
+export type SellerProductDraft = Omit<Product, "title_source"> & {
+  audiences: ProductAudience[];
+  title_source: ProductDraftTitleSource;
   imagePublicationMode: SellerProductImagePublicationMode;
   imageSourceMode: SellerProductImageSourceMode;
 };
@@ -16,6 +26,7 @@ export type SellerProductDraft = Product & {
 export interface SellerProductDraftReadRepository {
   findSellerId(userId: string): Promise<string | null>;
   findOwnedProduct(productDraftId: string, sellerId: string): Promise<Product | null>;
+  getAudiences(productDraftId: string): Promise<string[]>;
   getImageSourceState(productDraftId: string): Promise<{
     imageSourceMode: SellerProductImageSourceMode;
     usesDurableImagePublication: boolean;
@@ -55,8 +66,9 @@ export class SellerProductDraftReadService {
       throw new Error("The seller product is temporarily unavailable.");
     }
 
-    const [imageSourceState, gallery] = await Promise.all([
+    const [imageSourceState, storedAudiences, gallery] = await Promise.all([
       this.repository.getImageSourceState(product.id),
+      this.repository.getAudiences(product.id),
       input.loadGallery(product),
     ]);
     if (
@@ -69,7 +81,9 @@ export class SellerProductDraftReadService {
     return {
       product: {
         ...product,
+        audiences: parseStoredProductAudiences(storedAudiences),
         product_code: productCode,
+        title_source: parseStoredProductDraftTitleSource(product.title_source),
         imagePublicationMode: imageSourceState.usesDurableImagePublication ? "durable" : "direct",
         imageSourceMode: imageSourceState.imageSourceMode,
       },

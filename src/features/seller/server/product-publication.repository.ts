@@ -3,8 +3,10 @@ import type {
   ProductPublicationItem,
   ProductPublicationRun,
 } from "./product-publication.types";
+import type { ProductAudience } from "@/features/product-audience/product-audience.types";
 
 export type ProductPublicationAuthorizationInput = {
+  audiences: ProductAudience[];
   productDraftId: string;
   sellerId: string;
   titlePatchPresent: boolean;
@@ -42,6 +44,7 @@ export type ProductPublicationAuthorizationResult =
         | "title_required"
         | "title_invalid"
         | "description_invalid"
+        | "audience_required"
         | "category_required"
         | "product_code_company_unconfigured"
         | "product_code_category_unconfigured"
@@ -58,6 +61,7 @@ export type ProductPublicationRetryResult =
   | "title_required"
   | "title_invalid"
   | "description_invalid"
+  | "audience_required"
   | "category_required"
   | "in_progress";
 

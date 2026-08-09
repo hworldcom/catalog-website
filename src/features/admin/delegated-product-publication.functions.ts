@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { ProductDraftDescriptionError } from "@/features/product-draft-descriptions/product-draft-descriptions.types";
 import { ProductDraftFactsError } from "@/features/product-draft-facts/product-draft-facts.types";
+import { ProductAudienceError } from "@/features/product-audience/product-audience.types";
 import { ProductDraftTitleError } from "@/features/product-draft-title/product-draft-title.types";
 import { SellerProductPublicationError } from "@/features/seller/seller-product-publication.types";
 
@@ -93,6 +94,7 @@ export async function handleDelegatedProductPublicationOperation<TResult>(
     if (
       error instanceof DelegatedProductDraftError ||
       error instanceof DelegatedClassifierContinuationError ||
+      error instanceof ProductAudienceError ||
       error instanceof ProductDraftTitleError ||
       error instanceof ProductDraftFactsError ||
       error instanceof ProductDraftDescriptionError ||

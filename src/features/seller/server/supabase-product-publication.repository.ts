@@ -29,6 +29,7 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
     const response = await this.database.rpc("authorize_product_publication_with_correlation", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_audiences: input.audiences,
       p_title_patch_present: input.titlePatchPresent,
       p_title: input.title,
       p_description_patch_present: input.descriptionPatchPresent,
@@ -71,6 +72,13 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
     if (result.result === "product_publication_category_required") {
       return {
         result: "category_required",
+        productDraftId: result.product_draft_id,
+      };
+    }
+
+    if (result.result === "product_publication_audience_required") {
+      return {
+        result: "audience_required",
         productDraftId: result.product_draft_id,
       };
     }
@@ -321,6 +329,7 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       "title_required",
       "title_invalid",
       "description_invalid",
+      "audience_required",
       "category_required",
       "in_progress",
     ]);

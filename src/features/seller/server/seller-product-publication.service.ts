@@ -31,6 +31,7 @@ export class SellerProductPublicationService {
     delegatedAction: ProductPublicationCorrelation | null = null,
   ): Promise<SellerProductPublicationSnapshot> {
     const product = await this.requireOwnedProduct(input.id, sellerId);
+    if (input.audiences.length === 0) throw publicationAudienceRequired();
     if (!input.category_id) throw publicationCategoryRequired();
     if (product.imagePublicationMode === "direct") {
       requirePublicationTitle("title" in input ? input.title : product.title);
@@ -49,6 +50,9 @@ export class SellerProductPublicationService {
           if (error.code === "product_draft_title_invalid") throw publicationTitleInvalid();
           if (error.code === "product_publication_category_required") {
             throw publicationCategoryRequired();
+          }
+          if (error.code === "product_publication_audience_required") {
+            throw publicationAudienceRequired();
           }
           if (error.code === "product_category_not_supported") {
             throw publicationInvalid();
@@ -69,6 +73,7 @@ export class SellerProductPublicationService {
     const result = await this.publications.authorize({
       productDraftId: input.id,
       sellerId,
+      audiences: input.audiences,
       titlePatchPresent: "title" in input,
       title: input.title ?? null,
       descriptionPatchPresent: "description" in input,
@@ -146,6 +151,7 @@ export class SellerProductPublicationService {
     if (result === "title_required") throw publicationTitleRequired();
     if (result === "title_invalid") throw publicationTitleInvalid();
     if (result === "description_invalid") throw publicationDescriptionInvalid();
+    if (result === "audience_required") throw publicationAudienceRequired();
     if (result === "category_required") throw publicationCategoryRequired();
     if (result === "in_progress") throw publicationInProgress();
 
@@ -179,6 +185,7 @@ function authorizationError(
     | "title_required"
     | "title_invalid"
     | "description_invalid"
+    | "audience_required"
     | "category_required"
     | "product_code_company_unconfigured"
     | "product_code_category_unconfigured"
@@ -196,6 +203,7 @@ function authorizationError(
   if (result === "title_required") return publicationTitleRequired();
   if (result === "title_invalid") return publicationTitleInvalid();
   if (result === "description_invalid") return publicationDescriptionInvalid();
+  if (result === "audience_required") return publicationAudienceRequired();
   if (result === "category_required") return publicationCategoryRequired();
   if (
     result === "product_code_company_unconfigured" ||
@@ -300,6 +308,14 @@ export function publicationCategoryRequired(): SellerProductPublicationError {
     409,
     "product_publication_category_required",
     "A product category is required before publication.",
+  );
+}
+
+export function publicationAudienceRequired(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    409,
+    "product_publication_audience_required",
+    "Select at least one audience before publication.",
   );
 }
 

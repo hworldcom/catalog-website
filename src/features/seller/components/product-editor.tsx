@@ -8,6 +8,7 @@ import { ProductDraftFields } from "@/components/product/product-draft-fields";
 import { ProductPublicationStatus } from "@/components/product/product-publication-status";
 import { isActiveProductPublication } from "@/components/product/product-publication-status.utils";
 import { productCodeCopy } from "@/features/product-code/product-code.copy";
+import type { ProductAudience } from "@/features/product-audience/product-audience.types";
 import type { ProductDraftDescriptionEditorState } from "@/features/product-draft-descriptions/components/product-draft-description-editor";
 import { PRODUCT_DRAFT_DESCRIPTION_MAX_LENGTH } from "@/features/product-draft-descriptions/product-draft-descriptions.types";
 import type { ProductDraftFactsEditorState } from "@/features/product-draft-facts/components/product-draft-facts-editor";
@@ -217,6 +218,12 @@ const S = {
     "Geben Sie vor der Veröffentlichung einen Titel ein und wählen Sie eine Kategorie. Ohne diese Angaben können Sie das Produkt als Entwurf speichern.",
     "Nhập tên và chọn danh mục trước khi xuất bản. Bạn vẫn có thể lưu sản phẩm dưới dạng bản nháp khi chưa có các thông tin này.",
   ),
+  audienceRequired: t(
+    "Select at least one audience before publishing.",
+    "Wybierz co najmniej jedną grupę odbiorców przed publikacją.",
+    "Wählen Sie vor der Veröffentlichung mindestens eine Zielgruppe aus.",
+    "Chọn ít nhất một đối tượng trước khi xuất bản.",
+  ),
   descriptionInvalid: t(
     "Enter product descriptions with at most 300 characters each.",
     "Każdy opis produktu może zawierać maksymalnie 300 znaków.",
@@ -286,6 +293,7 @@ const S = {
 };
 
 type ProductInitial = {
+  audiences: ProductAudience[];
   id: string;
   title: string;
   product_code: string | null;
@@ -305,6 +313,7 @@ type ProductInitial = {
 } | null;
 
 type ProductForm = {
+  audiences: ProductAudience[];
   id: string | undefined;
   title: string;
   description: string;
@@ -468,6 +477,7 @@ export function ProductEditor({
       const res = await save({
         data: {
           ...productFields(form, {
+            includeAudiences: !isPublished,
             includeCover: false,
             titleTouched,
             descriptionTouched,
@@ -506,6 +516,7 @@ export function ProductEditor({
       const snapshot = await publish({
         data: {
           ...productFields(form, {
+            includeAudiences: true,
             includeCover: false,
             titleTouched,
             descriptionTouched,
@@ -575,6 +586,7 @@ export function ProductEditor({
   const publishBlockedByEditors =
     factsState.dirty || factsState.saving || descriptionState.dirty || descriptionState.saving;
   const publishBlockedByRequiredFields = form.title.trim() === "" || form.category_id.trim() === "";
+  const publishBlockedByAudience = form.audiences.length === 0;
   const publishBlockedByGallery =
     !productId || !resolvedGalleryState.hasAvailableCover || resolvedGalleryState.incomplete;
   const actionsDisabled = disabled || busy || publicationActive;
@@ -623,6 +635,7 @@ export function ProductEditor({
         <div className="md:col-span-2">
           <ProductDraftFields
             value={{
+              audiences: form.audiences,
               title: form.title,
               categoryId: form.category_id,
               minimumOrderQuantity: form.moq,
@@ -636,11 +649,13 @@ export function ProductEditor({
             titleSource={titleSource}
             disabled={disabled || publicationActive}
             titleDisabled={titleReadOnly || disabled || publicationActive}
+            audienceDisabled={isPublished || disabled || publicationActive}
             onChange={(next) => {
               if (next.title !== form.title) setTitleTouched(true);
               if (next.title !== form.title) onDisplayTitleChange?.(next.title);
               setForm({
                 ...form,
+                audiences: next.audiences,
                 title: next.title,
                 category_id: next.categoryId,
                 moq: next.minimumOrderQuantity,
@@ -680,6 +695,10 @@ export function ProductEditor({
           <p className="text-sm text-amber-700 md:col-span-2">{tr(S.publicationFieldsRequired)}</p>
         ) : null}
 
+        {publishBlockedByAudience && !isPublished ? (
+          <p className="text-sm text-amber-700 md:col-span-2">{tr(S.audienceRequired)}</p>
+        ) : null}
+
         {publishBlockedByGallery && !isPublished ? (
           <p className="text-sm text-amber-700 md:col-span-2">
             {resolvedGalleryState.incomplete ? tr(S.imagesNotReady) : tr(S.imageRequired)}
@@ -701,6 +720,7 @@ export function ProductEditor({
                 actionsDisabled ||
                 publishBlockedByEditors ||
                 publishBlockedByRequiredFields ||
+                publishBlockedByAudience ||
                 publishBlockedByGallery
               }
               onClick={() => void submitPublication()}
@@ -717,6 +737,7 @@ export function ProductEditor({
 
 function productForm(initial: ProductInitial): ProductForm {
   return {
+    audiences: initial?.audiences ?? [],
     id: initial?.id,
     title: initial?.title ?? "",
     description: initial?.description ?? "",
@@ -734,6 +755,7 @@ function productForm(initial: ProductInitial): ProductForm {
 function sameProductForm(left: ProductForm, right: ProductForm): boolean {
   return (
     left.id === right.id &&
+    JSON.stringify(left.audiences) === JSON.stringify(right.audiences) &&
     left.title === right.title &&
     left.description === right.description &&
     left.category_id === right.category_id &&
@@ -750,12 +772,14 @@ function sameProductForm(left: ProductForm, right: ProductForm): boolean {
 function productFields(
   form: ProductForm,
   options: {
+    includeAudiences: boolean;
     includeCover: boolean;
     titleTouched: boolean;
     descriptionTouched: boolean;
   },
 ) {
   return {
+    ...(options.includeAudiences ? { audiences: form.audiences } : {}),
     ...(!form.id || options.titleTouched ? { title: form.title } : {}),
     ...(!form.id || options.descriptionTouched ? { description: form.description } : {}),
     category_id: form.category_id || null,
@@ -777,6 +801,7 @@ function publicationErrorCode(error: unknown): string | null {
 function publicationErrorMessage(error: unknown, fallback: string): string {
   switch (publicationErrorCode(error)) {
     case "product_publication_invalid":
+    case "product_audience_invalid":
       return tr(S.invalid);
     case "authentication_required":
       return tr(S.authenticationRequired);
@@ -790,6 +815,8 @@ function publicationErrorMessage(error: unknown, fallback: string): string {
       return tr(S.categoryRequired);
     case "product_publication_description_invalid":
       return tr(S.descriptionInvalid);
+    case "product_publication_audience_required":
+      return tr(S.audienceRequired);
     case "product_publication_image_required":
       return tr(S.imageRequired);
     case "product_publication_images_not_ready":
@@ -797,12 +824,14 @@ function publicationErrorMessage(error: unknown, fallback: string): string {
     case "product_publication_in_progress":
       return tr(S.inProgress);
     case "product_publication_not_allowed":
+    case "product_audience_moderation_required":
       return tr(S.notAllowed);
     case "product_draft_title_not_editable":
       return tr(S.notEditable);
     case "product_publication_configuration_invalid":
       return tr(S.configurationInvalid);
     case "product_publication_unavailable":
+    case "product_audience_unavailable":
       return tr(S.unavailable);
     default:
       return error instanceof Error && error.message ? error.message : fallback;

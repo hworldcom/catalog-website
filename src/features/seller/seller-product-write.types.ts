@@ -1,11 +1,18 @@
 import { z } from "zod";
 
+import {
+  hasProductAudienceValidationIssue,
+  productAudienceInvalid,
+  productAudienceSetSchema,
+} from "@/features/product-audience/product-audience.types";
+
 import { hasValidSellerProductDescriptionLength } from "./product-description-validation";
 
 export const sellerProductIdSchema = z.string().uuid();
 
 const sellerProductFieldsSchema = z
   .object({
+    audiences: productAudienceSetSchema.optional(),
     title: z.string().optional(),
     description: z
       .string()
@@ -32,7 +39,15 @@ export const sellerProductSaveSchema = sellerProductFieldsSchema.extend({
 });
 
 export const sellerProductPublicationSchema = sellerProductFieldsSchema.extend({
+  audiences: productAudienceSetSchema,
   id: sellerProductIdSchema,
 });
 
 export type SellerProductPublicationInput = z.infer<typeof sellerProductPublicationSchema>;
+
+export function parseSellerProductSave(input: unknown): z.infer<typeof sellerProductSaveSchema> {
+  const result = sellerProductSaveSchema.safeParse(input);
+  if (result.success) return result.data;
+  if (hasProductAudienceValidationIssue(result.error)) throw productAudienceInvalid();
+  throw result.error;
+}

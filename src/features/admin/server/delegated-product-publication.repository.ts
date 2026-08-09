@@ -18,6 +18,7 @@ export type DelegatedProductDraftRecord = {
     classifierGroupId: string;
   };
   product: Product;
+  audiences: string[];
 };
 
 export type DelegatedProductPublicationRunRecord = {
