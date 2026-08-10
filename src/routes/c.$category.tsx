@@ -2,12 +2,20 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 
 import { NotFound } from "@/components/layout/not-found";
 import { PageError } from "@/components/layout/page-error";
-import { categoryQueryOptions } from "@/features/marketplace/queries";
+import {
+  audienceNavigationQueryOptions,
+  categoryQueryOptions,
+} from "@/features/marketplace/queries";
 import { CategoryScreen } from "@/features/marketplace/screens/category-screen";
+import { normalizePublicAudience } from "@/features/marketplace/public-audience";
 
 export const Route = createFileRoute("/c/$category")({
-  loader: async ({ params, context }) => {
-    const data = await context.queryClient.ensureQueryData(categoryQueryOptions(params.category));
+  loaderDeps: ({ search }) => ({ audience: normalizePublicAudience(search.audience) }),
+  loader: async ({ params, context, deps }) => {
+    const [data] = await Promise.all([
+      context.queryClient.ensureQueryData(categoryQueryOptions(params.category, deps.audience)),
+      context.queryClient.ensureQueryData(audienceNavigationQueryOptions(deps.audience)),
+    ]);
     if (!data.category) throw notFound();
   },
   component: CategoryRoute,
@@ -28,7 +36,8 @@ export const Route = createFileRoute("/c/$category")({
 
 function CategoryRoute() {
   const { category } = Route.useParams();
-  return <CategoryScreen categorySlug={category} />;
+  const { audience } = Route.useLoaderDeps();
+  return <CategoryScreen categorySlug={category} audience={audience} />;
 }
 
 function prettify(slug: string) {

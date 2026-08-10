@@ -1696,6 +1696,132 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      get_public_product_description: {
+        Args: {
+          p_language: string;
+          p_product_id: string;
+        };
+        Returns: {
+          description_text: string;
+          resolved_language: string;
+        }[];
+      };
+      list_public_clothing_categories: {
+        Args: {
+          p_audience: string;
+          p_limit?: number;
+        };
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          sort_order: number;
+        }[];
+      };
+      list_public_audience_sellers: {
+        Args: {
+          p_audience: string;
+          p_limit?: number;
+        };
+        Returns: {
+          id: string;
+          logo_url: string | null;
+          name: string;
+          slug: string;
+        }[];
+      };
+      list_public_trending_products: {
+        Args: {
+          p_audience: string;
+          p_limit?: number;
+        };
+        Returns: {
+          cover_image_url: string | null;
+          created_at: string;
+          currency: string;
+          id: string;
+          moq: number | null;
+          pack_size: string | null;
+          price: number | null;
+          seller_id: string;
+          stock: Database["public"]["Enums"]["stock_status"];
+          title: string;
+        }[];
+      };
+      list_public_featured_sellers: {
+        Args: {
+          p_audience: string;
+          p_limit?: number;
+        };
+        Returns: {
+          city: string | null;
+          country: string | null;
+          cover_image_url: string | null;
+          id: string;
+          logo_url: string | null;
+          name: string;
+          primary_category_id: string | null;
+          slug: string;
+          verified: boolean;
+        }[];
+      };
+      list_public_category_products: {
+        Args: {
+          p_audience: string;
+          p_category_slug: string;
+          p_limit?: number;
+        };
+        Returns: {
+          cover_image_url: string | null;
+          created_at: string;
+          currency: string;
+          id: string;
+          moq: number | null;
+          pack_size: string | null;
+          price: number | null;
+          seller_id: string;
+          stock: Database["public"]["Enums"]["stock_status"];
+          title: string;
+        }[];
+      };
+      list_public_category_sellers: {
+        Args: {
+          p_audience: string;
+          p_category_slug: string;
+          p_limit?: number;
+        };
+        Returns: {
+          city: string | null;
+          country: string | null;
+          cover_image_url: string | null;
+          id: string;
+          logo_url: string | null;
+          name: string;
+          slug: string;
+          verified: boolean;
+        }[];
+      };
+      list_public_seller_products: {
+        Args: {
+          p_audience: string;
+          p_limit?: number;
+          p_seller_slug: string;
+        };
+        Returns: {
+          category_id: string | null;
+          category_name: string | null;
+          category_slug: string | null;
+          cover_image_url: string | null;
+          created_at: string;
+          currency: string;
+          id: string;
+          moq: number | null;
+          pack_size: string | null;
+          price: number | null;
+          stock: Database["public"]["Enums"]["stock_status"];
+          title: string;
+        }[];
+      };
       search_delegated_upload_sellers: {
         Args: {
           p_limit: number;

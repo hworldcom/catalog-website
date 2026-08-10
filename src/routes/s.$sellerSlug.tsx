@@ -2,12 +2,17 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 
 import { NotFound } from "@/components/layout/not-found";
 import { PageError } from "@/components/layout/page-error";
-import { sellerQueryOptions } from "@/features/marketplace/queries";
+import { audienceNavigationQueryOptions, sellerQueryOptions } from "@/features/marketplace/queries";
 import { SellerStorefrontScreen } from "@/features/marketplace/screens/seller-storefront-screen";
+import { normalizePublicAudience } from "@/features/marketplace/public-audience";
 
 export const Route = createFileRoute("/s/$sellerSlug")({
-  loader: async ({ params, context }) => {
-    const data = await context.queryClient.ensureQueryData(sellerQueryOptions(params.sellerSlug));
+  loaderDeps: ({ search }) => ({ audience: normalizePublicAudience(search.audience) }),
+  loader: async ({ params, context, deps }) => {
+    const [data] = await Promise.all([
+      context.queryClient.ensureQueryData(sellerQueryOptions(params.sellerSlug, deps.audience)),
+      context.queryClient.ensureQueryData(audienceNavigationQueryOptions(deps.audience)),
+    ]);
     if (!data.seller) throw notFound();
     return data;
   },
@@ -35,7 +40,8 @@ export const Route = createFileRoute("/s/$sellerSlug")({
 
 function SellerStorefrontRoute() {
   const { sellerSlug } = Route.useParams();
-  return <SellerStorefrontScreen sellerSlug={sellerSlug} />;
+  const { audience } = Route.useLoaderDeps();
+  return <SellerStorefrontScreen sellerSlug={sellerSlug} audience={audience} />;
 }
 
 function prettify(slug: string) {

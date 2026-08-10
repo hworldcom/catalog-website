@@ -126,6 +126,41 @@ Review the migration plan before confirming it. Never run `supabase db reset`
 against hosted UAT. Automated tests must use mocks or isolated test state and
 must not read or mutate UAT.
 
+## UAT Marketplace Fixtures
+
+Ticket `0039c1` provides a destructive, server-only command for replacing the
+disposable hosted UAT seller catalog with four QA sellers and sixteen published
+products. It is not an application startup seed and must never target
+production.
+
+The generated JPEG source pack is kept locally under the ignored
+`.uat-fixtures/0039c1` directory. Before running the command, configure the
+normal hosted UAT Supabase server variables and these additional variables in
+`.env`:
+
+```text
+BAZORIA_ALLOW_UAT_FIXTURE_RESET=true
+BAZORIA_UAT_DATABASE_URL=postgresql://postgres.jhkouuxouplqcfecjutd:<password>@<pooler-host>:6543/postgres
+BAZORIA_UAT_FIXTURE_ASSET_DIR=.uat-fixtures/0039c1
+```
+
+Obtain the database connection string from the hosted UAT project's Supabase
+**Connect** panel. The command validates both the Supabase application URL and
+database connection string against project reference
+`jhkouuxouplqcfecjutd` before reading assets or mutating data.
+
+Run the complete seed twice, then verify it:
+
+```bash
+npm run seed:uat-marketplace-fixtures
+npm run seed:uat-marketplace-fixtures
+npm run verify:uat-marketplace-fixtures
+```
+
+The second seed must retain the first run's product codes. Use
+`npm run reset:uat-marketplace-fixtures` only when an empty seller catalog is
+intentionally required; `seed` already resets a non-fixture seller catalog.
+
 ## Validation
 
 Run the supported checks with the repository's required Node.js version:

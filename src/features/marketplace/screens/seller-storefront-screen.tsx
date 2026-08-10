@@ -3,7 +3,7 @@ import { Building2, CalendarDays, Mail, MessageCircle, Package, Shapes } from "l
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ProductCard } from "@/components/product/product-card";
-import { t, tr } from "@/lib/i18n";
+import { t, tr, useLang } from "@/lib/i18n";
 
 import { InquiryForm } from "../components/inquiry-form";
 import { SellerCategoryDiscovery } from "../components/seller-category-discovery";
@@ -14,6 +14,8 @@ import {
 import { SellerStorefrontHeader } from "../components/seller-storefront-header";
 import { SellerStorefrontHero } from "../components/seller-storefront-hero";
 import { sellerQueryOptions } from "../queries";
+import type { PublicAudience } from "../public-audience";
+import { getPublicCategoryLabel } from "../public-category-labels";
 import {
   buildWhatsAppUrl,
   filterStorefrontProducts,
@@ -69,16 +71,35 @@ const S = {
   ),
 };
 
-export function SellerStorefrontScreen({ sellerSlug }: { sellerSlug: string }) {
-  const { data } = useSuspenseQuery(sellerQueryOptions(sellerSlug));
-  const products: StorefrontProduct[] = data.products;
+export function SellerStorefrontScreen({
+  sellerSlug,
+  audience,
+}: {
+  sellerSlug: string;
+  audience: PublicAudience;
+}) {
+  const language = useLang();
+  const { data } = useSuspenseQuery(sellerQueryOptions(sellerSlug, audience));
+  const products: StorefrontProduct[] = useMemo(
+    () =>
+      data.products.map((product) => ({
+        ...product,
+        category: product.category
+          ? {
+              ...product.category,
+              name: getPublicCategoryLabel(product.category.slug, product.category.name, language),
+            }
+          : null,
+      })),
+    [data.products, language],
+  );
   const categoryGroups = useMemo(() => groupStorefrontProducts(products), [products]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const catalogHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     setSelectedCategoryId(null);
-  }, [sellerSlug]);
+  }, [sellerSlug, audience]);
 
   const visibleProducts = useMemo(
     () => filterStorefrontProducts(products, selectedCategoryId),
@@ -114,6 +135,7 @@ export function SellerStorefrontScreen({ sellerSlug }: { sellerSlug: string }) {
         whatsappUrl={whatsappUrl}
         showCategories={categoryGroups.length > 0}
         showAbout={showAbout}
+        audience={audience}
       />
 
       <main>

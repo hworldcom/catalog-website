@@ -15,11 +15,13 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { reportClientError } from "@/lib/client-error-reporting";
+import { publicAudienceSchema } from "@/features/marketplace/public-audience";
 import { LangProvider } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase/client";
 
 const rootSearchSchema = z.object({
   lang: fallback(z.string(), "EN").default("EN"),
+  audience: publicAudienceSchema,
 });
 
 function NotFoundComponent() {
@@ -122,7 +124,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
   validateSearch: zodValidator(rootSearchSchema),
   search: {
-    middlewares: [retainSearchParams(["lang"])],
+    middlewares: [retainSearchParams(["lang", "audience"])],
   },
 });
 

@@ -27,6 +27,10 @@ const mocks = vi.hoisted(() => ({
     },
     images: [] as Array<{ id: string; url: string }>,
     category: null,
+    description: null as {
+      text: string;
+      resolvedLanguage: "EN" | "PL" | "DE" | "VI";
+    } | null,
   },
 }));
 
@@ -67,10 +71,14 @@ describe("ProductDetailScreen", () => {
   beforeEach(() => {
     mocks.data.images = [];
     mocks.data.product.cover_image_url = null;
+    mocks.data.product.description = null;
+    mocks.data.description = null;
   });
 
   it("shows the exact stored product code as read-only text", () => {
-    render(<ProductDetailScreen productId={mocks.data.product.id} />);
+    render(
+      <ProductDetailScreen productId={mocks.data.product.id} language="EN" audience="women" />,
+    );
 
     expect(screen.getByText("Product code")).toBeVisible();
     expect(screen.getByText("SEL-F-TSH-ABCDEFGH")).toBeVisible();
@@ -78,7 +86,9 @@ describe("ProductDetailScreen", () => {
   });
 
   it("links the supplier detail to its public storefront", () => {
-    render(<ProductDetailScreen productId={mocks.data.product.id} />);
+    render(
+      <ProductDetailScreen productId={mocks.data.product.id} language="EN" audience="women" />,
+    );
 
     const supplierDetail = screen.getByText("Supplier").closest("div");
     expect(supplierDetail).not.toBeNull();
@@ -96,7 +106,9 @@ describe("ProductDetailScreen", () => {
     }));
     mocks.data.product.cover_image_url = mocks.data.images[1]!.url;
 
-    render(<ProductDetailScreen productId={mocks.data.product.id} />);
+    render(
+      <ProductDetailScreen productId={mocks.data.product.id} language="EN" audience="women" />,
+    );
 
     expect(screen.getByRole("img", { name: "Cotton shirt" })).toHaveAttribute(
       "src",
@@ -121,7 +133,9 @@ describe("ProductDetailScreen", () => {
       { id: "detail", url: "https://public.test/detail.jpg" },
     ];
     mocks.data.product.cover_image_url = "https://public.test/cover.jpg";
-    render(<ProductDetailScreen productId={mocks.data.product.id} />);
+    render(
+      <ProductDetailScreen productId={mocks.data.product.id} language="EN" audience="women" />,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Select product image 2" }));
     fireEvent.error(screen.getByRole("img", { name: "Cotton shirt" }));
@@ -131,5 +145,69 @@ describe("ProductDetailScreen", () => {
       "https://public.test/cover.jpg",
     );
     expect(screen.getByRole("button", { name: "Select product image 2" })).toBeDisabled();
+  });
+
+  it.each([
+    ["EN", "Product description"],
+    ["PL", "Opis produktu"],
+    ["DE", "Produktbeschreibung"],
+    ["VI", "Mô tả sản phẩm"],
+  ] as const)("shows the localized description heading for %s", (language, heading) => {
+    mocks.data.description = {
+      text: "Localized description",
+      resolvedLanguage: language,
+    };
+
+    render(
+      <ProductDetailScreen
+        productId={mocks.data.product.id}
+        language={language}
+        audience="women"
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: heading })).toBeVisible();
+    expect(screen.getByText("Localized description")).toBeVisible();
+  });
+
+  it("keeps the requested-language heading when the body falls back to English", () => {
+    mocks.data.description = {
+      text: "English fallback",
+      resolvedLanguage: "EN",
+    };
+
+    render(
+      <ProductDetailScreen productId={mocks.data.product.id} language="DE" audience="women" />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Produktbeschreibung" })).toBeVisible();
+    expect(screen.getByText("English fallback")).toBeVisible();
+  });
+
+  it("omits the description section when no public description is available", () => {
+    mocks.data.product.description = "Legacy English projection";
+
+    render(
+      <ProductDetailScreen productId={mocks.data.product.id} language="EN" audience="women" />,
+    );
+
+    expect(screen.queryByRole("heading", { name: "Product description" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Legacy English projection")).not.toBeInTheDocument();
+  });
+
+  it("renders description text literally and preserves line breaks", () => {
+    mocks.data.description = {
+      text: "First line\n<strong>Second line</strong>",
+      resolvedLanguage: "EN",
+    };
+
+    render(
+      <ProductDetailScreen productId={mocks.data.product.id} language="EN" audience="women" />,
+    );
+
+    const description = screen.getByText(/First line/);
+    expect(description).toHaveTextContent("First line <strong>Second line</strong>");
+    expect(description).toHaveClass("whitespace-pre-line");
+    expect(description.querySelector("strong")).toBeNull();
   });
 });

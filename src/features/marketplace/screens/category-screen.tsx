@@ -3,19 +3,30 @@ import { Link } from "@tanstack/react-router";
 
 import { PublicShell } from "@/components/layout/public-shell";
 import { ProductCard } from "@/components/product/product-card";
+import { useLang } from "@/lib/i18n";
 
+import type { PublicAudience } from "../public-audience";
+import { getPublicCategoryLabel } from "../public-category-labels";
 import { categoryQueryOptions } from "../queries";
 
-export function CategoryScreen({ categorySlug }: { categorySlug: string }) {
-  const { data } = useSuspenseQuery(categoryQueryOptions(categorySlug));
+export function CategoryScreen({
+  categorySlug,
+  audience,
+}: {
+  categorySlug: string;
+  audience: PublicAudience;
+}) {
+  const language = useLang();
+  const { data } = useSuspenseQuery(categoryQueryOptions(categorySlug, audience));
   if (!data.category) return null;
+  const categoryName = getPublicCategoryLabel(data.category.slug, data.category.name, language);
   return (
-    <PublicShell>
+    <PublicShell marketplaceAudience={audience}>
       <section className="border-b border-border/60 bg-gradient-to-b from-primary/10 to-transparent">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="text-xs uppercase tracking-widest text-primary/80">Category</div>
           <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            {data.category.name}
+            {categoryName}
           </h1>
           {data.category.tagline ? (
             <p className="mt-3 max-w-2xl text-sm text-muted-foreground">{data.category.tagline}</p>

@@ -17,6 +17,9 @@ dist-ssr
 *.local
 .lovable
 
+# Generated UAT marketplace fixture source images
+.uat-fixtures/
+
 # Environment files and secrets
 .env
 .env.*

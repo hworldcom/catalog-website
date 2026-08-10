@@ -715,9 +715,9 @@ BEGIN
 END;
 $$;
 
--- Intentionally fail deployment when retained published products have not
--- received an explicit operator-assigned audience set.
-SELECT public.validate_product_audience_release_preflight();
+-- The following data migration records explicit operator-owned assignments
+-- for retained UAT products and then runs the release preflight. Keeping that
+-- decision separate prevents this schema migration from inferring an audience.
 
 REVOKE ALL ON FUNCTION public.normalize_product_audience_set(text[])
   FROM PUBLIC, anon, authenticated, service_role;

@@ -3,13 +3,27 @@ import { z } from "zod";
 
 import { NotFound } from "@/components/layout/not-found";
 import { PageError } from "@/components/layout/page-error";
-import { productQueryOptions } from "@/features/marketplace/queries";
+import {
+  audienceNavigationQueryOptions,
+  productQueryOptions,
+} from "@/features/marketplace/queries";
 import { ProductDetailScreen } from "@/features/marketplace/screens/product-detail-screen";
+import { normalizePublicAudience } from "@/features/marketplace/public-audience";
+import { normalizeLanguage } from "@/lib/i18n";
 
 export const Route = createFileRoute("/p/$productId")({
-  loader: async ({ params, context }) => {
+  loaderDeps: ({ search }) => ({
+    language: normalizeLanguage(search.lang),
+    audience: normalizePublicAudience(search.audience),
+  }),
+  loader: async ({ params, context, deps }) => {
     if (!isUuid(params.productId)) throw notFound();
-    const data = await context.queryClient.ensureQueryData(productQueryOptions(params.productId));
+    const [data] = await Promise.all([
+      context.queryClient.ensureQueryData(
+        productQueryOptions(params.productId, deps.language, deps.audience),
+      ),
+      context.queryClient.ensureQueryData(audienceNavigationQueryOptions(deps.audience)),
+    ]);
     if (!data.product) throw notFound();
   },
   component: ProductDetailRoute,
@@ -27,7 +41,8 @@ export const Route = createFileRoute("/p/$productId")({
 
 function ProductDetailRoute() {
   const { productId } = Route.useParams();
-  return <ProductDetailScreen productId={productId} />;
+  const { language, audience } = Route.useLoaderDeps();
+  return <ProductDetailScreen productId={productId} language={language} audience={audience} />;
 }
 
 function isUuid(v: string) {

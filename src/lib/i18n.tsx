@@ -30,7 +30,7 @@ const LangContext = createContext<Ctx>({
 
 const STORAGE_KEY = "bazoria.lang";
 
-function normalize(v: unknown): Lang {
+export function normalizeLanguage(v: unknown): Lang {
   if (typeof v !== "string") return "EN";
   const up = v.toUpperCase();
   return (languages as readonly string[]).includes(up) ? (up as Lang) : "EN";
@@ -74,7 +74,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
 
-  const lang = normalize(search.lang);
+  const lang = normalizeLanguage(search.lang);
   currentLang = lang;
 
   // On first visit (no ?lang= in URL), promote the persisted choice into the URL.
@@ -93,7 +93,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
-    const initial = normalize(saved ?? "EN");
+    const initial = normalizeLanguage(saved ?? "EN");
     if (initial !== "EN" || saved) {
       navigate({
         to: ".",

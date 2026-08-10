@@ -3,11 +3,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { NotFound } from "@/components/layout/not-found";
 import { PageError } from "@/components/layout/page-error";
 import { MarketplaceHomeScreen } from "@/features/marketplace/screens/marketplace-home-screen";
-import { marketplaceQueryOptions } from "@/features/marketplace/queries";
+import { normalizePublicAudience } from "@/features/marketplace/public-audience";
+import {
+  audienceNavigationQueryOptions,
+  marketplaceQueryOptions,
+} from "@/features/marketplace/queries";
 
 export const Route = createFileRoute("/")({
-  component: MarketplaceHomeScreen,
-  loader: ({ context }) => context.queryClient.ensureQueryData(marketplaceQueryOptions()),
+  component: MarketplaceRoute,
+  loaderDeps: ({ search }) => ({ audience: normalizePublicAudience(search.audience) }),
+  loader: ({ context, deps }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(marketplaceQueryOptions(deps.audience)),
+      context.queryClient.ensureQueryData(audienceNavigationQueryOptions(deps.audience)),
+    ]),
   head: () => ({
     meta: [
       { title: "Bazoria — Wholesale Discovery for Retailers & Resellers" },
@@ -29,3 +38,8 @@ export const Route = createFileRoute("/")({
   errorComponent: PageError,
   notFoundComponent: () => <NotFound title="Marketplace unavailable" />,
 });
+
+function MarketplaceRoute() {
+  const { audience } = Route.useLoaderDeps();
+  return <MarketplaceHomeScreen audience={audience} />;
+}

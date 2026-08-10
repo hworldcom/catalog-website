@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { supabase } from "@/lib/supabase/client";
+import { MarketplaceNavigation } from "@/features/marketplace/components/marketplace-navigation";
+import type { PublicAudience } from "@/features/marketplace/public-audience";
 import { LanguageSwitcher, t, tr } from "@/lib/i18n";
 
 const S = {
@@ -18,17 +20,23 @@ const S = {
   sampleStorefront: t("Sample storefront", "Przykładowy sklep", "Beispiel-Shop", "Gian hàng mẫu"),
 };
 
-export function PublicShell({ children }: { children: ReactNode }) {
+export function PublicShell({
+  children,
+  marketplaceAudience,
+}: {
+  children: ReactNode;
+  marketplaceAudience?: PublicAudience;
+}) {
   return (
     <div className="storefront-dark min-h-screen bg-background text-foreground">
-      <TopNav />
+      <TopNav marketplaceAudience={marketplaceAudience} />
       <main>{children}</main>
       <Footer />
     </div>
   );
 }
 
-function TopNav() {
+function TopNav({ marketplaceAudience }: { marketplaceAudience?: PublicAudience }) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => {
     let mounted = true;
@@ -47,7 +55,7 @@ function TopNav() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border/60 bg-background/85 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center border border-primary/50 bg-primary/10 font-display text-sm font-bold text-primary">
@@ -77,6 +85,7 @@ function TopNav() {
           ) : null}
         </nav>
       </div>
+      {marketplaceAudience ? <MarketplaceNavigation audience={marketplaceAudience} /> : null}
     </header>
   );
 }

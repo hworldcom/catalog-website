@@ -2,7 +2,9 @@ import { Menu, MessageCircle, X } from "lucide-react";
 import { useState } from "react";
 
 import { LanguageSwitcher, t, tr } from "@/lib/i18n";
+import type { PublicAudience } from "../public-audience";
 
+import { MarketplaceNavigation } from "./marketplace-navigation";
 import { SellerBrand } from "./seller-brand";
 
 const H = {
@@ -28,12 +30,14 @@ export function SellerStorefrontHeader({
   whatsappUrl,
   showCategories,
   showAbout,
+  audience,
 }: {
   sellerName: string;
   logoUrl: string | null;
   whatsappUrl: string | null;
   showCategories: boolean;
   showAbout: boolean;
+  audience: PublicAudience;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navItems: StorefrontNavItem[] = [
@@ -134,6 +138,7 @@ export function SellerStorefrontHeader({
           </nav>
         </div>
       ) : null}
+      <MarketplaceNavigation audience={audience} />
     </header>
   );
 }

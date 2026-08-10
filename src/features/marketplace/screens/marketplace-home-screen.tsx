@@ -4,9 +4,11 @@ import type { ReactNode } from "react";
 
 import { PublicShell } from "@/components/layout/public-shell";
 import { ProductCard } from "@/components/product/product-card";
-import { t, tr } from "@/lib/i18n";
+import { t, tr, useLang } from "@/lib/i18n";
 
-import { marketplaceQueryOptions } from "../queries";
+import type { PublicAudience } from "../public-audience";
+import { getPublicCategoryLabel } from "../public-category-labels";
+import { audienceNavigationQueryOptions, marketplaceQueryOptions } from "../queries";
 
 const H = {
   kicker: t(
@@ -33,19 +35,6 @@ const H = {
     "Bazoria ist der Ort, an dem Händler, Online-Verkäufer und Marktverkäufer Großhandelskataloge entdecken. Produkte durchsuchen, den Shop eines Lieferanten öffnen und direkt anfragen — kein Checkout, keine Mittelsmänner.",
     "Bazoria là nơi nhà bán lẻ, người bán online và tiểu thương chợ khám phá danh mục bán buôn. Duyệt sản phẩm, mở gian hàng nhà cung cấp và hỏi trực tiếp — không thanh toán, không trung gian.",
   ),
-  catsTitle: t(
-    "Browse by category",
-    "Przeglądaj według kategorii",
-    "Nach Kategorie stöbern",
-    "Duyệt theo danh mục",
-  ),
-  catsSub: t(
-    "Start where you source",
-    "Zacznij tam, gdzie kupujesz",
-    "Beginne dort, wo du einkaufst",
-    "Bắt đầu từ nơi bạn nhập hàng",
-  ),
-  viewCatalog: t("View catalog →", "Zobacz katalog →", "Katalog ansehen →", "Xem danh mục →"),
   trendingTitle: t(
     "Trending this week",
     "Popularne w tym tygodniu",
@@ -144,13 +133,19 @@ const H = {
   ),
 };
 
-export function MarketplaceHomeScreen() {
-  const { data } = useSuspenseQuery(marketplaceQueryOptions());
-  const hasCategories = data.categories.length > 0;
-  const catBySeller = new Map(data.categories.map((c) => [c.id, c]));
+export function MarketplaceHomeScreen({ audience }: { audience: PublicAudience }) {
+  const language = useLang();
+  const { data } = useSuspenseQuery(marketplaceQueryOptions(audience));
+  const { data: navigation } = useSuspenseQuery(audienceNavigationQueryOptions(audience));
+  const catBySeller = new Map(
+    navigation.categories.map((category) => [
+      category.id,
+      getPublicCategoryLabel(category.slug, category.name, language),
+    ]),
+  );
 
   return (
-    <PublicShell>
+    <PublicShell marketplaceAudience={audience}>
       {/* Hero */}
       <section className="border-b border-border/60 bg-gradient-to-b from-primary/10 to-transparent">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
@@ -162,12 +157,14 @@ export function MarketplaceHomeScreen() {
           </h1>
           <p className="mt-5 max-w-2xl text-sm text-muted-foreground sm:text-base">{tr(H.lead)}</p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <a
-              href={hasCategories ? "#categories" : "#products"}
+            <Link
+              to="/c/$category"
+              params={{ category: "fashion" }}
+              search={(previous) => ({ ...previous, audience })}
               className="inline-flex items-center bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               {tr(H.browseCta)}
-            </a>
+            </Link>
             <Link
               to="/auth"
               className="inline-flex items-center border border-primary/60 px-5 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
@@ -178,33 +175,6 @@ export function MarketplaceHomeScreen() {
           </div>
         </div>
       </section>
-
-      {hasCategories ? (
-        <>
-          <section id="categories" />
-
-          <Section title={tr(H.catsTitle)} subtitle={tr(H.catsSub)}>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {data.categories.map((c) => (
-                <Link
-                  key={c.id}
-                  to="/c/$category"
-                  params={{ category: c.slug }}
-                  className="group flex flex-col justify-between border border-border/60 bg-card/40 p-5 transition-colors hover:border-primary/70 hover:bg-card/70"
-                >
-                  <div className="font-display text-lg font-semibold text-foreground">{c.name}</div>
-                  {c.tagline ? (
-                    <div className="mt-2 text-sm text-muted-foreground">{c.tagline}</div>
-                  ) : null}
-                  <div className="mt-4 text-xs uppercase tracking-widest text-primary/80 group-hover:text-primary">
-                    {tr(H.viewCatalog)}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </Section>
-        </>
-      ) : null}
 
       <Section id="products" title={tr(H.trendingTitle)} subtitle={tr(H.trendingSub)}>
         {data.trending.length === 0 ? (
@@ -225,7 +195,7 @@ export function MarketplaceHomeScreen() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.sellers.map((s) => {
               const categoryName = s.primary_category_id
-                ? catBySeller.get(s.primary_category_id)?.name
+                ? catBySeller.get(s.primary_category_id)
                 : null;
               return (
                 <Link

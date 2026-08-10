@@ -7,6 +7,10 @@ const migration = readFileSync(
   resolve(process.cwd(), "supabase/migrations/20260810120000_product_audience_memberships.sql"),
   "utf8",
 );
+const uatAssignmentMigration = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/20260810125000_product_audience_uat_assignments.sql"),
+  "utf8",
+);
 
 describe("product audience membership migration", () => {
   it("stores only canonical audience memberships and rejects duplicates", () => {
@@ -59,12 +63,18 @@ describe("product audience membership migration", () => {
     expect(authorization).toContain("FROM unnest(previous_audiences)");
   });
 
-  it("fails release preflight instead of inferring existing published audiences", () => {
+  it("records explicit UAT assignments and still fails preflight for any unassigned product", () => {
     expect(migration).toContain("product_audience_release_preflight_failed");
-    expect(migration).toContain("SELECT public.validate_product_audience_release_preflight();");
     expect(migration).not.toContain("SELECT product.id, 'women'");
     expect(migration).not.toContain("SELECT product.id, 'men'");
     expect(migration).not.toContain("SELECT product.id, 'kids'");
+    expect(uatAssignmentMigration).toContain(
+      "INSERT INTO public.product_audience_memberships (product_id, audience)",
+    );
+    expect(uatAssignmentMigration).toContain(
+      "SELECT public.validate_product_audience_release_preflight();",
+    );
+    expect(uatAssignmentMigration).toContain("92775a80-b7dc-4953-a9bf-6e865a097c48");
   });
 });
 

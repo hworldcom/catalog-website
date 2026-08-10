@@ -5,9 +5,11 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PublicShell } from "@/components/layout/public-shell";
 import { formatPrice, getStockLabel } from "@/components/product/product-format";
 import { productCodeCopy } from "@/features/product-code/product-code.copy";
-import { t, tr } from "@/lib/i18n";
+import { pick, t, tr, type Lang } from "@/lib/i18n";
 
 import { InquiryForm } from "../components/inquiry-form";
+import type { PublicAudience } from "../public-audience";
+import { getPublicCategoryLabel } from "../public-category-labels";
 import { productQueryOptions } from "../queries";
 
 const P = {
@@ -16,6 +18,7 @@ const P = {
   packSize: t("Pack size", "Rozmiar opakowania", "Verpackungsgröße", "Kích cỡ gói"),
   supplier: t("Supplier", "Dostawca", "Lieferant", "Nhà cung cấp"),
   location: t("Location", "Lokalizacja", "Standort", "Vị trí"),
+  description: t("Product description", "Opis produktu", "Produktbeschreibung", "Mô tả sản phẩm"),
   selectImage: t(
     "Select product image",
     "Wybierz zdjęcie produktu",
@@ -30,13 +33,21 @@ const P = {
   ),
 };
 
-export function ProductDetailScreen({ productId }: { productId: string }) {
-  const { data } = useSuspenseQuery(productQueryOptions(productId));
-  const { product, seller, images, category } = data;
+export function ProductDetailScreen({
+  productId,
+  language,
+  audience,
+}: {
+  productId: string;
+  language: Lang;
+  audience: PublicAudience;
+}) {
+  const { data } = useSuspenseQuery(productQueryOptions(productId, language, audience));
+  const { product, seller, images, category, description } = data;
   if (!product || !seller) return null;
 
   return (
-    <PublicShell>
+    <PublicShell marketplaceAudience={audience}>
       <div className="mx-auto max-w-6xl px-6 py-8">
         <nav className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
           <Link to="/" className="hover:text-foreground">
@@ -50,7 +61,7 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
                 params={{ category: category.slug }}
                 className="hover:text-foreground"
               >
-                {category.name}
+                {getPublicCategoryLabel(category.slug, category.name, language)}
               </Link>
             </>
           ) : null}
@@ -106,8 +117,15 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
               />
             </dl>
 
-            {product.description ? (
-              <p className="mt-4 text-sm text-muted-foreground">{product.description}</p>
+            {description ? (
+              <section className="mt-6 border-t border-border/60 pt-5">
+                <h2 className="font-display text-lg font-semibold">
+                  {pick(P.description, language)}
+                </h2>
+                <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+                  {description.text}
+                </p>
+              </section>
             ) : null}
 
             <InquiryForm

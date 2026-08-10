@@ -4,6 +4,12 @@ import { z } from "zod";
 import { parseStoredProductCode } from "@/features/product-code/product-code";
 import type { Database } from "@/lib/supabase/types";
 
+import {
+  readPublicProductDescription,
+  toDatabaseDescriptionLanguage,
+} from "./public-product-description";
+import { publicAudienceSchema } from "./public-audience";
+
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     auth: {
@@ -18,45 +24,79 @@ export type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 export type SellerRow = Database["public"]["Tables"]["sellers"]["Row"];
 export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 
-const HOME_EXCLUDED_CATEGORY_SLUGS = new Set([
-  "textiles",
-  "home-decor",
-  "fashion",
-  "beauty",
-  "food",
-  "electronics",
-]);
+export type PublicClothingCategory = {
+  id: string;
+  slug: string;
+  name: string;
+  sortOrder: number;
+};
 
-export const listMarketplace = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = publicClient();
-  const [cats, trending, sellers] = await Promise.all([
-    sb.from("categories").select("id,slug,name,tagline,sort_order").order("sort_order"),
-    sb
-      .from("products")
-      .select("id,title,cover_image_url,price,currency,moq,pack_size,stock,seller_id")
-      .eq("status", "published")
-      .eq("trending", true)
-      .limit(8),
-    sb
-      .from("sellers")
-      .select("id,slug,name,city,country,verified,cover_image_url,primary_category_id")
-      .eq("published", true)
-      .limit(6),
-  ]);
-  if (cats.error) throw cats.error;
-  if (trending.error) throw trending.error;
-  if (sellers.error) throw sellers.error;
-  return {
-    categories: (cats.data ?? []).filter((category) => {
-      return !HOME_EXCLUDED_CATEGORY_SLUGS.has(category.slug);
-    }),
-    trending: trending.data ?? [],
-    sellers: sellers.data ?? [],
-  };
-});
+export type PublicAudienceSeller = {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+};
+
+export const getAudienceNavigation = createServerFn({ method: "GET" })
+  .validator((input) => z.object({ audience: publicAudienceSchema }).parse(input))
+  .handler(async ({ data }) => {
+    const sb = publicClient();
+    const [categories, sellers] = await Promise.all([
+      sb.rpc("list_public_clothing_categories", {
+        p_audience: data.audience,
+        p_limit: 50,
+      }),
+      sb.rpc("list_public_audience_sellers", {
+        p_audience: data.audience,
+        p_limit: 100,
+      }),
+    ]);
+    if (categories.error) throw categories.error;
+    if (sellers.error) throw sellers.error;
+    return {
+      audience: data.audience,
+      categories: (categories.data ?? []).map((category): PublicClothingCategory => ({
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+        sortOrder: category.sort_order,
+      })),
+      sellers: (sellers.data ?? []).map((seller): PublicAudienceSeller => ({
+        id: seller.id,
+        slug: seller.slug,
+        name: seller.name,
+        logoUrl: seller.logo_url,
+      })),
+    };
+  });
+
+export const listMarketplace = createServerFn({ method: "GET" })
+  .validator((input) => z.object({ audience: publicAudienceSchema }).parse(input))
+  .handler(async ({ data }) => {
+    const sb = publicClient();
+    const [trending, sellers] = await Promise.all([
+      sb.rpc("list_public_trending_products", {
+        p_audience: data.audience,
+        p_limit: 8,
+      }),
+      sb.rpc("list_public_featured_sellers", {
+        p_audience: data.audience,
+        p_limit: 6,
+      }),
+    ]);
+    if (trending.error) throw trending.error;
+    if (sellers.error) throw sellers.error;
+    return {
+      trending: trending.data ?? [],
+      sellers: sellers.data ?? [],
+    };
+  });
 
 export const getCategoryPage = createServerFn({ method: "GET" })
-  .validator((input) => z.object({ slug: z.string().min(1).max(80) }).parse(input))
+  .validator((input) =>
+    z.object({ slug: z.string().min(1).max(80), audience: publicAudienceSchema }).parse(input),
+  )
   .handler(async ({ data }) => {
     const sb = publicClient();
     const { data: category, error: cErr } = await sb
@@ -67,18 +107,16 @@ export const getCategoryPage = createServerFn({ method: "GET" })
     if (cErr) throw cErr;
     if (!category) return { category: null, products: [], sellers: [] };
     const [products, sellers] = await Promise.all([
-      sb
-        .from("products")
-        .select("id,title,cover_image_url,price,currency,moq,pack_size,stock,seller_id")
-        .eq("status", "published")
-        .eq("category_id", category.id)
-        .limit(48),
-      sb
-        .from("sellers")
-        .select("id,slug,name,city,country,verified,cover_image_url")
-        .eq("published", true)
-        .eq("primary_category_id", category.id)
-        .limit(12),
+      sb.rpc("list_public_category_products", {
+        p_category_slug: category.slug,
+        p_audience: data.audience,
+        p_limit: 48,
+      }),
+      sb.rpc("list_public_category_sellers", {
+        p_category_slug: category.slug,
+        p_audience: data.audience,
+        p_limit: 12,
+      }),
     ]);
     if (products.error) throw products.error;
     if (sellers.error) throw sellers.error;
@@ -86,7 +124,9 @@ export const getCategoryPage = createServerFn({ method: "GET" })
   });
 
 export const getSellerPage = createServerFn({ method: "GET" })
-  .validator((input) => z.object({ slug: z.string().min(1).max(80) }).parse(input))
+  .validator((input) =>
+    z.object({ slug: z.string().min(1).max(80), audience: publicAudienceSchema }).parse(input),
+  )
   .handler(async ({ data }) => {
     const sb = publicClient();
     const { data: seller, error } = await sb
@@ -97,20 +137,46 @@ export const getSellerPage = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw error;
     if (!seller) return { seller: null, products: [] };
-    const { data: products, error: pErr } = await sb
-      .from("products")
-      .select(
-        "id,title,cover_image_url,price,currency,moq,pack_size,stock,category_id,category:categories(id,slug,name)",
-      )
-      .eq("seller_id", seller.id)
-      .eq("status", "published")
-      .order("created_at", { ascending: false });
+    const { data: products, error: pErr } = await sb.rpc("list_public_seller_products", {
+      p_seller_slug: seller.slug,
+      p_audience: data.audience,
+      p_limit: 100,
+    });
     if (pErr) throw pErr;
-    return { seller, products: products ?? [] };
+    return {
+      seller,
+      products: (products ?? []).map((product) => ({
+        id: product.id,
+        title: product.title,
+        cover_image_url: product.cover_image_url,
+        price: product.price,
+        currency: product.currency,
+        moq: product.moq,
+        pack_size: product.pack_size,
+        stock: product.stock,
+        category_id: product.category_id,
+        category:
+          product.category_id && product.category_slug && product.category_name
+            ? {
+                id: product.category_id,
+                slug: product.category_slug,
+                name: product.category_name,
+              }
+            : null,
+      })),
+    };
   });
 
 export const getProductPage = createServerFn({ method: "GET" })
-  .validator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        language: z.enum(["EN", "PL", "DE", "VI"]),
+        audience: publicAudienceSchema,
+      })
+      .parse(input),
+  )
   .handler(async ({ data }) => {
     const sb = publicClient();
     const { data: product, error } = await sb
@@ -120,7 +186,19 @@ export const getProductPage = createServerFn({ method: "GET" })
       .eq("status", "published")
       .maybeSingle();
     if (error) throw error;
-    if (!product) return { product: null, seller: null, images: [], category: null };
+    if (!product) {
+      return { product: null, seller: null, images: [], category: null, description: null };
+    }
+    const seller = await sb
+      .from("sellers")
+      .select("id,slug,name,city,country,whatsapp,verified,cover_image_url,about")
+      .eq("id", product.seller_id)
+      .eq("published", true)
+      .maybeSingle();
+    if (seller.error) throw seller.error;
+    if (!seller.data) {
+      return { product: null, seller: null, images: [], category: null, description: null };
+    }
     try {
       product.product_code = parseStoredProductCode(product.product_code);
     } catch (parseError) {
@@ -130,12 +208,7 @@ export const getProductPage = createServerFn({ method: "GET" })
       });
       throw new Error("The published product is temporarily unavailable.");
     }
-    const [seller, images, category] = await Promise.all([
-      sb
-        .from("sellers")
-        .select("id,slug,name,city,country,whatsapp,verified,cover_image_url,about")
-        .eq("id", product.seller_id)
-        .maybeSingle(),
+    const [images, category, description] = await Promise.all([
       sb
         .from("product_images")
         .select("id,url,sort_order")
@@ -144,12 +217,22 @@ export const getProductPage = createServerFn({ method: "GET" })
       product.category_id
         ? sb.from("categories").select("id,slug,name").eq("id", product.category_id).maybeSingle()
         : Promise.resolve({ data: null, error: null } as const),
+      sb
+        .rpc("get_public_product_description", {
+          p_product_id: product.id,
+          p_language: toDatabaseDescriptionLanguage(data.language),
+        })
+        .maybeSingle(),
     ]);
+    if (images.error) throw images.error;
+    if (category.error) throw category.error;
+    if (description.error) throw description.error;
     return {
       product,
       seller: seller.data,
       images: images.data ?? [],
       category: category.data,
+      description: readPublicProductDescription(description.data),
     };
   });
 
