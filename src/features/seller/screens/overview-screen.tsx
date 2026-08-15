@@ -1,45 +1,32 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
-import { getMySeller } from "@/features/seller/current-seller.functions";
 import { listMyLeads } from "@/features/seller/leads.functions";
 import { getMyProductSummary } from "@/features/seller/products.functions";
-import { setStorefrontPublished } from "@/features/seller/storefront.functions";
+import { getMySellerProfileWorkingCopy } from "@/features/seller/storefront.functions";
 import { toast } from "sonner";
 
 export function OverviewScreen() {
-  const getSeller = useServerFn(getMySeller);
+  const getProfile = useServerFn(getMySellerProfileWorkingCopy);
   const getProductSummary = useServerFn(getMyProductSummary);
   const listLeads = useServerFn(listMyLeads);
-  const setPublished = useServerFn(setStorefrontPublished);
-  const qc = useQueryClient();
 
-  const seller = useQuery({ queryKey: ["my-seller"], queryFn: () => getSeller() });
+  const profile = useQuery({ queryKey: ["my-seller-profile"], queryFn: () => getProfile() });
   const productSummary = useQuery({
     queryKey: ["my-product-summary"],
     queryFn: () => getProductSummary(),
   });
   const leads = useQuery({ queryKey: ["my-leads"], queryFn: () => listLeads() });
 
-  const publishMutation = useMutation({
-    mutationFn: (next: boolean) => setPublished({ data: { published: next } }),
-    onSuccess: (_res, next) => {
-      qc.invalidateQueries({ queryKey: ["my-seller"] });
-      toast.success(next ? "Storefront is live." : "Storefront unpublished.");
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Couldn't update publish state");
-    },
-  });
-
-  const s = seller.data?.seller;
+  const s = profile.data?.seller;
+  const workingCopy = profile.data?.workingCopy;
   const productCount = productSummary.data?.productCount ?? 0;
   const publishedProductCount = productSummary.data?.publishedProductCount ?? 0;
   const shareUrl =
     typeof window !== "undefined" && s ? `${window.location.origin}/s/${s.slug}` : "";
 
-  const steps: Array<{ done: boolean; label: string; to: string; cta: string }> = s
+  const steps: Array<{ done: boolean; label: string; to: string; cta: string }> = workingCopy
     ? [
         {
           done: true,
@@ -48,20 +35,8 @@ export function OverviewScreen() {
           cta: "Edit",
         },
         {
-          done: Boolean(s.primary_category_id),
-          label: "Pick a primary category",
-          to: "/seller/storefront",
-          cta: "Pick",
-        },
-        {
-          done: Boolean(s.whatsapp || s.email),
+          done: Boolean(workingCopy.whatsapp || workingCopy.email),
           label: "Add a way for buyers to contact you (WhatsApp or email)",
-          to: "/seller/storefront",
-          cta: "Add",
-        },
-        {
-          done: Boolean(s.cover_image_url),
-          label: "Add a cover image so your storefront looks branded",
           to: "/seller/storefront",
           cta: "Add",
         },
@@ -71,38 +46,31 @@ export function OverviewScreen() {
           to: "/seller/products",
           cta: "Add product",
         },
-        {
-          done: Boolean(s.published),
-          label: "Publish your storefront",
-          to: "/seller/storefront",
-          cta: "Open storefront",
-        },
       ]
     : [];
 
   const remaining = steps.filter((step) => !step.done).length;
-  const canQuickPublish =
-    !!s && !s.published && publishedProductCount > 0 && !!(s.whatsapp || s.email);
+  const sellerStatus = s?.published
+    ? "Published"
+    : s?.approved_profile_submission_id
+      ? "Approved, hidden"
+      : "Private draft";
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-display text-2xl font-semibold">
-          Welcome{s?.name ? `, ${s.name}` : ""}
+          Welcome{workingCopy?.name ? `, ${workingCopy.name}` : ""}
         </h1>
         <p className="text-sm text-muted-foreground">
           {s?.published
             ? "Your storefront is live and buyers can find you."
-            : "Your storefront is a draft — finish the checklist below to go live."}
+            : "Your storefront profile is private while moderation is being prepared."}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card
-          label="Status"
-          value={s?.published ? "Published" : "Draft"}
-          tone={s?.published ? "good" : "warn"}
-        />
+        <Card label="Status" value={sellerStatus} tone={s?.published ? "good" : "warn"} />
         <Card label="Products" value={String(productCount)} />
         <Card label="Leads" value={String(leads.data?.leads.length ?? 0)} />
       </div>
@@ -118,15 +86,6 @@ export function OverviewScreen() {
                 {remaining} {remaining === 1 ? "step" : "steps"} left
               </p>
             </div>
-            {canQuickPublish ? (
-              <button
-                onClick={() => publishMutation.mutate(true)}
-                disabled={publishMutation.isPending}
-                className="bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-              >
-                {publishMutation.isPending ? "Publishing…" : "Publish storefront"}
-              </button>
-            ) : null}
           </div>
           <ul className="mt-4 divide-y divide-border">
             {steps.map((step) => (
@@ -157,20 +116,13 @@ export function OverviewScreen() {
           </ul>
         </div>
       ) : s?.published ? (
-        <div className="flex items-center justify-between border border-primary/40 bg-primary/5 p-4 text-sm">
+        <div className="border border-primary/40 bg-primary/5 p-4 text-sm">
           <div>
-            <div className="font-medium text-foreground">Storefront live 🎉</div>
+            <div className="font-medium text-foreground">Storefront live</div>
             <div className="text-xs text-muted-foreground">
               Share your link with buyers to start receiving inquiries.
             </div>
           </div>
-          <button
-            onClick={() => publishMutation.mutate(false)}
-            disabled={publishMutation.isPending}
-            className="border border-border px-3 py-1.5 text-xs hover:border-primary disabled:opacity-60"
-          >
-            Unpublish
-          </button>
         </div>
       ) : null}
 
@@ -195,7 +147,7 @@ export function OverviewScreen() {
           </div>
           {!s.published ? (
             <p className="mt-2 text-[11px] text-amber-400">
-              This link only works once your storefront is published.
+              This private draft is not available to buyers.
             </p>
           ) : null}
         </div>

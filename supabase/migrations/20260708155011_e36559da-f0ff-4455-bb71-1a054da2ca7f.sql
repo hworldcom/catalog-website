@@ -130,38 +130,5 @@ INSERT INTO public.categories (slug, name, tagline, sort_order) VALUES
   ('food', 'Food & Beverages', 'Spices, snacks, packaged goods', 5),
   ('electronics', 'Electronics & Gadgets', 'Consumer electronics, accessories', 6);
 
--- SEED SELLERS
-INSERT INTO public.sellers (slug, name, city, country, whatsapp, email, verified, about, cover_image_url, established_year, primary_category_id)
-SELECT 'kesar-textiles', 'Kesar Textiles', 'Surat', 'India', '919812345678', 'sales@kesartextiles.example',
-       true, 'Family-run wholesale house specialising in sarees, dress materials, and home linens. MOQ 12 pieces.',
-       'https://images.unsplash.com/photo-1583391733956-6c78276477e2?auto=format&fit=crop&w=1600&q=60',
-       1998, id FROM public.categories WHERE slug='textiles';
-
-INSERT INTO public.sellers (slug, name, city, country, whatsapp, email, verified, about, cover_image_url, established_year, primary_category_id)
-SELECT 'jaipur-handicrafts', 'Jaipur Handicrafts Co.', 'Jaipur', 'India', '919811112222', 'orders@jaipurhc.example',
-       true, 'Blue pottery, brass décor, and hand-block printed home accents. Ships worldwide.',
-       'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=1600&q=60',
-       2005, id FROM public.categories WHERE slug='home-decor';
-
-INSERT INTO public.sellers (slug, name, city, country, whatsapp, email, verified, about, cover_image_url, established_year, primary_category_id)
-SELECT 'aroma-naturals', 'Aroma Naturals', 'Kochi', 'India', '919833334444', 'wholesale@aromanaturals.example',
-       false, 'Ayurvedic skincare and essential oils. Private-label available from 500 units.',
-       'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1600&q=60',
-       2015, id FROM public.categories WHERE slug='beauty';
-
--- SEED PRODUCTS
-WITH s AS (SELECT id, slug FROM public.sellers),
-     c AS (SELECT id, slug FROM public.categories)
-INSERT INTO public.products (seller_id, category_id, title, description, moq, pack_size, price, currency, stock, status, cover_image_url, trending)
-SELECT s.id, c.id, p.title, p.description, p.moq, p.pack_size, p.price, 'USD', p.stock::stock_status, 'published'::product_status, p.image, p.trending
-FROM (VALUES
-  ('kesar-textiles','textiles','Banarasi Silk Saree — Rust', 'Handloom Banarasi silk with zari border. Assorted colours in each pack.', 12, 'Pack of 12', 22.50, 'in_stock', 'https://images.unsplash.com/photo-1610030006645-6a3d3a3d5a5b?auto=format&fit=crop&w=1200&q=60', true),
-  ('kesar-textiles','textiles','Cotton Dress Material Set', 'Unstitched dress material — top, bottom, dupatta. Mixed prints.', 24, 'Pack of 24', 8.90, 'low_stock', 'https://images.unsplash.com/photo-1583391733981-8698e5cf8b91?auto=format&fit=crop&w=1200&q=60', true),
-  ('kesar-textiles','textiles','Cotton Bedsheet Set (King)', '100% cotton, 220 TC. King size with 2 pillow covers.', 20, 'Pack of 20', 11.20, 'in_stock', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=60', false),
-  ('jaipur-handicrafts','home-decor','Blue Pottery Vase — 8"', 'Hand-painted Jaipur blue pottery vase. Fragile — packed with foam.', 24, 'Pack of 24', 6.40, 'in_stock', 'https://images.unsplash.com/photo-1578500494198-246f612d3b3d?auto=format&fit=crop&w=1200&q=60', true),
-  ('jaipur-handicrafts','home-decor','Brass Diya Set (12 pcs)', 'Traditional brass oil lamps, polished finish.', 50, 'Box of 50', 3.10, 'in_stock', 'https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&w=1200&q=60', false),
-  ('aroma-naturals','beauty','Cold-Pressed Coconut Oil 250ml', 'Virgin coconut oil, private-label available.', 100, 'Case of 100', 2.20, 'in_stock', 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=1200&q=60', true),
-  ('aroma-naturals','beauty','Ayurvedic Face Serum 30ml', 'Kumkumadi-inspired brightening serum.', 60, 'Case of 60', 4.75, 'made_to_order', 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=1200&q=60', false)
-) AS p(seller_slug, category_slug, title, description, moq, pack_size, price, stock, image, trending)
-JOIN s ON s.slug = p.seller_slug
-JOIN c ON c.slug = p.category_slug;
+-- Synthetic seller and product fixtures are created only by the guarded UAT
+-- fixture command. Fresh migration replays must not create public business data.

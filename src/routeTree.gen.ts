@@ -19,6 +19,7 @@ import { Route as DemoKesarTextilesRouteImport } from './routes/demo.kesar-texti
 import { Route as CCategoryRouteImport } from './routes/c.$category'
 import { Route as AuthenticatedSellerRouteImport } from './routes/_authenticated/seller'
 import { Route as AuthenticatedSellerIndexRouteImport } from './routes/_authenticated/seller.index'
+import { Route as V1SellerProfileAssetsAssetIdRouteImport } from './routes/v1.seller-profile-assets.$assetId'
 import { Route as V1AdminClassifierImportsRouteImport } from './routes/v1.admin.classifier-imports'
 import { Route as V1AdminClassifierImportDestinationRouteImport } from './routes/v1.admin.classifier-import-destination'
 import { Route as V1AdminClassifierBatchesRouteImport } from './routes/v1.admin.classifier-batches'
@@ -46,6 +47,7 @@ import { Route as AuthenticatedSellerClassifierBatchesWorkflowIdImportRouteImpor
 import { Route as AuthenticatedAdminProductDraftsProductDraftIdFactsRouteImport } from './routes/_authenticated/admin.product-drafts_.$productDraftId.facts'
 import { Route as AuthenticatedAdminClassifierUploadsWorkflowIdReviewRouteImport } from './routes/_authenticated/admin.classifier-uploads_.$workflowId_.review'
 import { Route as AuthenticatedAdminClassifierUploadsWorkflowIdImportRouteImport } from './routes/_authenticated/admin.classifier-uploads_.$workflowId_.import'
+import { Route as V1PublicSellersSellerIdProfileImagesKindRouteImport } from './routes/v1.public.sellers.$sellerId.profile-images.$kind'
 import { Route as AuthenticatedAdminClassifierUploadsWorkflowIdProductsProductDraftIdRouteImport } from './routes/_authenticated/admin.classifier-uploads_.$workflowId_.products.$productDraftId'
 import { Route as V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRouteImport } from './routes/v1.seller.classifier-batches.$workflowId.images.$imageId.thumbnail'
 import { Route as V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRouteImport } from './routes/v1.admin.classifier-uploads.$workflowId.images.$imageId.thumbnail'
@@ -99,6 +101,12 @@ const AuthenticatedSellerIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedSellerRoute,
+  } as any)
+const V1SellerProfileAssetsAssetIdRoute =
+  V1SellerProfileAssetsAssetIdRouteImport.update({
+    id: '/v1/seller-profile-assets/$assetId',
+    path: '/v1/seller-profile-assets/$assetId',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const V1AdminClassifierImportsRoute =
   V1AdminClassifierImportsRouteImport.update({
@@ -262,6 +270,12 @@ const AuthenticatedAdminClassifierUploadsWorkflowIdImportRoute =
     path: '/admin/classifier-uploads/$workflowId/import',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const V1PublicSellersSellerIdProfileImagesKindRoute =
+  V1PublicSellersSellerIdProfileImagesKindRouteImport.update({
+    id: '/v1/public/sellers/$sellerId/profile-images/$kind',
+    path: '/v1/public/sellers/$sellerId/profile-images/$kind',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAdminClassifierUploadsWorkflowIdProductsProductDraftIdRoute =
   AuthenticatedAdminClassifierUploadsWorkflowIdProductsProductDraftIdRouteImport.update(
     {
@@ -301,6 +315,7 @@ export interface FileRoutesByFullPath {
   '/v1/admin/classifier-batches': typeof V1AdminClassifierBatchesRoute
   '/v1/admin/classifier-import-destination': typeof V1AdminClassifierImportDestinationRoute
   '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
+  '/v1/seller-profile-assets/$assetId': typeof V1SellerProfileAssetsAssetIdRoute
   '/seller/': typeof AuthenticatedSellerIndexRoute
   '/admin/classifier-imports/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
   '/admin/classifier-uploads/$workflowId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdRoute
@@ -321,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/v1/admin/classifier-imports/$importId/reconcile': typeof V1AdminClassifierImportsImportIdReconcileRoute
   '/v1/admin/classifier-imports/$importId/retry': typeof V1AdminClassifierImportsImportIdRetryRoute
   '/admin/classifier-uploads/$workflowId/products/$productDraftId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdProductsProductDraftIdRoute
+  '/v1/public/sellers/$sellerId/profile-images/$kind': typeof V1PublicSellersSellerIdProfileImagesKindRoute
   '/v1/admin/classifier-uploads/$workflowId/images/$imageId/thumbnail': typeof V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute
   '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail': typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
 }
@@ -341,6 +357,7 @@ export interface FileRoutesByTo {
   '/v1/admin/classifier-batches': typeof V1AdminClassifierBatchesRoute
   '/v1/admin/classifier-import-destination': typeof V1AdminClassifierImportDestinationRoute
   '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
+  '/v1/seller-profile-assets/$assetId': typeof V1SellerProfileAssetsAssetIdRoute
   '/seller': typeof AuthenticatedSellerIndexRoute
   '/admin/classifier-imports/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
   '/admin/classifier-uploads/$workflowId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdRoute
@@ -361,6 +378,7 @@ export interface FileRoutesByTo {
   '/v1/admin/classifier-imports/$importId/reconcile': typeof V1AdminClassifierImportsImportIdReconcileRoute
   '/v1/admin/classifier-imports/$importId/retry': typeof V1AdminClassifierImportsImportIdRetryRoute
   '/admin/classifier-uploads/$workflowId/products/$productDraftId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdProductsProductDraftIdRoute
+  '/v1/public/sellers/$sellerId/profile-images/$kind': typeof V1PublicSellersSellerIdProfileImagesKindRoute
   '/v1/admin/classifier-uploads/$workflowId/images/$imageId/thumbnail': typeof V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute
   '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail': typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
 }
@@ -384,6 +402,7 @@ export interface FileRoutesById {
   '/v1/admin/classifier-batches': typeof V1AdminClassifierBatchesRoute
   '/v1/admin/classifier-import-destination': typeof V1AdminClassifierImportDestinationRoute
   '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
+  '/v1/seller-profile-assets/$assetId': typeof V1SellerProfileAssetsAssetIdRoute
   '/_authenticated/seller/': typeof AuthenticatedSellerIndexRoute
   '/_authenticated/admin/classifier-imports_/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
   '/_authenticated/admin/classifier-uploads_/$workflowId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdRoute
@@ -404,6 +423,7 @@ export interface FileRoutesById {
   '/v1/admin/classifier-imports/$importId/reconcile': typeof V1AdminClassifierImportsImportIdReconcileRoute
   '/v1/admin/classifier-imports/$importId/retry': typeof V1AdminClassifierImportsImportIdRetryRoute
   '/_authenticated/admin/classifier-uploads_/$workflowId_/products/$productDraftId': typeof AuthenticatedAdminClassifierUploadsWorkflowIdProductsProductDraftIdRoute
+  '/v1/public/sellers/$sellerId/profile-images/$kind': typeof V1PublicSellersSellerIdProfileImagesKindRoute
   '/v1/admin/classifier-uploads/$workflowId/images/$imageId/thumbnail': typeof V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute
   '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail': typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
 }
@@ -427,6 +447,7 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-batches'
     | '/v1/admin/classifier-import-destination'
     | '/v1/admin/classifier-imports'
+    | '/v1/seller-profile-assets/$assetId'
     | '/seller/'
     | '/admin/classifier-imports/$importId'
     | '/admin/classifier-uploads/$workflowId'
@@ -447,6 +468,7 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-imports/$importId/reconcile'
     | '/v1/admin/classifier-imports/$importId/retry'
     | '/admin/classifier-uploads/$workflowId/products/$productDraftId'
+    | '/v1/public/sellers/$sellerId/profile-images/$kind'
     | '/v1/admin/classifier-uploads/$workflowId/images/$imageId/thumbnail'
     | '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
   fileRoutesByTo: FileRoutesByTo
@@ -467,6 +489,7 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-batches'
     | '/v1/admin/classifier-import-destination'
     | '/v1/admin/classifier-imports'
+    | '/v1/seller-profile-assets/$assetId'
     | '/seller'
     | '/admin/classifier-imports/$importId'
     | '/admin/classifier-uploads/$workflowId'
@@ -487,6 +510,7 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-imports/$importId/reconcile'
     | '/v1/admin/classifier-imports/$importId/retry'
     | '/admin/classifier-uploads/$workflowId/products/$productDraftId'
+    | '/v1/public/sellers/$sellerId/profile-images/$kind'
     | '/v1/admin/classifier-uploads/$workflowId/images/$imageId/thumbnail'
     | '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
   id:
@@ -509,6 +533,7 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-batches'
     | '/v1/admin/classifier-import-destination'
     | '/v1/admin/classifier-imports'
+    | '/v1/seller-profile-assets/$assetId'
     | '/_authenticated/seller/'
     | '/_authenticated/admin/classifier-imports_/$importId'
     | '/_authenticated/admin/classifier-uploads_/$workflowId'
@@ -529,6 +554,7 @@ export interface FileRouteTypes {
     | '/v1/admin/classifier-imports/$importId/reconcile'
     | '/v1/admin/classifier-imports/$importId/retry'
     | '/_authenticated/admin/classifier-uploads_/$workflowId_/products/$productDraftId'
+    | '/v1/public/sellers/$sellerId/profile-images/$kind'
     | '/v1/admin/classifier-uploads/$workflowId/images/$imageId/thumbnail'
     | '/v1/seller/classifier-batches/$workflowId/images/$imageId/thumbnail'
   fileRoutesById: FileRoutesById
@@ -545,6 +571,8 @@ export interface RootRouteChildren {
   V1AdminClassifierBatchesRoute: typeof V1AdminClassifierBatchesRoute
   V1AdminClassifierImportDestinationRoute: typeof V1AdminClassifierImportDestinationRoute
   V1AdminClassifierImportsRoute: typeof V1AdminClassifierImportsRouteWithChildren
+  V1SellerProfileAssetsAssetIdRoute: typeof V1SellerProfileAssetsAssetIdRoute
+  V1PublicSellersSellerIdProfileImagesKindRoute: typeof V1PublicSellersSellerIdProfileImagesKindRoute
   V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute: typeof V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute
   V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute: typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
 }
@@ -620,6 +648,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/seller/'
       preLoaderRoute: typeof AuthenticatedSellerIndexRouteImport
       parentRoute: typeof AuthenticatedSellerRoute
+    }
+    '/v1/seller-profile-assets/$assetId': {
+      id: '/v1/seller-profile-assets/$assetId'
+      path: '/v1/seller-profile-assets/$assetId'
+      fullPath: '/v1/seller-profile-assets/$assetId'
+      preLoaderRoute: typeof V1SellerProfileAssetsAssetIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/v1/admin/classifier-imports': {
       id: '/v1/admin/classifier-imports'
@@ -810,6 +845,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminClassifierUploadsWorkflowIdImportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/v1/public/sellers/$sellerId/profile-images/$kind': {
+      id: '/v1/public/sellers/$sellerId/profile-images/$kind'
+      path: '/v1/public/sellers/$sellerId/profile-images/$kind'
+      fullPath: '/v1/public/sellers/$sellerId/profile-images/$kind'
+      preLoaderRoute: typeof V1PublicSellersSellerIdProfileImagesKindRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/classifier-uploads_/$workflowId_/products/$productDraftId': {
       id: '/_authenticated/admin/classifier-uploads_/$workflowId_/products/$productDraftId'
       path: '/admin/classifier-uploads/$workflowId/products/$productDraftId'
@@ -974,6 +1016,9 @@ const rootRouteChildren: RootRouteChildren = {
   V1AdminClassifierImportDestinationRoute:
     V1AdminClassifierImportDestinationRoute,
   V1AdminClassifierImportsRoute: V1AdminClassifierImportsRouteWithChildren,
+  V1SellerProfileAssetsAssetIdRoute: V1SellerProfileAssetsAssetIdRoute,
+  V1PublicSellersSellerIdProfileImagesKindRoute:
+    V1PublicSellersSellerIdProfileImagesKindRoute,
   V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute:
     V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute,
   V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute:

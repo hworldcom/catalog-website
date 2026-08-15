@@ -48,7 +48,8 @@ export type ProductPublicationAuthorizationResult =
         | "category_required"
         | "product_code_company_unconfigured"
         | "product_code_category_unconfigured"
-        | "product_code_allocation_failed";
+        | "product_code_allocation_failed"
+        | "seller_approval_required";
       productDraftId: string | null;
     };
 
@@ -63,6 +64,7 @@ export type ProductPublicationRetryResult =
   | "description_invalid"
   | "audience_required"
   | "category_required"
+  | "seller_approval_required"
   | "in_progress";
 
 export interface ProductPublicationRepository {

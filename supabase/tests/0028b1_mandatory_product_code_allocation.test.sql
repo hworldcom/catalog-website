@@ -2,6 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
+\ir helpers/approved_seller.inc
 
 SELECT plan(30);
 
@@ -93,6 +94,9 @@ VALUES
     'QA 0028b1 Two',
     'Q92'
   );
+
+SELECT pg_temp.approve_fixture_seller('28b10000-0000-0000-0000-000000000001');
+SELECT pg_temp.approve_fixture_seller('28b10000-0000-0000-0000-000000000002');
 
 CREATE TEMP TABLE direct_creation AS
 SELECT *

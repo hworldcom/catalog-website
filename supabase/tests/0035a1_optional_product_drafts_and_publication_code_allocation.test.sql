@@ -2,6 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
+\ir helpers/approved_seller.inc
 
 SELECT plan(30);
 
@@ -44,6 +45,8 @@ VALUES (
   'QA 0035a1 Seller',
   'Q35'
 );
+
+SELECT pg_temp.approve_fixture_seller('35a10000-0000-0000-0000-000000000001');
 
 CREATE TEMP TABLE incomplete_draft AS
 SELECT *

@@ -1,150 +1,252 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { listSellerBusinessCategories } from "@/features/seller/categories.functions";
 import {
   normalizeSubmittedCompanyCode,
   readSellerCompanyCodeError,
 } from "@/features/seller/company-code";
 import { companyCodeCopy, companyCodeErrorCopy } from "@/features/seller/company-code.copy";
 import { updateMyCompanyCode } from "@/features/seller/company-code.functions";
-import { getMySeller } from "@/features/seller/current-seller.functions";
-import { updateStorefront } from "@/features/seller/storefront.functions";
+import {
+  getMySellerProfileWorkingCopy,
+  saveMySellerProfileWorkingCopy,
+} from "@/features/seller/storefront.functions";
+import { SellerProfileMediaField } from "@/features/seller/components/seller-profile-media-field";
+import { removeMySellerProfileAsset } from "@/features/seller/seller-profile-media.functions";
 import { tr } from "@/lib/i18n";
 import { toast } from "sonner";
 
 import { Field } from "../components/field";
-import { ImageUpload } from "../components/image-upload";
+
+type StorefrontForm = {
+  revision: number;
+  name: string;
+  slug: string;
+  city: string;
+  country: string;
+  whatsapp: string;
+  email: string;
+  about: string;
+  establishedYear: string;
+  logoAssetId: string | null;
+  coverAssetId: string | null;
+  companyCode: string;
+  savedCompanyCode: string;
+  companyCodeLockedAt: string | null;
+};
 
 export function StorefrontScreen() {
-  const getSeller = useServerFn(getMySeller);
-  const save = useServerFn(updateStorefront);
+  const getProfile = useServerFn(getMySellerProfileWorkingCopy);
+  const saveProfile = useServerFn(saveMySellerProfileWorkingCopy);
   const saveCompanyCode = useServerFn(updateMyCompanyCode);
-  const listCats = useServerFn(listSellerBusinessCategories);
+  const removeAsset = useServerFn(removeMySellerProfileAsset);
   const queryClient = useQueryClient();
-  const { data } = useQuery({ queryKey: ["my-seller"], queryFn: () => getSeller() });
-  const cats = useQuery({ queryKey: ["seller-business-categories"], queryFn: () => listCats() });
-
-  const seller = data?.seller;
-  const [form, setForm] = useState<null | {
-    id: string;
-    name: string;
-    slug: string;
-    city: string;
-    country: string;
-    whatsapp: string;
-    email: string;
-    about: string;
-    logo_url: string;
-    cover_image_url: string;
-    established_year: string;
-    primary_category_id: string;
-    company_code: string;
-    company_code_saved: string;
-    company_code_locked_at: string | null;
-    published: boolean;
-  }>(null);
+  const profileQuery = useQuery({
+    queryKey: ["my-seller-profile"],
+    queryFn: () => getProfile(),
+  });
+  const [form, setForm] = useState<StorefrontForm | null>(null);
+  const formRef = useRef<StorefrontForm | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mediaBusy, setMediaBusy] = useState(false);
 
   useEffect(() => {
-    if (seller && !form) {
-      setForm({
-        id: seller.id,
-        name: seller.name ?? "",
-        slug: seller.slug ?? "",
-        city: seller.city ?? "",
-        country: seller.country ?? "",
-        whatsapp: seller.whatsapp ?? "",
-        email: seller.email ?? "",
-        about: seller.about ?? "",
-        logo_url: seller.logo_url ?? "",
-        cover_image_url: seller.cover_image_url ?? "",
-        established_year: seller.established_year ? String(seller.established_year) : "",
-        primary_category_id: seller.primary_category_id ?? "",
-        company_code: seller.company_code,
-        company_code_saved: seller.company_code,
-        company_code_locked_at: seller.company_code_locked_at,
-        published: seller.published,
-      });
-    }
-  }, [seller, form]);
+    if (!profileQuery.data || form) return;
+    const { seller, workingCopy } = profileQuery.data;
+    const initialForm = {
+      revision: workingCopy.revision,
+      name: workingCopy.name,
+      slug: workingCopy.slug,
+      city: workingCopy.city ?? "",
+      country: workingCopy.country ?? "",
+      whatsapp: workingCopy.whatsapp ?? "",
+      email: workingCopy.email ?? "",
+      about: workingCopy.about ?? "",
+      establishedYear: workingCopy.established_year ? String(workingCopy.established_year) : "",
+      logoAssetId: workingCopy.logo_asset_id,
+      coverAssetId: workingCopy.cover_asset_id,
+      companyCode: seller.company_code,
+      savedCompanyCode: seller.company_code,
+      companyCodeLockedAt: seller.company_code_locked_at,
+    };
+    formRef.current = initialForm;
+    setForm(initialForm);
+  }, [form, profileQuery.data]);
+
+  if (profileQuery.isError) {
+    return (
+      <div className="border border-destructive/40 bg-destructive/5 p-4 text-sm">
+        Seller profile could not be loaded.
+      </div>
+    );
+  }
 
   if (!form) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+  async function submit(event: FormEvent) {
+    event.preventDefault();
     if (!form) return;
     setBusy(true);
     try {
-      const companyCode = normalizeSubmittedCompanyCode(form.company_code);
-      if (!form.company_code_locked_at && companyCode !== form.company_code_saved) {
+      const companyCode = normalizeSubmittedCompanyCode(form.companyCode);
+      if (!form.companyCodeLockedAt && companyCode !== form.savedCompanyCode) {
         const result = await saveCompanyCode({ data: { companyCode } });
         setForm((current) =>
           current
             ? {
                 ...current,
-                company_code: result.seller.company_code,
-                company_code_saved: result.seller.company_code,
-                company_code_locked_at: result.seller.company_code_locked_at,
+                companyCode: result.seller.company_code,
+                savedCompanyCode: result.seller.company_code,
+                companyCodeLockedAt: result.seller.company_code_locked_at,
               }
             : current,
         );
       }
 
-      await save({
-        data: {
-          id: form.id,
-          name: form.name,
-          slug: form.slug,
-          city: form.city,
-          country: form.country,
-          whatsapp: form.whatsapp,
-          email: form.email,
-          about: form.about,
-          logo_url: form.logo_url,
-          cover_image_url: form.cover_image_url,
-          established_year: form.established_year ? Number(form.established_year) : null,
-          primary_category_id: form.primary_category_id || null,
-          published: form.published,
-        },
-      });
-      await queryClient.invalidateQueries({ queryKey: ["my-seller"] });
-      toast.success(tr(companyCodeCopy.saveSuccess));
-    } catch (err) {
-      const companyCodeError = readSellerCompanyCodeError(err);
+      const result = await persistProfile(form);
+      applyWorkingCopy(result.workingCopy);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["my-seller-profile"] }),
+        queryClient.invalidateQueries({ queryKey: ["my-seller"] }),
+      ]);
+      toast.success("Profile draft saved.");
+    } catch (error) {
+      const companyCodeError = readSellerCompanyCodeError(error);
       toast.error(
-        companyCodeError
-          ? tr(companyCodeErrorCopy[companyCodeError])
-          : err instanceof Error && err.message !== "seller_company_code_unavailable"
-            ? err.message
-            : tr(companyCodeCopy.saveUnavailable),
+        companyCodeError ? tr(companyCodeErrorCopy[companyCodeError]) : profileErrorMessage(error),
       );
     } finally {
       setBusy(false);
     }
   }
 
-  const update = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
-    setForm((f) => (f ? { ...f, [k]: v } : f));
+  const update = <Key extends keyof StorefrontForm>(key: Key, value: StorefrontForm[Key]) =>
+    setForm((current) => {
+      const next = current ? { ...current, [key]: value } : current;
+      formRef.current = next;
+      return next;
+    });
+  const inputClass = "border border-border bg-background px-3 py-2 text-sm";
 
-  const inputCls = "border border-border bg-background px-3 py-2 text-sm";
+  async function persistProfile(next: StorefrontForm) {
+    return saveProfile({
+      data: {
+        expectedRevision: next.revision,
+        name: next.name,
+        slug: next.slug,
+        city: next.city,
+        country: next.country,
+        whatsapp: next.whatsapp,
+        email: next.email,
+        about: next.about,
+        establishedYear: next.establishedYear ? Number(next.establishedYear) : null,
+        logoAssetId: next.logoAssetId,
+        coverAssetId: next.coverAssetId,
+      },
+    });
+  }
+
+  function applyWorkingCopy(
+    workingCopy: Awaited<ReturnType<typeof persistProfile>>["workingCopy"],
+  ) {
+    setForm((current) => {
+      const next = current
+        ? {
+            ...current,
+            revision: workingCopy.revision,
+            name: workingCopy.name,
+            slug: workingCopy.slug,
+            city: workingCopy.city ?? "",
+            country: workingCopy.country ?? "",
+            whatsapp: workingCopy.whatsapp ?? "",
+            email: workingCopy.email ?? "",
+            about: workingCopy.about ?? "",
+            establishedYear: workingCopy.established_year
+              ? String(workingCopy.established_year)
+              : "",
+            logoAssetId: workingCopy.logo_asset_id,
+            coverAssetId: workingCopy.cover_asset_id,
+          }
+        : current;
+      formRef.current = next;
+      return next;
+    });
+  }
+
+  async function selectMedia(kind: "logo" | "cover", assetId: string) {
+    const current = formRef.current;
+    if (!current) return;
+    const previousAssetId = kind === "logo" ? current.logoAssetId : current.coverAssetId;
+    const next = {
+      ...current,
+      ...(kind === "logo" ? { logoAssetId: assetId } : { coverAssetId: assetId }),
+    };
+    try {
+      const result = await persistProfile(next);
+      applyWorkingCopy(result.workingCopy);
+    } catch (error) {
+      try {
+        await removeAsset({ data: { assetId } });
+      } catch {
+        // The durable cleanup state remains retryable through the server operation.
+      }
+      throw error;
+    }
+    if (previousAssetId && previousAssetId !== assetId) {
+      await removeAsset({ data: { assetId: previousAssetId } });
+    }
+    toast.success(`${kind === "logo" ? "Logo" : "Cover image"} saved to the profile draft.`);
+  }
+
+  async function removeMedia(kind: "logo" | "cover") {
+    const current = formRef.current;
+    if (!current) return;
+    const assetId = kind === "logo" ? current.logoAssetId : current.coverAssetId;
+    if (!assetId) return;
+    const next = {
+      ...current,
+      ...(kind === "logo" ? { logoAssetId: null } : { coverAssetId: null }),
+    };
+    const result = await persistProfile(next);
+    applyWorkingCopy(result.workingCopy);
+    await removeAsset({ data: { assetId } });
+    toast.success(`${kind === "logo" ? "Logo" : "Cover image"} removed.`);
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Storefront</h1>
+        <h1 className="font-display text-2xl font-semibold">Storefront profile</h1>
         <p className="text-sm text-muted-foreground">
-          Info shown to buyers on your public storefront.
+          These edits stay private until seller approval controls are available.
         </p>
       </div>
       <form onSubmit={submit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <SellerProfileMediaField
+          kind="logo"
+          assetId={form.logoAssetId}
+          disabled={busy || mediaBusy}
+          onSelect={(assetId) => selectMedia("logo", assetId)}
+          onRemove={() => removeMedia("logo")}
+          onBusyChange={setMediaBusy}
+        />
+        <SellerProfileMediaField
+          kind="cover"
+          assetId={form.coverAssetId}
+          disabled={busy || mediaBusy}
+          onSelect={(assetId) => selectMedia("cover", assetId)}
+          onRemove={() => removeMedia("cover")}
+          onBusyChange={setMediaBusy}
+        />
         <Field label="Business name">
           <input
             required
+            minLength={2}
+            maxLength={120}
             value={form.name}
-            onChange={(e) => update("name", e.target.value)}
-            className={inputCls}
+            onChange={(event) => update("name", event.target.value)}
+            className={inputClass}
           />
         </Field>
         <Field label={tr(companyCodeCopy.label)}>
@@ -153,56 +255,63 @@ export function StorefrontScreen() {
             minLength={3}
             maxLength={10}
             pattern="[A-Z0-9]{3}[0-9]*"
-            value={form.company_code}
-            onChange={(e) => update("company_code", e.target.value.toUpperCase())}
-            disabled={Boolean(form.company_code_locked_at)}
-            className={`${inputCls} uppercase disabled:cursor-not-allowed disabled:opacity-60`}
+            value={form.companyCode}
+            onChange={(event) => update("companyCode", event.target.value.toUpperCase())}
+            disabled={Boolean(form.companyCodeLockedAt)}
+            className={`${inputClass} uppercase disabled:cursor-not-allowed disabled:opacity-60`}
             autoComplete="off"
           />
           <span className="text-[11px] text-muted-foreground">
             {tr(
-              form.company_code_locked_at
-                ? companyCodeCopy.lockedHelp
-                : companyCodeCopy.unlockedHelp,
+              form.companyCodeLockedAt ? companyCodeCopy.lockedHelp : companyCodeCopy.unlockedHelp,
             )}
           </span>
         </Field>
         <Field label="URL slug (a-z, 0-9, -)">
           <input
             required
+            minLength={2}
+            maxLength={60}
             value={form.slug}
-            onChange={(e) => update("slug", e.target.value)}
-            className={inputCls}
-            pattern="^[a-z0-9-]+$"
+            onChange={(event) => update("slug", event.target.value)}
+            className={inputClass}
+            pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
           />
+        </Field>
+        <Field label="Business category">
+          <input value="Fashion" disabled className={`${inputClass} opacity-60`} />
         </Field>
         <Field label="City">
           <input
+            maxLength={80}
             value={form.city}
-            onChange={(e) => update("city", e.target.value)}
-            className={inputCls}
+            onChange={(event) => update("city", event.target.value)}
+            className={inputClass}
           />
         </Field>
         <Field label="Country">
           <input
+            maxLength={80}
             value={form.country}
-            onChange={(e) => update("country", e.target.value)}
-            className={inputCls}
+            onChange={(event) => update("country", event.target.value)}
+            className={inputClass}
           />
         </Field>
-        <Field label="WhatsApp (E.164, e.g. +919812345678)">
+        <Field label="WhatsApp">
           <input
+            maxLength={40}
             value={form.whatsapp}
-            onChange={(e) => update("whatsapp", e.target.value)}
-            className={inputCls}
+            onChange={(event) => update("whatsapp", event.target.value)}
+            className={inputClass}
           />
         </Field>
         <Field label="Contact email">
           <input
             type="email"
+            maxLength={255}
             value={form.email}
-            onChange={(e) => update("email", e.target.value)}
-            className={inputCls}
+            onChange={(event) => update("email", event.target.value)}
+            className={inputClass}
           />
         </Field>
         <Field label="Established year">
@@ -210,69 +319,49 @@ export function StorefrontScreen() {
             type="number"
             min={1800}
             max={2100}
-            value={form.established_year}
-            onChange={(e) => update("established_year", e.target.value)}
-            className={inputCls}
+            value={form.establishedYear}
+            onChange={(event) => update("establishedYear", event.target.value)}
+            className={inputClass}
           />
         </Field>
-        <Field label="Primary category">
-          <select
-            value={form.primary_category_id}
-            onChange={(e) => update("primary_category_id", e.target.value)}
-            className={inputCls}
-          >
-            <option value="">— none —</option>
-            {cats.data?.categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <div className="md:col-span-2">
-          <ImageUpload
-            label="Logo"
-            folder="storefront"
-            value={form.logo_url}
-            onChange={(url) => update("logo_url", url)}
-          />
-        </div>
-        <div className="md:col-span-2">
-          <ImageUpload
-            label="Cover image"
-            folder="storefront"
-            value={form.cover_image_url}
-            onChange={(url) => update("cover_image_url", url)}
-          />
-        </div>
         <div className="md:col-span-2">
           <Field label="About">
             <textarea
               rows={5}
+              maxLength={4000}
               value={form.about}
-              onChange={(e) => update("about", e.target.value)}
-              className={inputCls}
+              onChange={(event) => update("about", event.target.value)}
+              className={inputClass}
             />
           </Field>
         </div>
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input
-            type="checkbox"
-            checked={form.published}
-            onChange={(e) => update("published", e.target.checked)}
-          />
-          Publish storefront (visible to buyers)
-        </label>
         <div className="md:col-span-2">
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || mediaBusy}
             className="bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
-            Save changes
+            {busy ? "Saving…" : "Save profile draft"}
           </button>
         </div>
       </form>
     </div>
   );
+}
+
+function profileErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return "Seller profile is temporarily unavailable.";
+  if (error.message.includes("seller_profile_revision_conflict")) {
+    return "This profile changed elsewhere. Reload the page and try again.";
+  }
+  if (error.message.includes("seller_approval_submission_invalid")) {
+    return "Check the profile fields and try again.";
+  }
+  if (error.message.includes("seller_approval_not_found")) {
+    return "Seller profile could not be found.";
+  }
+  if (error.message.includes("seller_profile_image_not_ready")) {
+    return "The selected logo or cover image is not ready.";
+  }
+  return "Seller profile is temporarily unavailable.";
 }

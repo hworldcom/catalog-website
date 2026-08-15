@@ -6,6 +6,7 @@ export type SellerProductPublicationProduct = {
   productStatus: "draft" | "published" | "archived";
   coverImageUrl: string | null;
   imagePublicationMode: "durable" | "direct";
+  sellerApproved: boolean;
 };
 
 export interface SellerProductPublicationRepository {

@@ -2,6 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
+\ir helpers/approved_seller.inc
 
 SELECT plan(9);
 
@@ -13,6 +14,8 @@ VALUES (
   false,
   'Q72'
 );
+
+SELECT pg_temp.approve_fixture_seller('29a30000-0000-0000-0000-000000000001');
 
 CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
 RETURNS text
@@ -153,12 +156,12 @@ SELECT ok(
 SELECT ok(
   has_function_privilege(
     'service_role',
-    'public.authorize_product_publication_with_correlation(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,uuid,text)',
+    'public.authorize_product_publication_with_correlation(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,text[],uuid,text)',
     'EXECUTE'
   )
   AND NOT has_function_privilege(
     'authenticated',
-    'public.authorize_product_publication_with_correlation(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,uuid,text)',
+    'public.authorize_product_publication_with_correlation(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,text[],uuid,text)',
     'EXECUTE'
   ),
   'only the service role can execute correlated publication authorization'
@@ -235,6 +238,7 @@ SELECT results_eq(
       false,
       NULL,
       false,
+      ARRAY['women']::text[],
       '29a30000-0000-0000-0000-000000000201',
       repeat('a', 64)
     )
@@ -280,6 +284,7 @@ SELECT results_eq(
       false,
       NULL,
       false,
+      ARRAY['women']::text[],
       '29a30000-0000-0000-0000-000000000201',
       repeat('a', 64)
     )

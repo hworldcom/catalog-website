@@ -34,6 +34,7 @@ export type SellerProductPublicationErrorCode =
   | "product_publication_images_not_ready"
   | "product_publication_in_progress"
   | "product_publication_not_allowed"
+  | "seller_approval_required"
   | "product_publication_configuration_invalid"
   | "product_publication_unavailable";
 

@@ -93,6 +93,23 @@ describe("SellerProductPublicationService", () => {
     });
   });
 
+  it("rejects publication before doing product validation when the seller is unapproved", async () => {
+    const publications = publicationService();
+    const publishDirect = vi.fn();
+    const service = new SellerProductPublicationService(
+      productRepository({ sellerApproved: false }),
+      publications,
+      publishDirect,
+    );
+
+    await expect(service.publish(sellerId, productInput())).rejects.toMatchObject({
+      statusCode: 409,
+      code: "seller_approval_required",
+    });
+    expect(publications.authorize).not.toHaveBeenCalled();
+    expect(publishDirect).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["title_required", 409, "product_publication_title_required"],
     ["title_invalid", 400, "product_publication_title_invalid"],
@@ -240,6 +257,7 @@ function productRepository(
       productStatus: "draft",
       coverImageUrl: null,
       imagePublicationMode: "durable",
+      sellerApproved: true,
       ...overrides,
     })),
   };

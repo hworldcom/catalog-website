@@ -18,14 +18,22 @@ export const onboardSeller = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input) => onboardSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { userId } = context as {
+    const { supabase, userId } = context as {
+      supabase: import("@supabase/supabase-js").SupabaseClient<
+        import("@/lib/supabase/types").Database
+      >;
       userId: string;
     };
 
-    const [{ slugify }, { supabaseAdmin }] = await Promise.all([
+    const [{ slugify }, { supabaseAdmin }, { findOwnedSellerProfileIdentity }] = await Promise.all([
       import("./server/seller-slug"),
       import("@/lib/supabase/client.server"),
+      import("./server/seller-profile-working-copy.service"),
     ]);
+
+    // Resolve any existing identity with the requester-scoped client before the
+    // protected idempotent transaction receives the authenticated user id.
+    await findOwnedSellerProfileIdentity({ requester: supabase, userId });
 
     const response = await supabaseAdmin.rpc("create_seller_with_company_code", {
       p_owner_id: userId,

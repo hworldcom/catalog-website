@@ -2,6 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
+\ir helpers/approved_seller.inc
 
 SELECT plan(15);
 
@@ -24,6 +25,8 @@ VALUES (
   'QA 0027d',
   'Q7D'
 );
+
+SELECT pg_temp.approve_fixture_seller('27d00000-0000-4000-8000-000000000001');
 
 CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
 RETURNS text

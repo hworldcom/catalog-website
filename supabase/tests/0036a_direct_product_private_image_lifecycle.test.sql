@@ -2,6 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
+\ir helpers/approved_seller.inc
 
 SELECT plan(34);
 
@@ -108,6 +109,8 @@ VALUES (
   true,
   'Q36'
 );
+
+SELECT pg_temp.approve_fixture_seller('36a00000-0000-0000-0000-000000000001');
 
 INSERT INTO public.products (
   id,

@@ -5,11 +5,12 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getSeller: vi.fn(),
+  getProfile: vi.fn(),
   listCategories: vi.fn(),
   onboard: vi.fn(),
   saveCompanyCode: vi.fn(),
-  saveStorefront: vi.fn(),
+  saveProfile: vi.fn(),
+  removeProfileAsset: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
 }));
@@ -22,10 +23,6 @@ vi.mock("@/features/seller/categories.functions", () => ({
   listSellerBusinessCategories: mocks.listCategories,
 }));
 
-vi.mock("@/features/seller/current-seller.functions", () => ({
-  getMySeller: mocks.getSeller,
-}));
-
 vi.mock("@/features/seller/onboarding.functions", () => ({
   onboardSeller: mocks.onboard,
 }));
@@ -35,7 +32,14 @@ vi.mock("@/features/seller/company-code.functions", () => ({
 }));
 
 vi.mock("@/features/seller/storefront.functions", () => ({
-  updateStorefront: mocks.saveStorefront,
+  getMySellerProfileWorkingCopy: mocks.getProfile,
+  saveMySellerProfileWorkingCopy: mocks.saveProfile,
+}));
+
+vi.mock("@/features/seller/seller-profile-media.functions", () => ({
+  prepareMySellerProfileAssetUpload: vi.fn(),
+  finalizeMySellerProfileAssetUpload: vi.fn(),
+  removeMySellerProfileAsset: mocks.removeProfileAsset,
 }));
 
 vi.mock("sonner", () => ({
@@ -43,10 +47,6 @@ vi.mock("sonner", () => ({
     error: mocks.toastError,
     success: mocks.toastSuccess,
   },
-}));
-
-vi.mock("../components/image-upload", () => ({
-  ImageUpload: () => <div>Image upload</div>,
 }));
 
 import { OnboardingScreen } from "./onboarding-screen";
@@ -61,11 +61,11 @@ describe("seller company-code screens", () => {
       categories: [{ id: fashionId, slug: "fashion", name: "Fashion & Apparel", parent_id: null }],
     });
     mocks.onboard.mockResolvedValue({ seller: seller() });
-    mocks.getSeller.mockResolvedValue({ seller: seller() });
+    mocks.getProfile.mockResolvedValue(profileResult());
     mocks.saveCompanyCode.mockResolvedValue({
       seller: seller({ company_code: "QAB" }),
     });
-    mocks.saveStorefront.mockResolvedValue({ ok: true });
+    mocks.saveProfile.mockResolvedValue(profileResult({ revision: 2 }));
   });
 
   it("preserves a deliberate onboarding code when the business name changes", async () => {
@@ -102,26 +102,46 @@ describe("seller company-code screens", () => {
     const companyCode = await screen.findByRole("textbox", { name: /^Company code\*/ });
     await userEvent.clear(companyCode);
     await userEvent.type(companyCode, "qab");
-    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save profile draft" }));
 
-    await waitFor(() => expect(mocks.saveStorefront).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.saveProfile).toHaveBeenCalledTimes(1));
     expect(mocks.saveCompanyCode).toHaveBeenCalledWith({ data: { companyCode: "QAB" } });
+    expect(mocks.saveProfile).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        expectedRevision: 1,
+        name: "QA Seller",
+        slug: "qa-seller",
+      }),
+    });
 
-    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(mocks.saveStorefront).toHaveBeenCalledTimes(2));
+    await userEvent.click(screen.getByRole("button", { name: "Save profile draft" }));
+    await waitFor(() => expect(mocks.saveProfile).toHaveBeenCalledTimes(2));
     expect(mocks.saveCompanyCode).toHaveBeenCalledTimes(1);
+    expect(mocks.saveProfile).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({ expectedRevision: 2 }),
+    });
   });
 
   it("shows a locked company code without allowing edits", async () => {
-    mocks.getSeller.mockResolvedValue({
-      seller: seller({ company_code_locked_at: "2026-08-01T12:00:00.000Z" }),
-    });
+    mocks.getProfile.mockResolvedValue(
+      profileResult({ company_code_locked_at: "2026-08-01T12:00:00.000Z" }),
+    );
     renderScreen(<StorefrontScreen />);
 
     expect(await screen.findByRole("textbox", { name: /^Company code\*/ })).toBeDisabled();
     expect(
       screen.getByText("This code is locked because a product code has already been created."),
     ).toBeInTheDocument();
+  });
+
+  it("keeps publication and category editing disabled while exposing private media controls", async () => {
+    renderScreen(<StorefrontScreen />);
+
+    await screen.findByRole("textbox", { name: "Business name" });
+    expect(screen.getByRole("textbox", { name: "Business category" })).toBeDisabled();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload logo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload cover image" })).toBeInTheDocument();
   });
 });
 
@@ -140,20 +160,42 @@ function seller(
 ) {
   return {
     id: "00000000-0000-4000-8000-000000000010",
-    name: "QA Seller",
     slug: "qa-seller",
-    city: null,
-    country: null,
-    whatsapp: null,
-    email: null,
-    about: null,
-    logo_url: null,
-    cover_image_url: null,
-    established_year: null,
     primary_category_id: fashionId,
     company_code: "QAA",
     company_code_locked_at: null,
+    approved_profile_submission_id: null,
+    storefront_enabled: false,
     published: false,
     ...overrides,
+  };
+}
+
+function profileResult(
+  sellerOverrides: Partial<{
+    company_code: string;
+    company_code_locked_at: string | null;
+    revision: number;
+  }> = {},
+) {
+  const { revision = 1, ...identityOverrides } = sellerOverrides;
+  return {
+    seller: seller(identityOverrides),
+    workingCopy: {
+      seller_id: "00000000-0000-4000-8000-000000000010",
+      revision,
+      name: "QA Seller",
+      slug: "qa-seller",
+      city: null,
+      country: null,
+      whatsapp: null,
+      email: null,
+      about: null,
+      logo_asset_id: null,
+      cover_asset_id: null,
+      established_year: null,
+      created_at: "2026-08-11T12:00:00.000Z",
+      updated_at: "2026-08-11T12:00:00.000Z",
+    },
   };
 }

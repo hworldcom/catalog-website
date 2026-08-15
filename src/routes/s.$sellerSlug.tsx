@@ -1,19 +1,31 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { NotFound } from "@/components/layout/not-found";
 import { PageError } from "@/components/layout/page-error";
 import { audienceNavigationQueryOptions, sellerQueryOptions } from "@/features/marketplace/queries";
 import { SellerStorefrontScreen } from "@/features/marketplace/screens/seller-storefront-screen";
 import { normalizePublicAudience } from "@/features/marketplace/public-audience";
+import { normalizeLanguage } from "@/lib/i18n";
 
 export const Route = createFileRoute("/s/$sellerSlug")({
-  loaderDeps: ({ search }) => ({ audience: normalizePublicAudience(search.audience) }),
+  loaderDeps: ({ search }) => ({
+    audience: normalizePublicAudience(search.audience),
+    lang: normalizeLanguage(search.lang),
+  }),
   loader: async ({ params, context, deps }) => {
     const [data] = await Promise.all([
       context.queryClient.ensureQueryData(sellerQueryOptions(params.sellerSlug, deps.audience)),
       context.queryClient.ensureQueryData(audienceNavigationQueryOptions(deps.audience)),
     ]);
     if (!data.seller) throw notFound();
+    if (data.canonicalSlug && data.canonicalSlug !== params.sellerSlug) {
+      throw redirect({
+        to: "/s/$sellerSlug",
+        params: { sellerSlug: data.canonicalSlug },
+        search: { lang: deps.lang, audience: deps.audience },
+        statusCode: 308,
+      });
+    }
     return data;
   },
   component: SellerStorefrontRoute,

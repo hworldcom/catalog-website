@@ -98,7 +98,8 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       result.result === "category_required" ||
       result.result === "product_code_company_unconfigured" ||
       result.result === "product_code_category_unconfigured" ||
-      result.result === "product_code_allocation_failed"
+      result.result === "product_code_allocation_failed" ||
+      result.result === "seller_approval_required"
     ) {
       return {
         result: result.result,
@@ -331,6 +332,7 @@ export class SupabaseProductPublicationRepository implements ProductPublicationR
       "description_invalid",
       "audience_required",
       "category_required",
+      "seller_approval_required",
       "in_progress",
     ]);
   }

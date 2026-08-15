@@ -129,14 +129,19 @@ export const getSellerPage = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const sb = publicClient();
+    const resolution = await sb.rpc("resolve_public_seller_slug", { p_slug: data.slug });
+    if (resolution.error) throw resolution.error;
+    const resolved = resolution.data?.[0];
+    if (!resolved) return { seller: null, products: [], canonicalSlug: null };
+
     const { data: seller, error } = await sb
       .from("sellers")
       .select("*")
-      .eq("slug", data.slug)
+      .eq("id", resolved.seller_id)
       .eq("published", true)
       .maybeSingle();
     if (error) throw error;
-    if (!seller) return { seller: null, products: [] };
+    if (!seller) return { seller: null, products: [], canonicalSlug: null };
     const { data: products, error: pErr } = await sb.rpc("list_public_seller_products", {
       p_seller_slug: seller.slug,
       p_audience: data.audience,
@@ -145,6 +150,7 @@ export const getSellerPage = createServerFn({ method: "GET" })
     if (pErr) throw pErr;
     return {
       seller,
+      canonicalSlug: resolved.canonical_slug,
       products: (products ?? []).map((product) => ({
         id: product.id,
         title: product.title,

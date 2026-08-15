@@ -2,6 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
+\ir helpers/approved_seller.inc
 
 SELECT plan(29);
 
@@ -51,12 +52,17 @@ SELECT ok(
     'public.save_seller_product_with_description(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,public.product_status)',
     'EXECUTE'
   )
-  AND has_function_privilege(
+  AND NOT has_function_privilege(
     'service_role',
     'public.save_seller_product_with_description(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,public.product_status)',
     'EXECUTE'
+  )
+  AND has_function_privilege(
+    'service_role',
+    'public.save_seller_product_with_description(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean,public.product_status,text[])',
+    'EXECUTE'
   ),
-  'only the service role can execute the atomic seller save function'
+  'only the service role can execute the audience-aware atomic seller save function'
 );
 
 SELECT is(
@@ -89,6 +95,8 @@ VALUES (
   'QA 0027a1',
   'Q04'
 );
+
+SELECT pg_temp.approve_fixture_seller('27000000-0000-0000-0000-000000000001');
 
 CREATE FUNCTION pg_temp.qa_product_code(p_product_id uuid)
 RETURNS text

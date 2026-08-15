@@ -31,6 +31,7 @@ export class SellerProductPublicationService {
     delegatedAction: ProductPublicationCorrelation | null = null,
   ): Promise<SellerProductPublicationSnapshot> {
     const product = await this.requireOwnedProduct(input.id, sellerId);
+    if (!product.sellerApproved) throw sellerApprovalRequired();
     if (input.audiences.length === 0) throw publicationAudienceRequired();
     if (!input.category_id) throw publicationCategoryRequired();
     if (product.imagePublicationMode === "direct") {
@@ -135,6 +136,7 @@ export class SellerProductPublicationService {
     delegatedAction: ProductPublicationCorrelation | null = null,
   ): Promise<SellerProductPublicationSnapshot> {
     const product = await this.requireOwnedProduct(productDraftId, sellerId);
+    if (!product.sellerApproved) throw sellerApprovalRequired();
     if (product.imagePublicationMode !== "durable") {
       throw publicationNotAllowed();
     }
@@ -153,6 +155,7 @@ export class SellerProductPublicationService {
     if (result === "description_invalid") throw publicationDescriptionInvalid();
     if (result === "audience_required") throw publicationAudienceRequired();
     if (result === "category_required") throw publicationCategoryRequired();
+    if (result === "seller_approval_required") throw sellerApprovalRequired();
     if (result === "in_progress") throw publicationInProgress();
 
     return this.requireSnapshot(productDraftId, sellerId);
@@ -189,7 +192,8 @@ function authorizationError(
     | "category_required"
     | "product_code_company_unconfigured"
     | "product_code_category_unconfigured"
-    | "product_code_allocation_failed",
+    | "product_code_allocation_failed"
+    | "seller_approval_required",
 ): SellerProductPublicationError {
   if (result === "not_found") return productNotFound();
   if (result === "image_required") return publicationImageRequired();
@@ -212,6 +216,7 @@ function authorizationError(
     return publicationConfigurationInvalid();
   }
   if (result === "product_code_allocation_failed") return publicationUnavailable();
+  if (result === "seller_approval_required") return sellerApprovalRequired();
   if (result === "cover_not_allowed" || result === "not_allowed" || result === "not_editable") {
     return publicationNotAllowed();
   }
@@ -332,6 +337,14 @@ function publicationNotAllowed(): SellerProductPublicationError {
     409,
     "product_publication_not_allowed",
     "The product cannot be published in its current state.",
+  );
+}
+
+export function sellerApprovalRequired(): SellerProductPublicationError {
+  return new SellerProductPublicationError(
+    409,
+    "seller_approval_required",
+    "The seller profile must be approved before products can be published.",
   );
 }
 

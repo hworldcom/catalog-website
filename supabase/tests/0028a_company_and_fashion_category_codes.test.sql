@@ -12,20 +12,10 @@ SELECT is(public.derive_company_code_base('Árömà Naturals'), 'AAS', 'diacriti
 SELECT is(public.derive_company_code_base('ABCD'), 'ABD', 'even-length names use the lower middle character');
 SELECT is(public.derive_company_code_base('A!'), NULL, 'short normalized names have no proposal');
 
-SELECT results_eq(
-  $$
-    SELECT name, company_code
-    FROM public.sellers
-    WHERE name IN ('Kesar Textiles', 'Aroma Naturals', 'Jaipur Handicrafts Co.')
-    ORDER BY name
-  $$,
-  $$
-    VALUES
-      ('Aroma Naturals'::text, 'AAS'::text),
-      ('Jaipur Handicrafts Co.'::text, 'JDO'::text),
-      ('Kesar Textiles'::text, 'KES'::text)
-  $$,
-  'existing sellers receive deterministic codes without changing their rows'
+SELECT is(
+  (SELECT count(*)::integer FROM public.sellers),
+  0,
+  'fresh migration replays do not create pre-moderation seller fixtures'
 );
 
 SELECT ok(
@@ -90,10 +80,11 @@ SELECT results_eq(
 
 SELECT ok(
   NOT has_table_privilege('authenticated', 'public.sellers', 'INSERT')
-  AND has_column_privilege('authenticated', 'public.sellers', 'name', 'UPDATE')
+  AND NOT has_table_privilege('authenticated', 'public.sellers', 'DELETE')
+  AND NOT has_column_privilege('authenticated', 'public.sellers', 'name', 'UPDATE')
   AND NOT has_column_privilege('authenticated', 'public.sellers', 'company_code', 'UPDATE')
   AND NOT has_column_privilege('authenticated', 'public.sellers', 'company_code_locked_at', 'UPDATE'),
-  'browser callers cannot directly create sellers or update company-code columns'
+  'browser callers cannot directly mutate seller identity or profile columns'
 );
 
 SELECT ok(
@@ -164,8 +155,8 @@ FROM public.create_seller_with_company_code(
   'KES'
 );
 
-SELECT is((SELECT company_code FROM qa_0028a_first), 'KES2', 'automatic collision gets suffix two');
-SELECT is((SELECT company_code FROM qa_0028a_second), 'KES3', 'automatic collisions remain consecutive');
+SELECT is((SELECT company_code FROM qa_0028a_first), 'KES', 'the first automatic code uses its base');
+SELECT is((SELECT company_code FROM qa_0028a_second), 'KES2', 'automatic collision gets suffix two');
 SELECT is((SELECT slug FROM qa_0028a_second), 'qa-company-2', 'slug collisions are serialized and suffixed');
 
 SELECT is(
@@ -244,7 +235,7 @@ SELECT is(
 );
 
 SELECT throws_ok(
-  $$ SELECT * FROM public.update_unlocked_seller_company_code('KES3') $$,
+  $$ SELECT * FROM public.update_unlocked_seller_company_code('KES2') $$,
   '23505',
   'seller_company_code_taken',
   'an unlocked edit cannot take another seller code'
