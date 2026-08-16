@@ -18,6 +18,7 @@ export async function createSellerProductPublicationService(): Promise<SellerPro
     async ({ sellerId, product }) =>
       titlePersistence.saveSellerProduct({
         productDraftId: product.id,
+        expectedModerationRevision: product.expectedModerationRevision,
         sellerId,
         title: product.title,
         productFields: directProductFields(product),

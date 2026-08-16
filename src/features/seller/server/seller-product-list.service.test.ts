@@ -61,10 +61,11 @@ describe("SellerProductListService", () => {
     });
     const service = new SellerProductListService(products, candidates, { resolve });
 
-    const page = await service.list(uuid(900), { limit: 4, cursor: null });
+    const page = await service.list(uuid(900), { limit: 4, cursor: null, status: "active" });
 
     expect(products.listProducts).toHaveBeenCalledWith({
       sellerId: uuid(900),
+      status: "active",
       limit: 5,
       before: null,
     });
@@ -112,7 +113,7 @@ describe("SellerProductListService", () => {
       logger,
     );
 
-    const page = await service.list(uuid(900), { limit: 25, cursor: null });
+    const page = await service.list(uuid(900), { limit: 25, cursor: null, status: "active" });
 
     expect(page.products).toHaveLength(3);
     expect(page.products[0]?.preview.source).toBe("public_cover");
@@ -142,7 +143,9 @@ describe("SellerProductListService", () => {
       resolve: vi.fn(),
     });
 
-    await expect(service.list(uuid(900), { limit: 25, cursor: null })).rejects.toMatchObject({
+    await expect(
+      service.list(uuid(900), { limit: 25, cursor: null, status: "active" }),
+    ).rejects.toMatchObject({
       statusCode: 500,
       code: "seller_product_list_unavailable",
     });
@@ -159,7 +162,9 @@ describe("SellerProductListService", () => {
       logger,
     );
 
-    await expect(service.list(uuid(900), { limit: 25, cursor: null })).rejects.toMatchObject({
+    await expect(
+      service.list(uuid(900), { limit: 25, cursor: null, status: "active" }),
+    ).rejects.toMatchObject({
       code: "seller_product_list_unavailable",
     });
     expect(logger.error).toHaveBeenCalledWith("seller_product_list_product_code_invalid", {
@@ -179,7 +184,7 @@ describe("SellerProductListService", () => {
     const resolve = vi.fn();
     const service = new SellerProductListService(products, candidates, { resolve });
 
-    const page = await service.list(uuid(900), { limit: 25, cursor: null });
+    const page = await service.list(uuid(900), { limit: 25, cursor: null, status: "active" });
 
     expect(resolve).not.toHaveBeenCalled();
     expect(page.products[1]?.preview.source).toBe("none");
@@ -222,6 +227,29 @@ function product(
     pack_size: null,
     stock: "in_stock",
     status: "draft",
+    moderation_revision: 1,
+    has_working_copy: false,
+    review_submission_id: null,
+    review_kind: null,
+    review_revision: null,
+    review_status: null,
+    review_submitted_at: null,
+    review_decided_at: null,
+    review_seller_visible_reason: null,
+    activation_run_id: null,
+    activation_phase: null,
+    activation_status: null,
+    activation_dispatch_status: null,
+    activation_dispatch_generation: null,
+    activation_dispatch_error_code: null,
+    activation_error_code: null,
+    can_edit: true,
+    can_submit: true,
+    can_withdraw: false,
+    can_abandon_failed_activation: false,
+    can_retry_abandonment_cleanup: false,
+    can_archive: true,
+    can_restore: false,
     created_at: `2026-07-27T10:00:${String(59 - value).padStart(2, "0")}.000Z`,
     ...overrides,
   };

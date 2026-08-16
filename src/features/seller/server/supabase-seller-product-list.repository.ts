@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
-import type { Database } from "@/lib/supabase/types";
+import type { Database, Json } from "@/lib/supabase/types";
 
 import type {
   SellerProductListRecord,
@@ -12,11 +13,24 @@ import {
   SellerProductListRepositoryError,
   SellerProductPreviewCandidateRepositoryError,
 } from "./seller-product-list.repository";
+import { productModerationStatusFieldsSchema } from "./supabase-product-moderation-status.repository";
 
 type DatabaseClient = SupabaseClient<Database>;
 
-const productFields =
-  "id,title,product_code,cover_image_id,cover_image_url,price,currency,moq,pack_size,stock,status,created_at" as const;
+const productRowSchema = productModerationStatusFieldsSchema
+  .extend({
+    title: z.string(),
+    product_code: z.string().nullable(),
+    cover_image_id: z.string().uuid().nullable(),
+    cover_image_url: z.string().nullable(),
+    price: z.coerce.number().nullable(),
+    currency: z.string(),
+    moq: z.number().int().nullable(),
+    pack_size: z.string().nullable(),
+    stock: z.enum(["in_stock", "low_stock", "out_of_stock", "made_to_order"]),
+    created_at: z.string(),
+  })
+  .strict();
 
 export class SupabaseSellerProductListRepository implements SellerProductListRepository {
   constructor(private readonly database: DatabaseClient) {}
@@ -24,25 +38,24 @@ export class SupabaseSellerProductListRepository implements SellerProductListRep
   async listProducts(
     input: Parameters<SellerProductListRepository["listProducts"]>[0],
   ): Promise<SellerProductListRecord[]> {
-    let query = this.database
-      .from("products")
-      .select(productFields)
-      .eq("seller_id", input.sellerId)
-      .neq("status", "archived")
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(input.limit);
-
-    if (input.before) {
-      const createdAt = quotePostgrestValue(input.before.createdAt);
-      query = query.or(
-        `created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${input.before.productId})`,
+    const response = await this.database.rpc(
+      "list_seller_products_for_moderation" as never,
+      {
+        p_seller_id: input.sellerId,
+        p_status: input.status,
+        p_limit: input.limit,
+        p_before_created_at: input.before?.createdAt ?? null,
+        p_before_product_id: input.before?.productId ?? null,
+      } as never,
+    );
+    if (response.error) throw productDatabaseError(response.error);
+    const parsed = z.array(productRowSchema).safeParse(response.data as Json);
+    if (!parsed.success) {
+      throw new SellerProductListRepositoryError(
+        "Seller product moderation list returned an invalid response.",
       );
     }
-
-    const response = await query;
-    if (response.error) throw productDatabaseError(response.error);
-    return response.data ?? [];
+    return parsed.data;
   }
 
   async countProducts(sellerId: string) {
@@ -93,10 +106,6 @@ export class SupabaseSellerProductPreviewCandidateRepository implements SellerPr
     }
     return response.data ?? [];
   }
-}
-
-function quotePostgrestValue(value: string): string {
-  return `"${value.replaceAll('"', '\\"')}"`;
 }
 
 function productDatabaseError(error: { message: string }): SellerProductListRepositoryError {

@@ -31,5 +31,10 @@ export const updateProductDraftFacts = createServerFn({ method: "POST" })
     const { createProductDraftFactsRequestContext } =
       await import("./server/product-draft-facts.runtime");
     const runtime = await createProductDraftFactsRequestContext(context as AuthenticatedContext);
-    return runtime.service.update(data.productDraftId, data.patch, runtime.access);
+    return runtime.service.update(
+      data.productDraftId,
+      data.patch,
+      data.expectedModerationRevision,
+      runtime.access,
+    );
   });

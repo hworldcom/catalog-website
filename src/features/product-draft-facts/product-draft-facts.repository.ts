@@ -13,12 +13,18 @@ export type ProductDraftFactsRecord = {
 
 export type ProductDraftFactsReadResult = {
   productDraftId: string;
+  moderationRevision: number;
+  editable?: boolean;
   productStatus: ProductStatus;
   factsRecord: ProductDraftFactsRecord | null;
 } | null;
 
 export type ProductDraftFactsPatchResult =
-  | ({ result: "updated" | "unchanged"; productStatus: ProductStatus } & ProductDraftFactsRecord)
+  | ({
+      result: "updated" | "unchanged";
+      moderationRevision: number;
+      productStatus: ProductStatus;
+    } & ProductDraftFactsRecord)
   | {
       result: "not_found";
     }
@@ -41,5 +47,6 @@ export interface ProductDraftFactsRepository {
     productDraftId: string,
     patch: ProductDraftFactsPatch,
     expectedSellerId: string | null,
+    expectedModerationRevision: number,
   ): Promise<ProductDraftFactsPatchResult>;
 }

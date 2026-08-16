@@ -1,6 +1,7 @@
 import type { Database } from "@/lib/supabase/types";
 
 import type { SellerProductListCursor } from "../seller-product-list.cursor";
+import type { ProductModerationStatusRecord } from "./product-moderation-status.repository";
 
 export type SellerProductListRecord = Pick<
   Database["public"]["Tables"]["products"]["Row"],
@@ -14,9 +15,9 @@ export type SellerProductListRecord = Pick<
   | "moq"
   | "pack_size"
   | "stock"
-  | "status"
   | "created_at"
->;
+> &
+  ProductModerationStatusRecord;
 
 export type SellerProductPreviewCandidateRecord = Pick<
   Database["public"]["Tables"]["product_draft_images"]["Row"],
@@ -26,6 +27,7 @@ export type SellerProductPreviewCandidateRecord = Pick<
 export interface SellerProductListRepository {
   listProducts(input: {
     sellerId: string;
+    status: "active" | "archived";
     limit: number;
     before: SellerProductListCursor | null;
   }): Promise<SellerProductListRecord[]>;

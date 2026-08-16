@@ -13,6 +13,7 @@ const productDraftId = "00000000-0000-4000-8000-000000000001";
 function snapshot(overrides: Partial<ProductDraftTitleSnapshot> = {}): ProductDraftTitleSnapshot {
   return {
     productDraftId,
+    moderationRevision: 3,
     title: "Draft title",
     titleSource: "human",
     productStatus: "draft",
@@ -61,7 +62,7 @@ describe("ProductDraftTitleEditorView", () => {
     await userEvent.type(input, "  Black   trousers  ");
     await userEvent.click(screen.getByRole("button", { name: "Save title" }));
 
-    expect(update).toHaveBeenCalledWith(productDraftId, "  Black   trousers  ");
+    expect(update).toHaveBeenCalledWith(productDraftId, "  Black   trousers  ", 3);
     expect(await screen.findByText("Product title was saved.")).toBeVisible();
     expect(input).toHaveValue("Black trousers");
     expect(onSnapshot).toHaveBeenLastCalledWith(
@@ -82,7 +83,7 @@ describe("ProductDraftTitleEditorView", () => {
     await userEvent.clear(await screen.findByLabelText("Product title"));
     await userEvent.click(screen.getByRole("button", { name: "Save title" }));
 
-    expect(update).toHaveBeenCalledWith(productDraftId, "");
+    expect(update).toHaveBeenCalledWith(productDraftId, "", 3);
     expect(await screen.findByText("Source: Not set")).toBeVisible();
   });
 

@@ -39,6 +39,7 @@ export const updateProductDraftDescriptions = createServerFn({ method: "POST" })
     return runtime.service.update(
       data.productDraftId,
       normalizeProductDraftDescriptionPatch(data.descriptions),
+      data.expectedModerationRevision,
       runtime.access,
     );
   });
@@ -67,6 +68,7 @@ export const updateMyProductDraftDescriptions = createServerFn({ method: "POST" 
     return runtime.service.update(
       data.productDraftId,
       normalizeProductDraftDescriptionPatch(data.descriptions),
+      data.expectedModerationRevision,
       runtime.access,
     );
   });

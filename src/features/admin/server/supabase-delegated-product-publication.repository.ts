@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/supabase/types";
+import { readProductModerationEditState } from "@/features/seller/server/product-moderation-edit-state";
 
 import {
   DelegatedProductPublicationRepositoryError,
@@ -122,6 +123,12 @@ export class SupabaseDelegatedProductPublicationRepository implements DelegatedP
     ) {
       return null;
     }
+    const editState = await readProductModerationEditState(
+      this.database,
+      productDraftId,
+      workflow.sellerId,
+    );
+    if (!editState) return null;
 
     return {
       workflowId,
@@ -131,8 +138,21 @@ export class SupabaseDelegatedProductPublicationRepository implements DelegatedP
         classifierBatchId: run.classifier_batch_id,
         classifierGroupId: outcome.classifier_group_id,
       },
-      product: productResponse.data,
-      audiences: (audiencesResponse.data ?? []).map((membership) => membership.audience),
+      product: {
+        ...productResponse.data,
+        title: editState.snapshot.title,
+        title_source: editState.snapshot.titleSource,
+        category_id: editState.snapshot.categoryId,
+        moq: editState.snapshot.minimumOrder,
+        pack_size: editState.snapshot.packSize,
+        price: editState.snapshot.price,
+        currency: editState.snapshot.currency,
+        stock: editState.snapshot.stock,
+        cover_image_id: editState.snapshot.coverImageId,
+        moderation_revision: editState.revision,
+      },
+      audiences: editState.snapshot.audiences,
+      moderationEditable: editState.editable,
     };
   }
 

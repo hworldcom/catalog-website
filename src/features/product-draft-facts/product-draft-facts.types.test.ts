@@ -10,7 +10,7 @@ import {
 const productDraftId = "00000000-0000-0000-0000-000000000001";
 
 function updateInput(patch: unknown) {
-  return { productDraftId, patch };
+  return { productDraftId, expectedModerationRevision: 3, patch };
 }
 
 function expectInvalid(input: unknown) {
@@ -35,6 +35,7 @@ describe("ProductDraft facts validation", () => {
       ),
     ).toEqual({
       productDraftId,
+      expectedModerationRevision: 3,
       patch: {
         colors: ["black", "red"],
         materialComposition: "60% cotton, 40% polyester",

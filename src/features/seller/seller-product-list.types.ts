@@ -6,13 +6,16 @@ import type {
   ProductDraftImageDeliveryErrorCode,
   ProductDraftImageDeliveryStatus,
 } from "@/features/admin/server/product-draft-image-delivery.types";
+import type { ProductModerationStatusCommon } from "./product-moderation-status.types";
 
 export const SELLER_PRODUCT_LIST_DEFAULT_LIMIT = 25;
 export const SELLER_PRODUCT_LIST_MAX_LIMIT = 100;
+export type SellerProductListStatus = "active" | "archived";
 
 export type SellerProductListRequest = {
   limit: number;
   cursor: string | null;
+  status: SellerProductListStatus;
 };
 
 export type SellerProductPreviewSource = "public_cover" | "private_draft" | "none" | "unavailable";
@@ -37,11 +40,11 @@ export type SellerProductListItem = Pick<
   | "moq"
   | "pack_size"
   | "stock"
-  | "status"
   | "created_at"
-> & {
-  preview: SellerProductPreview;
-};
+> &
+  ProductModerationStatusCommon & {
+    preview: SellerProductPreview;
+  };
 
 export type SellerProductListPage = {
   products: SellerProductListItem[];
@@ -82,6 +85,7 @@ const requestSchema = z
       .max(SELLER_PRODUCT_LIST_MAX_LIMIT)
       .default(SELLER_PRODUCT_LIST_DEFAULT_LIMIT),
     cursor: z.string().trim().min(1).nullable().default(null),
+    status: z.enum(["active", "archived"]).default("active"),
   })
   .strict();
 

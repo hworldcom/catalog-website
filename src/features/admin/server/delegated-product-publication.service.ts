@@ -64,11 +64,12 @@ export class DelegatedProductPublicationService {
   async save(input: DelegatedProductSaveInput): Promise<DelegatedProductDraftSnapshot> {
     return this.repositoryOperation(async () => {
       const resolved = await this.requireResolved(input);
-      if (resolved.product.status !== "draft") throw delegatedProductDraftNotEditable();
+      if (!resolved.moderationEditable) throw delegatedProductDraftNotEditable();
       const fields = normalizeFields(input);
       await this.requireCategory(fields.categoryId);
       await this.titles.saveSellerProduct({
         productDraftId: input.productDraftId,
+        expectedModerationRevision: input.expectedModerationRevision,
         sellerId: resolved.seller.id,
         title: fields.title,
         productFields: sellerFields(fields),
@@ -96,7 +97,12 @@ export class DelegatedProductPublicationService {
   async updateFacts(input: DelegatedProductFactsUpdateInput) {
     return this.repositoryOperation(async () => {
       const resolved = await this.requireResolved(input);
-      return this.facts.update(input.productDraftId, input.patch, access(resolved));
+      return this.facts.update(
+        input.productDraftId,
+        input.patch,
+        input.expectedModerationRevision,
+        access(resolved),
+      );
     });
   }
 
@@ -110,7 +116,12 @@ export class DelegatedProductPublicationService {
   async updateDescriptions(input: DelegatedProductDescriptionsUpdateInput) {
     return this.repositoryOperation(async () => {
       const resolved = await this.requireResolved(input);
-      return this.descriptions.update(input.productDraftId, input.descriptions, access(resolved));
+      return this.descriptions.update(
+        input.productDraftId,
+        input.descriptions,
+        input.expectedModerationRevision,
+        access(resolved),
+      );
     });
   }
 
@@ -155,6 +166,7 @@ export class DelegatedProductPublicationService {
             resolved.seller.id,
             {
               id: input.productDraftId,
+              expectedModerationRevision: input.expectedModerationRevision,
               audiences: fields.audiences,
               title: fields.title,
               category_id: fields.categoryId,
@@ -270,6 +282,7 @@ export class DelegatedProductPublicationService {
       },
       source: resolved.source,
       product: {
+        moderationRevision: product.moderation_revision,
         audiences: parseStoredProductAudiences(resolved.audiences),
         status: product.status,
         title: product.title,
@@ -283,7 +296,7 @@ export class DelegatedProductPublicationService {
         trending: product.trending,
         coverImageId: product.cover_image_id,
         imagePublicationMode: "durable",
-        editable: product.status === "draft",
+        editable: resolved.moderationEditable,
       },
       gallery: await this.gallery.get(product),
     };

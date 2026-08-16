@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   decideSellerProfileSubmission,
+  readOwnedSellerProfileModerationSnapshot,
   setOwnedSellerStorefrontEnabled,
   submitOwnedSellerProfile,
   withdrawOwnedSellerProfileSubmission,
@@ -18,6 +19,29 @@ const submissionId = uuid(4);
 const requestId = uuid(5);
 
 describe("seller profile moderation service", () => {
+  it("resolves seller ownership before reading the side-effect-free snapshot", async () => {
+    const requester = createRequester();
+    const administrator = createAdministrator(snapshot());
+
+    await expect(
+      readOwnedSellerProfileModerationSnapshot({
+        requester: requester.client,
+        administrator: administrator.client,
+        userId,
+      }),
+    ).resolves.toMatchObject({
+      sellerId,
+      approvalState: "not_approved",
+      actions: { canEdit: true, canSubmit: true },
+    });
+
+    expect(requester.order).toEqual(["requester"]);
+    expect(administrator.order).toEqual(["administrator"]);
+    expect(administrator.rpc).toHaveBeenCalledWith("read_seller_profile_moderation_snapshot", {
+      p_seller_id: sellerId,
+    });
+  });
+
   it("resolves seller ownership before submitting the protected working copy", async () => {
     const requester = createRequester();
     const administrator = createAdministrator([submission()]);
@@ -102,9 +126,7 @@ describe("seller profile moderation service", () => {
 
   it("sets storefront preference only after requester ownership resolution", async () => {
     const requester = createRequester();
-    const administrator = createAdministrator([
-      { ...seller(), storefront_enabled: true, published: true },
-    ]);
+    const administrator = createAdministrator([{ result: "replay", storefront_enabled: true }]);
 
     await expect(
       setOwnedSellerStorefrontEnabled({
@@ -114,7 +136,12 @@ describe("seller profile moderation service", () => {
         enabled: true,
         requestId,
       }),
-    ).resolves.toMatchObject({ seller: { storefront_enabled: true, published: true } });
+    ).resolves.toEqual({
+      receipt: { result: "replay", storefrontEnabled: true },
+    });
+
+    expect(requester.order).toEqual(["requester"]);
+    expect(administrator.order).toEqual(["administrator"]);
   });
 });
 
@@ -187,6 +214,39 @@ function submission(overrides: Record<string, unknown> = {}) {
     created_at: "2026-08-14T09:00:00.000Z",
     updated_at: "2026-08-14T09:00:00.000Z",
     ...overrides,
+  };
+}
+
+function snapshot() {
+  return {
+    sellerId,
+    companyCode: "QAS",
+    companyCodeLockedAt: null,
+    primaryCategoryId: uuid(7),
+    storefrontEnabled: false,
+    approvalState: "not_approved",
+    approvedProfile: null,
+    workingCopy: {
+      revision: 4,
+      name: "QA Seller",
+      slug: "qa-seller",
+      city: null,
+      country: null,
+      whatsapp: null,
+      email: null,
+      about: null,
+      establishedYear: null,
+      logo: null,
+      cover: null,
+    },
+    latestSubmission: null,
+    actions: {
+      canEdit: true,
+      canSubmit: true,
+      canWithdraw: false,
+      canEnableStorefront: false,
+      canDisableStorefront: false,
+    },
   };
 }
 

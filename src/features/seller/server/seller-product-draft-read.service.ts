@@ -18,6 +18,7 @@ type Product = Database["public"]["Tables"]["products"]["Row"];
 export type SellerProductImageSourceMode = "seller_upload" | "classifier_import";
 export type SellerProductDraft = Omit<Product, "title_source"> & {
   audiences: ProductAudience[];
+  moderation_editable: boolean;
   title_source: ProductDraftTitleSource;
   imagePublicationMode: SellerProductImagePublicationMode;
   imageSourceMode: SellerProductImageSourceMode;
@@ -27,6 +28,7 @@ export interface SellerProductDraftReadRepository {
   findSellerId(userId: string): Promise<string | null>;
   findOwnedProduct(productDraftId: string, sellerId: string): Promise<Product | null>;
   getAudiences(productDraftId: string): Promise<string[]>;
+  isModerationEditable?(productDraftId: string): boolean;
   getImageSourceState(productDraftId: string): Promise<{
     imageSourceMode: SellerProductImageSourceMode;
     usesDurableImagePublication: boolean;
@@ -82,6 +84,8 @@ export class SellerProductDraftReadService {
       product: {
         ...product,
         audiences: parseStoredProductAudiences(storedAudiences),
+        moderation_editable:
+          this.repository.isModerationEditable?.(product.id) ?? product.status === "draft",
         product_code: productCode,
         title_source: parseStoredProductDraftTitleSource(product.title_source),
         imagePublicationMode: imageSourceState.usesDurableImagePublication ? "durable" : "direct",

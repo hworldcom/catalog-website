@@ -17,6 +17,7 @@ import {
 } from "./seller-product-list.types";
 import { parseSellerProductSave } from "./seller-product-write.types";
 import { SellerProductPublicationError } from "./seller-product-publication.types";
+import { invalidProductModerationStatusRequest } from "./product-moderation-status.types";
 
 export const listMyProducts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -92,6 +93,32 @@ export const getMyProduct = createServerFn({ method: "GET" })
     return result;
   });
 
+export const getMyProductModerationStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input) => {
+    const parsed = z.object({ id: z.string().uuid() }).strict().safeParse(input);
+    if (!parsed.success) throw invalidProductModerationStatusRequest();
+    return parsed.data;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as {
+      supabase: SupabaseClient<Database>;
+      userId: string;
+    };
+    const sellerId = await getCurrentSellerId({ supabase, userId });
+    if (!sellerId) {
+      const { productModerationStatusNotFound } = await import("./product-moderation-status.types");
+      throw productModerationStatusNotFound();
+    }
+    const { createProductModerationStatusService } =
+      await import("./server/product-moderation-status.runtime");
+    const result = await (await createProductModerationStatusService()).get(data.id, sellerId);
+    const { applyPrivateProductDraftImageResponseHeaders } =
+      await import("@/features/admin/server/product-draft-image-delivery.response");
+    applyPrivateProductDraftImageResponseHeaders();
+    return result;
+  });
+
 export const saveMyProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(parseSellerProductSave)
@@ -146,6 +173,7 @@ export const saveMyProduct = createServerFn({ method: "POST" })
         await createProductDraftTitlePersistenceService()
       ).saveSellerProduct({
         productDraftId: data.id,
+        expectedModerationRevision: data.expectedModerationRevision,
         sellerId,
         title: data.title,
         productFields,
@@ -222,12 +250,22 @@ export const saveMyProduct = createServerFn({ method: "POST" })
       title: saved.title,
       titleSource: saved.titleSource,
       status: saved.productStatus,
+      moderationRevision: saved.moderationRevision,
     };
   });
 
 export const archiveMyProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input) => z.object({ id: z.string() }).strict().parse(input))
+  .validator((input) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        expectedModerationRevision: z.number().int().positive(),
+        requestId: z.string().uuid(),
+      })
+      .strict()
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as {
       supabase: import("@supabase/supabase-js").SupabaseClient;
@@ -237,5 +275,41 @@ export const archiveMyProduct = createServerFn({ method: "POST" })
     const sellerId = await getCurrentSellerId({ supabase, userId });
     const { createSellerProductArchiveService } =
       await import("./server/seller-product-archive.runtime");
-    return (await createSellerProductArchiveService()).archive(data.id, sellerId);
+    return (await createSellerProductArchiveService()).archive({
+      productId: data.id,
+      sellerId,
+      actorUserId: userId,
+      expectedModerationRevision: data.expectedModerationRevision,
+      requestId: data.requestId,
+    });
+  });
+
+export const restoreMyProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        expectedModerationRevision: z.number().int().positive(),
+        requestId: z.string().uuid(),
+      })
+      .strict()
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as {
+      supabase: import("@supabase/supabase-js").SupabaseClient;
+      userId: string;
+    };
+
+    const sellerId = await getCurrentSellerId({ supabase, userId });
+    const { createSellerProductArchiveService } =
+      await import("./server/seller-product-archive.runtime");
+    return (await createSellerProductArchiveService()).restore({
+      productId: data.id,
+      sellerId,
+      actorUserId: userId,
+      expectedModerationRevision: data.expectedModerationRevision,
+      requestId: data.requestId,
+    });
   });

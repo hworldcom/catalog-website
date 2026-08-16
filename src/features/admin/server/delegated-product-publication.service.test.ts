@@ -27,6 +27,7 @@ describe("DelegatedProductPublicationService", () => {
         classifierGroupId: uuid(6),
       },
       product: {
+        moderationRevision: 3,
         audiences: ["women"],
         title: "Cotton shirt",
         categoryId,
@@ -46,6 +47,7 @@ describe("DelegatedProductPublicationService", () => {
     await subject.service.save({
       workflowId,
       productDraftId,
+      expectedModerationRevision: 3,
       title: "  Cotton \n shirt ",
       audiences: ["women"],
       categoryId,
@@ -59,6 +61,7 @@ describe("DelegatedProductPublicationService", () => {
 
     expect(subject.titles.saveSellerProduct).toHaveBeenCalledWith({
       productDraftId,
+      expectedModerationRevision: 3,
       sellerId,
       title: "Cotton shirt",
       productFields: {
@@ -81,13 +84,13 @@ describe("DelegatedProductPublicationService", () => {
     await subject.service.updateFacts({
       workflowId,
       productDraftId,
+      expectedModerationRevision: 3,
       patch: { colors: ["Black"] },
     });
-    expect(subject.facts.update).toHaveBeenCalledWith(
-      productDraftId,
-      { colors: ["Black"] },
-      { mode: "delegated_administrator", expectedSellerId: sellerId },
-    );
+    expect(subject.facts.update).toHaveBeenCalledWith(productDraftId, { colors: ["Black"] }, 3, {
+      mode: "delegated_administrator",
+      expectedSellerId: sellerId,
+    });
   });
 
   it("audits normalized publication and correlates the durable publication run", async () => {
@@ -96,6 +99,7 @@ describe("DelegatedProductPublicationService", () => {
       {
         workflowId,
         productDraftId,
+        expectedModerationRevision: 3,
         requestId,
         title: " Cotton shirt ",
         audiences: ["women"],
@@ -125,6 +129,7 @@ describe("DelegatedProductPublicationService", () => {
       sellerId,
       expect.objectContaining({
         id: productDraftId,
+        expectedModerationRevision: 3,
         audiences: ["women"],
         title: "Cotton shirt",
         category_id: categoryId,
@@ -154,6 +159,7 @@ describe("DelegatedProductPublicationService", () => {
         {
           workflowId,
           productDraftId,
+          expectedModerationRevision: 3,
           requestId,
           title: "Cotton shirt",
           audiences: ["women"],
@@ -194,6 +200,7 @@ function setup() {
     saveSellerProduct: vi.fn(async () => ({
       productDraftId,
       title: "Cotton shirt",
+      moderationRevision: 3,
       titleSource: "human" as const,
       productStatus: "draft" as const,
       editable: true,
@@ -258,6 +265,7 @@ function record(): DelegatedProductDraftRecord {
       classifierGroupId: uuid(6),
     },
     audiences: ["women"],
+    moderationEditable: true,
     product: {
       id: productDraftId,
       seller_id: sellerId,
@@ -274,6 +282,9 @@ function record(): DelegatedProductDraftRecord {
       cover_image_id: uuid(7),
       cover_image_url: null,
       image_gallery_revision: 0,
+      moderation_revision: 3,
+      approved_moderation_submission_id: null,
+      active_moderation_submission_id: null,
       trending: false,
       status: "draft",
       classifier_group_id: null,

@@ -7,6 +7,7 @@ export type ProductDraftTitleStatus = "draft" | "published" | "archived";
 
 export type ProductDraftTitleSnapshot = {
   productDraftId: string;
+  moderationRevision: number;
   title: string;
   titleSource: ProductDraftTitleSource;
   productStatus: ProductDraftTitleStatus;
@@ -19,6 +20,7 @@ export type GetProductDraftTitleInput = {
 
 export type UpdateProductDraftTitleInput = {
   productDraftId: string;
+  expectedModerationRevision: number;
   title: string;
 };
 
@@ -43,6 +45,8 @@ export class ProductDraftTitleError extends Error {
       | "product_code_category_unconfigured"
       | "product_code_allocation_failed"
       | "product_code_immutable"
+      | "product_moderation_submission_conflict"
+      | "product_moderation_working_revision_conflict"
       | "product_draft_title_unavailable",
     message: string,
   ) {
@@ -60,6 +64,7 @@ const getRequestSchema = z
 const updateRequestSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
     title: z.string(),
   })
   .strict();

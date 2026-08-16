@@ -24,6 +24,7 @@ const canonicalFacts: ProductDraftFacts = {
 function snapshot(overrides: Partial<ProductDraftFactsSnapshot> = {}): ProductDraftFactsSnapshot {
   return {
     productDraftId,
+    moderationRevision: 3,
     facts: canonicalFacts,
     factsRevision: 1,
     updatedAt: "2026-07-24T12:00:00Z",
@@ -81,10 +82,14 @@ describe("ProductDraftFactsEditorView", () => {
     await userEvent.type(screen.getByLabelText("Material composition"), " cotton ");
     await userEvent.click(screen.getByRole("button", { name: "Save facts" }));
 
-    expect(update).toHaveBeenCalledWith(productDraftId, {
-      colors: ["black", "red"],
-      materialComposition: "cotton",
-    });
+    expect(update).toHaveBeenCalledWith(
+      productDraftId,
+      {
+        colors: ["black", "red"],
+        materialComposition: "cotton",
+      },
+      3,
+    );
     expect(await screen.findByText("Product facts were saved.")).toBeVisible();
     expect(screen.getByLabelText("Colors")).toHaveValue("black\nred");
     expect(screen.getByLabelText("Material composition")).toHaveValue("cotton");
@@ -146,10 +151,14 @@ describe("ProductDraftFactsEditorView", () => {
     await userEvent.clear(screen.getByLabelText("Material composition"));
     await userEvent.click(screen.getByRole("button", { name: "Save facts" }));
 
-    expect(update).toHaveBeenCalledWith(productDraftId, {
-      colors: [],
-      materialComposition: null,
-    });
+    expect(update).toHaveBeenCalledWith(
+      productDraftId,
+      {
+        colors: [],
+        materialComposition: null,
+      },
+      3,
+    );
   });
 
   it("preserves unsaved facts after a temporary save failure", async () => {

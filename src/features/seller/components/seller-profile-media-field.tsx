@@ -2,40 +2,46 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { supabase } from "@/lib/supabase/client";
+import { tr } from "@/lib/i18n";
 
 import {
   finalizeMySellerProfileAssetUpload,
   prepareMySellerProfileAssetUpload,
 } from "../seller-profile-media.functions";
+import type { SellerProfileMediaPreview } from "../seller-profile-moderation.types";
 import {
   SELLER_PROFILE_IMAGE_BUCKET,
   SELLER_PROFILE_IMAGE_MAX_SIZE_BYTES,
   type SellerProfileAssetKind,
 } from "../seller-profile-media.types";
+import { sellerProfileMediaCopy, storefrontCopy } from "../storefront.copy";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function SellerProfileMediaField({
   kind,
-  assetId,
+  preview,
   disabled,
   onSelect,
   onRemove,
   onBusyChange,
+  onPreviewRefresh,
 }: {
   kind: SellerProfileAssetKind;
-  assetId: string | null;
+  preview: SellerProfileMediaPreview | null;
   disabled: boolean;
   onSelect(assetId: string): Promise<void>;
   onRemove(): Promise<void>;
   onBusyChange(busy: boolean): void;
+  onPreviewRefresh(): Promise<void>;
 }) {
   const prepare = useServerFn(prepareMySellerProfileAssetUpload);
   const finalize = useServerFn(finalizeMySellerProfileAssetUpload);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const label = kind === "logo" ? "Logo" : "Cover image";
+  const assetId = preview?.assetId ?? null;
+  const label = tr(kind === "logo" ? sellerProfileMediaCopy.logo : sellerProfileMediaCopy.cover);
 
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -46,7 +52,7 @@ export function SellerProfileMediaField({
       file.size < 1 ||
       file.size > SELLER_PROFILE_IMAGE_MAX_SIZE_BYTES
     ) {
-      setError("Choose a non-empty JPEG, PNG, or WebP image no larger than 20 MB.");
+      setError(tr(sellerProfileMediaCopy.chooseFile));
       return;
     }
 
@@ -106,11 +112,13 @@ export function SellerProfileMediaField({
     <section className="flex flex-col gap-3 border border-border bg-muted/20 p-4">
       <div>
         <h2 className="text-sm font-semibold">{label}</h2>
-        <p className="text-xs text-muted-foreground">
-          Private until an administrator approves this profile revision.
-        </p>
+        <p className="text-xs text-muted-foreground">{tr(sellerProfileMediaCopy.privateHelp)}</p>
       </div>
-      <AuthenticatedSellerProfileImage assetId={assetId} kind={kind} />
+      <SellerProfileMediaPreviewImage
+        preview={preview}
+        kind={kind}
+        onPreviewRefresh={onPreviewRefresh}
+      />
       <input
         ref={inputRef}
         type="file"
@@ -127,10 +135,8 @@ export function SellerProfileMediaField({
           onClick={() => inputRef.current?.click()}
         >
           {busy
-            ? "Working…"
-            : assetId
-              ? `Replace ${label.toLowerCase()}`
-              : `Upload ${label.toLowerCase()}`}
+            ? tr(sellerProfileMediaCopy.working)
+            : `${tr(assetId ? sellerProfileMediaCopy.replace : sellerProfileMediaCopy.upload)} ${label.toLowerCase()}`}
         </button>
         {assetId ? (
           <button
@@ -139,7 +145,7 @@ export function SellerProfileMediaField({
             disabled={disabled || busy}
             onClick={() => void remove()}
           >
-            Remove
+            {tr(sellerProfileMediaCopy.remove)}
           </button>
         ) : null}
       </div>
@@ -148,38 +154,62 @@ export function SellerProfileMediaField({
   );
 }
 
-function AuthenticatedSellerProfileImage({
-  assetId,
+export function SellerProfileMediaPreviewImage({
+  preview,
   kind,
+  onPreviewRefresh,
 }: {
-  assetId: string | null;
+  preview: SellerProfileMediaPreview | null;
   kind: SellerProfileAssetKind;
+  onPreviewRefresh?: () => Promise<void>;
 }) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const refreshedAssetId = useRef<string | null>(null);
+  const onPreviewRefreshRef = useRef(onPreviewRefresh);
+  const assetId = preview?.assetId ?? null;
+  const deliveryUrl = preview?.deliveryStatus === "available" ? preview.url : null;
+
+  useEffect(() => {
+    onPreviewRefreshRef.current = onPreviewRefresh;
+  }, [onPreviewRefresh]);
 
   useEffect(() => {
     let currentUrl: string | null = null;
     const controller = new AbortController();
     setObjectUrl(null);
     setUnavailable(false);
-    if (!assetId) return () => controller.abort();
+    if (!assetId || !deliveryUrl) return () => controller.abort();
 
     void (async () => {
-      try {
-        const session = await supabase.auth.getSession();
-        const token = session.data.session?.access_token;
-        if (!token) throw new Error("authentication_required");
-        const response = await fetch(`/v1/seller-profile-assets/${assetId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("seller_profile_image_not_found");
-        currentUrl = URL.createObjectURL(await response.blob());
-        setObjectUrl(currentUrl);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setUnavailable(true);
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const session = await supabase.auth.getSession();
+          const token = session.data.session?.access_token;
+          if (!token) throw new Error("authentication_required");
+          const response = await fetch(deliveryUrl, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+            signal: controller.signal,
+          });
+          if (!response.ok) throw new Error("seller_profile_image_not_found");
+          currentUrl = URL.createObjectURL(await response.blob());
+          setObjectUrl(currentUrl);
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          if (
+            attempt === 0 &&
+            onPreviewRefreshRef.current &&
+            refreshedAssetId.current !== assetId
+          ) {
+            refreshedAssetId.current = assetId;
+            await onPreviewRefreshRef.current();
+            continue;
+          }
+          setUnavailable(true);
+          return;
+        }
       }
     })();
 
@@ -187,7 +217,7 @@ function AuthenticatedSellerProfileImage({
       controller.abort();
       if (currentUrl) URL.revokeObjectURL(currentUrl);
     };
-  }, [assetId]);
+  }, [assetId, deliveryUrl]);
 
   const shape = kind === "logo" ? "aspect-square max-w-40" : "aspect-[3/1] w-full";
   if (!assetId || unavailable || !objectUrl) {
@@ -195,28 +225,34 @@ function AuthenticatedSellerProfileImage({
       <div
         className={`${shape} grid place-items-center border border-dashed border-border bg-muted text-xs text-muted-foreground`}
       >
-        {assetId && !unavailable
-          ? "Loading image…"
-          : `${kind === "logo" ? "Logo" : "Cover"} placeholder`}
+        {assetId && deliveryUrl && !unavailable
+          ? tr(sellerProfileMediaCopy.loading)
+          : tr(sellerProfileMediaCopy.placeholder)}
       </div>
     );
   }
-  return <img src={objectUrl} alt={`Current seller ${kind}`} className={`${shape} object-cover`} />;
+  return (
+    <img
+      src={objectUrl}
+      alt={tr(kind === "logo" ? sellerProfileMediaCopy.logo : sellerProfileMediaCopy.cover)}
+      className={`${shape} object-cover`}
+    />
+  );
 }
 
 function mediaErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : "";
   if (message.includes("seller_profile_revision_conflict")) {
-    return "The profile changed elsewhere. Reload the page and try again.";
+    return tr(storefrontCopy.revisionConflict);
   }
   if (message.includes("seller_profile_image_invalid")) {
-    return "The selected file is not a valid supported image.";
+    return tr(sellerProfileMediaCopy.invalid);
   }
   if (message.includes("seller_profile_image_cleanup_required")) {
-    return "The profile was updated, but old image cleanup must be retried.";
+    return tr(sellerProfileMediaCopy.cleanup);
   }
   if (message.includes("seller_profile_image_not_ready")) {
-    return "The image is not ready. Select the file again or retry shortly.";
+    return tr(sellerProfileMediaCopy.notReady);
   }
-  return "The seller profile image is temporarily unavailable.";
+  return tr(sellerProfileMediaCopy.unavailable);
 }

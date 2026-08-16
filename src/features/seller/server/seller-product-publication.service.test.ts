@@ -295,6 +295,7 @@ function publicationService() {
 function productInput() {
   return {
     id: productDraftId,
+    expectedModerationRevision: 3,
     audiences: ["women" as const],
     category_id: uuid(3),
     currency: "EUR",

@@ -68,13 +68,14 @@ import {
 export type DelegatedProductPublicationClient = {
   get(scope: DelegatedProductScope): Promise<DelegatedProductDraftSnapshot>;
   save(
-    scope: DelegatedProductScope & DelegatedProductFields,
+    scope: DelegatedProductScope & DelegatedProductFields & { expectedModerationRevision: number },
   ): Promise<DelegatedProductDraftSnapshot>;
   listCategories(workflowId: string): Promise<{ categories: DelegatedProductCategory[] }>;
   getFacts(scope: DelegatedProductScope): ReturnType<ProductDraftFactsEditorClient["get"]>;
   updateFacts(
     scope: DelegatedProductScope,
     patch: ProductDraftFactsPatch,
+    expectedModerationRevision: number,
   ): ReturnType<ProductDraftFactsEditorClient["update"]>;
   getDescriptions(
     scope: DelegatedProductScope,
@@ -82,10 +83,12 @@ export type DelegatedProductPublicationClient = {
   updateDescriptions(
     scope: DelegatedProductScope,
     descriptions: Parameters<ProductDraftDescriptionEditorClient["update"]>[1],
+    expectedModerationRevision: number,
   ): ReturnType<ProductDraftDescriptionEditorClient["update"]>;
   getPublication(scope: DelegatedProductScope): Promise<SellerProductPublicationSnapshot>;
   publish(
-    scope: DelegatedProductScope & DelegatedProductFields & { requestId: string },
+    scope: DelegatedProductScope &
+      DelegatedProductFields & { expectedModerationRevision: number; requestId: string },
   ): Promise<SellerProductPublicationSnapshot>;
   retry(
     scope: DelegatedProductScope & { requestId: string },
@@ -354,10 +357,11 @@ export function DelegatedProductPublicationScreen({
       save: (input) => save({ data: input }),
       listCategories: (id) => listCategories({ data: { workflowId: id } }),
       getFacts: (scope) => getFacts({ data: scope }),
-      updateFacts: (scope, patch) => updateFacts({ data: { ...scope, patch } }),
+      updateFacts: (scope, patch, expectedModerationRevision) =>
+        updateFacts({ data: { ...scope, patch, expectedModerationRevision } }),
       getDescriptions: (scope) => getDescriptions({ data: scope }),
-      updateDescriptions: (scope, descriptions) =>
-        updateDescriptions({ data: { ...scope, descriptions } }),
+      updateDescriptions: (scope, descriptions, expectedModerationRevision) =>
+        updateDescriptions({ data: { ...scope, descriptions, expectedModerationRevision } }),
       getPublication: (scope) => getPublication({ data: scope }),
       publish: (input) => publish({ data: input }),
       retry: (input) => retry({ data: input }),
@@ -537,15 +541,20 @@ export function DelegatedProductPublicationScreenView({
   const factsClient = useMemo<ProductDraftFactsEditorClient>(
     () => ({
       get: (id) => client.getFacts({ workflowId, productDraftId: id }),
-      update: (id, patch) => client.updateFacts({ workflowId, productDraftId: id }, patch),
+      update: (id, patch, expectedModerationRevision) =>
+        client.updateFacts({ workflowId, productDraftId: id }, patch, expectedModerationRevision),
     }),
     [client, workflowId],
   );
   const descriptionClient = useMemo<ProductDraftDescriptionEditorClient>(
     () => ({
       get: (id) => client.getDescriptions({ workflowId, productDraftId: id }),
-      update: (id, descriptions) =>
-        client.updateDescriptions({ workflowId, productDraftId: id }, descriptions),
+      update: (id, descriptions, expectedModerationRevision) =>
+        client.updateDescriptions(
+          { workflowId, productDraftId: id },
+          descriptions,
+          expectedModerationRevision,
+        ),
     }),
     [client, workflowId],
   );
@@ -585,7 +594,11 @@ export function DelegatedProductPublicationScreenView({
     setActionError(null);
     setActionSuccess(null);
     try {
-      const next = await client.save({ ...scope, ...normalized.value });
+      const next = await client.save({
+        ...scope,
+        ...normalized.value,
+        expectedModerationRevision: snapshot.product.moderationRevision,
+      });
       setSnapshot(next);
       setForm(formFromSnapshot(next));
       setActionSuccess(tr(S.saved));
@@ -620,7 +633,12 @@ export function DelegatedProductPublicationScreenView({
         execute: (requestId, storedPayload) => {
           const parsed = delegatedProductFieldsSchema.safeParse(storedPayload);
           if (!parsed.success) throw new Error("Stored publication payload is invalid.");
-          return client.publish({ ...scope, ...parsed.data, requestId });
+          return client.publish({
+            ...scope,
+            ...parsed.data,
+            expectedModerationRevision: snapshot.product.moderationRevision,
+            requestId,
+          });
         },
       });
       setPublication(next);
@@ -829,6 +847,7 @@ export function DelegatedProductPublicationScreenView({
               client={factsClient}
               disabled={editorsDisabled}
               onStateChange={setFactsState}
+              onSaved={() => void refreshCanonical()}
             />
 
             <ProductDraftDescriptionEditor
@@ -836,6 +855,7 @@ export function DelegatedProductPublicationScreenView({
               client={descriptionClient}
               disabled={editorsDisabled}
               onStateChange={setDescriptionState}
+              onSaved={() => void refreshCanonical()}
             />
 
             <ProductPublicationStatus

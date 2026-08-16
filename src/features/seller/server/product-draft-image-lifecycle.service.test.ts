@@ -201,6 +201,34 @@ describe("ProductDraftImageLifecycleService", () => {
     expect(repository.completeRemoval).not.toHaveBeenCalled();
   });
 
+  it("removes an inherited working-copy image without deleting approved public bytes", async () => {
+    const repository = repositoryMock();
+    repository.beginRemoval.mockResolvedValue({
+      result: "removed",
+      productDraftId,
+      galleryRevision: 6,
+      moderationRevision: 9,
+      destinationKey: null,
+    });
+    const storage = storageMock();
+
+    await expect(
+      new ProductDraftImageLifecycleService(repository, storage).remove(sellerId, {
+        productDraftId,
+        imageId: firstImageId,
+        expectedGalleryRevision: 5,
+        expectedModerationRevision: 8,
+      }),
+    ).resolves.toEqual({
+      productDraftId,
+      galleryRevision: 6,
+      moderationRevision: 9,
+    });
+    expect(storage.inspect).not.toHaveBeenCalled();
+    expect(storage.delete).not.toHaveBeenCalled();
+    expect(repository.completeRemoval).not.toHaveBeenCalled();
+  });
+
   it("retries only cleanup-required upload failures and verifies object absence", async () => {
     const repository = repositoryMock();
     repository.listByImageIds.mockResolvedValue([

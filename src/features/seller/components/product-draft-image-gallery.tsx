@@ -163,6 +163,7 @@ export type ProductDraftImageGalleryProps = {
   productDraftId?: string;
   imageSourceMode?: SellerProductImageSourceMode;
   productStatus?: "draft" | "published" | "archived";
+  moderationEditable?: boolean;
   disabled?: boolean;
   onGalleryChange?(gallery: SellerProductDraftGallery): void;
 };
@@ -174,6 +175,7 @@ export function ProductDraftImageGallery({
   productDraftId,
   imageSourceMode,
   productStatus,
+  moderationEditable,
   disabled = false,
   onGalleryChange,
 }: ProductDraftImageGalleryProps) {
@@ -278,7 +280,8 @@ export function ProductDraftImageGallery({
 
   const dialogImage = gallery.images.find((image) => image.imageId === dialogImageId) ?? null;
   const editable = Boolean(
-    productDraftId && imageSourceMode === "seller_upload" && productStatus === "draft",
+    productDraftId &&
+    (moderationEditable ?? (imageSourceMode === "seller_upload" && productStatus === "draft")),
   );
   const title =
     productTitle.trim() ||
@@ -442,9 +445,9 @@ function EditableGallery({
   const [busy, setBusy] = useState(false);
   const [uploads, setUploads] = useState<BrowserUpload[]>([]);
 
-  const sellerImages = gallery.images
-    .filter((image) => image.sourceKind === "seller_upload")
-    .sort((left, right) => left.sourcePosition - right.sourcePosition);
+  const sellerImages = [...gallery.images].sort(
+    (left, right) => left.sourcePosition - right.sourcePosition,
+  );
   const availableImages = sellerImages.filter((image) => image.durableStatus === "available");
   const activeCount = sellerImages.filter((image) => image.durableStatus !== "deleting").length;
   const galleryIncomplete = sellerImages.some((image) => image.durableStatus !== "available");
@@ -499,6 +502,7 @@ function EditableGallery({
       const prepared = await prepare({
         data: {
           productDraftId,
+          expectedModerationRevision: gallery.moderationRevision,
           expectedGalleryRevision: gallery.galleryRevision,
           files: files.map((entry) => ({
             clientUploadId: entry.clientUploadId,
@@ -540,6 +544,7 @@ function EditableGallery({
       const finalized = await finalize({
         data: {
           productDraftId,
+          expectedModerationRevision: prepared.moderationRevision,
           imageIds: prepared.images.map((image) => image.imageId),
         },
       });
@@ -590,6 +595,7 @@ function EditableGallery({
       updateGallery({
         data: {
           productDraftId,
+          expectedModerationRevision: gallery.moderationRevision,
           expectedGalleryRevision: gallery.galleryRevision,
           orderedAvailableImageIds: nextImages.map((image) => image.imageId),
           coverImageId,
@@ -620,6 +626,7 @@ function EditableGallery({
         data: {
           productDraftId,
           imageId: image.imageId,
+          expectedModerationRevision: gallery.moderationRevision,
           expectedGalleryRevision: gallery.galleryRevision,
         },
       }),
@@ -628,7 +635,15 @@ function EditableGallery({
 
   function recover(image: SellerProductDraftGalleryImage) {
     if (image.recoveryAction === "retry_finalize") {
-      void mutate(() => finalize({ data: { productDraftId, imageIds: [image.imageId] } }));
+      void mutate(() =>
+        finalize({
+          data: {
+            productDraftId,
+            expectedModerationRevision: gallery.moderationRevision,
+            imageIds: [image.imageId],
+          },
+        }),
+      );
       return;
     }
     if (image.recoveryAction === "retry_upload") {
@@ -642,6 +657,7 @@ function EditableGallery({
           data: {
             productDraftId,
             imageId: image.imageId,
+            expectedModerationRevision: gallery.moderationRevision,
             expectedGalleryRevision: gallery.galleryRevision,
           },
         }),
@@ -649,7 +665,15 @@ function EditableGallery({
       return;
     }
     if (image.recoveryAction === "retry_cleanup") {
-      void mutate(() => retryCleanup({ data: { productDraftId, imageId: image.imageId } }));
+      void mutate(() =>
+        retryCleanup({
+          data: {
+            productDraftId,
+            imageId: image.imageId,
+            expectedModerationRevision: gallery.moderationRevision,
+          },
+        }),
+      );
     }
   }
 

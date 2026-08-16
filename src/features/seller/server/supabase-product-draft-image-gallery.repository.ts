@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/supabase/types";
+import { readProductModerationEditState } from "./product-moderation-edit-state";
 
 import {
   SellerProductDraftImageGalleryRepositoryError,
@@ -15,11 +16,18 @@ export class SupabaseSellerProductDraftImageGalleryRepository implements SellerP
 
   async list(productDraftId: string): Promise<{
     galleryRevision: number;
+    moderationRevision: number;
     records: SellerProductDraftGalleryRecord[];
   }> {
+    const editState = await readProductModerationEditState(this.database, productDraftId, null);
+    if (!editState) {
+      throw new SellerProductDraftImageGalleryRepositoryError("Product not found.");
+    }
+    if (editState.workingCopy) return this.listWorkingCopy(editState);
+
     const product = await this.database
       .from("products")
-      .select("id,cover_image_id,image_gallery_revision")
+      .select("id,cover_image_id,image_gallery_revision,moderation_revision")
       .eq("id", productDraftId)
       .maybeSingle();
     if (product.error) throw databaseError(product.error);
@@ -37,7 +45,11 @@ export class SupabaseSellerProductDraftImageGalleryRepository implements SellerP
       .order("id", { ascending: true });
     if (images.error) throw databaseError(images.error);
     if (!images.data || images.data.length === 0) {
-      return { galleryRevision: productRecord.image_gallery_revision, records: [] };
+      return {
+        galleryRevision: productRecord.image_gallery_revision,
+        moderationRevision: productRecord.moderation_revision,
+        records: [],
+      };
     }
 
     const classifierImageIds = images.data
@@ -94,7 +106,75 @@ export class SupabaseSellerProductDraftImageGalleryRepository implements SellerP
         isSourceCover,
       };
     });
-    return { galleryRevision: productRecord.image_gallery_revision, records };
+    return {
+      galleryRevision: productRecord.image_gallery_revision,
+      moderationRevision: productRecord.moderation_revision,
+      records,
+    };
+  }
+
+  private async listWorkingCopy(
+    editState: NonNullable<Awaited<ReturnType<typeof readProductModerationEditState>>>,
+  ): Promise<{
+    galleryRevision: number;
+    moderationRevision: number;
+    records: SellerProductDraftGalleryRecord[];
+  }> {
+    const memberships = await this.database
+      .from("product_moderation_working_copy_images")
+      .select("product_draft_image_id,position,is_cover")
+      .eq("product_id", editState.productId)
+      .order("position", { ascending: true });
+    if (memberships.error) throw databaseError(memberships.error);
+    const imageIds = (memberships.data ?? []).map((row) => row.product_draft_image_id);
+    if (imageIds.length === 0) {
+      return {
+        galleryRevision: editState.revision,
+        moderationRevision: editState.revision,
+        records: [],
+      };
+    }
+    const images = await this.database
+      .from("product_draft_images")
+      .select(
+        "id,product_draft_id,status,source_kind,client_upload_id,original_filename,content_type,size_bytes,lifecycle_error_code",
+      )
+      .eq("product_draft_id", editState.productId)
+      .in("id", imageIds);
+    if (images.error) throw databaseError(images.error);
+    const imageById = new Map((images.data ?? []).map((image) => [image.id, image]));
+    const records = (memberships.data ?? []).map((membership) => {
+      const image = imageById.get(membership.product_draft_image_id);
+      if (!image) {
+        throw new SellerProductDraftImageGalleryRepositoryError(
+          "Product moderation working-copy image is missing.",
+        );
+      }
+      const sourceKind = parseSourceKind(image.source_kind);
+      return {
+        imageId: image.id,
+        productDraftId: image.product_draft_id,
+        sourcePosition: membership.position,
+        durableStatus: image.status,
+        sourceKind,
+        clientUploadId: sourceKind === "seller_upload" ? image.client_upload_id : null,
+        originalFilename: image.original_filename,
+        contentType: parseContentType(image.content_type),
+        sizeBytes: image.size_bytes,
+        lifecycleErrorCode: image.lifecycle_error_code,
+        recoveryAction:
+          sourceKind === "seller_upload"
+            ? recoveryAction(image.status, image.lifecycle_error_code)
+            : null,
+        canRemove: editState.editable,
+        isSourceCover: membership.is_cover,
+      };
+    });
+    return {
+      galleryRevision: editState.revision,
+      moderationRevision: editState.revision,
+      records,
+    };
   }
 }
 

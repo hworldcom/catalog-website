@@ -27,9 +27,16 @@ describe("ProductDraft title contract", () => {
 
   it("parses strict get and update requests", () => {
     expect(parseGetProductDraftTitleInput({ productDraftId })).toEqual({ productDraftId });
-    expect(parseUpdateProductDraftTitleInput({ productDraftId, title: "" })).toEqual({
+    expect(
+      parseUpdateProductDraftTitleInput({
+        productDraftId,
+        title: "",
+        expectedModerationRevision: 3,
+      }),
+    ).toEqual({
       productDraftId,
       title: "",
+      expectedModerationRevision: 3,
     });
   });
 

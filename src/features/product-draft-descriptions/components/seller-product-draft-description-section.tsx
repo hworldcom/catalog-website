@@ -218,6 +218,7 @@ export function SellerProductDraftDescriptionSection({
   onGenerationStateChange,
   onGenerated,
   onRefreshContext,
+  onDescriptionSaved,
 }: {
   productDraftId: string;
   title: string;
@@ -230,6 +231,7 @@ export function SellerProductDraftDescriptionSection({
     titleSnapshot: ProductDraftTitleSnapshot;
   }): void;
   onRefreshContext(scope: DescriptionGenerationRefreshScope): Promise<void>;
+  onDescriptionSaved?(snapshot: ProductDraftDescriptionSnapshot): void;
 }) {
   const getDescriptions = useServerFn(getMyProductDraftDescriptions);
   const updateDescriptions = useServerFn(updateMyProductDraftDescriptions);
@@ -237,8 +239,10 @@ export function SellerProductDraftDescriptionSection({
   const client = useMemo<SellerProductDraftDescriptionClient>(
     () => ({
       get: (id) => getDescriptions({ data: { productDraftId: id } }),
-      update: (id, descriptions) =>
-        updateDescriptions({ data: { productDraftId: id, descriptions } }),
+      update: (id, descriptions, expectedModerationRevision) =>
+        updateDescriptions({
+          data: { productDraftId: id, descriptions, expectedModerationRevision },
+        }),
       generate: (id) => generateDescriptions({ data: { productDraftId: id } }),
     }),
     [generateDescriptions, getDescriptions, updateDescriptions],
@@ -254,6 +258,7 @@ export function SellerProductDraftDescriptionSection({
       onGenerationStateChange={onGenerationStateChange}
       onGenerated={onGenerated}
       onRefreshContext={onRefreshContext}
+      onDescriptionSaved={onDescriptionSaved}
     />
   );
 }
@@ -268,6 +273,7 @@ export function SellerProductDraftDescriptionSectionView({
   onGenerationStateChange,
   onGenerated,
   onRefreshContext,
+  onDescriptionSaved,
 }: {
   productDraftId: string;
   title: string;
@@ -281,6 +287,7 @@ export function SellerProductDraftDescriptionSectionView({
     titleSnapshot: ProductDraftTitleSnapshot;
   }): void;
   onRefreshContext(scope: DescriptionGenerationRefreshScope): Promise<void>;
+  onDescriptionSaved?(snapshot: ProductDraftDescriptionSnapshot): void;
 }) {
   const editorRef = useRef<ProductDraftDescriptionEditorHandle>(null);
   const previousRefreshRequest = useRef(refreshRequest);
@@ -406,6 +413,7 @@ export function SellerProductDraftDescriptionSectionView({
         onStateChange={handleEditorStateChange}
         onReadStateChange={setReadState}
         onSnapshotChange={setSnapshot}
+        onSaved={onDescriptionSaved}
       />
     </div>
   );

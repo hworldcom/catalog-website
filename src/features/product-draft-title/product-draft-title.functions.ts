@@ -31,5 +31,10 @@ export const updateProductDraftTitle = createServerFn({ method: "POST" })
     const { createProductDraftTitleRequestContext } =
       await import("./server/product-draft-title.runtime");
     const runtime = await createProductDraftTitleRequestContext(context as AuthenticatedContext);
-    return runtime.service.update(data.productDraftId, data.title, runtime.access);
+    return runtime.service.update(
+      data.productDraftId,
+      data.title,
+      data.expectedModerationRevision,
+      runtime.access,
+    );
   });

@@ -20,6 +20,8 @@ export type ProductDescriptionGenerationCoverReference =
 
 export type ProductDescriptionGenerationClaim = {
   result: "claimed";
+  workingCopy?: boolean;
+  moderationRevision?: number;
   attemptToken: string;
   category: {
     id: string;

@@ -7,6 +7,8 @@ type ProductUpdate = Database["public"]["Tables"]["products"]["Update"];
 
 export type ProductDraftTitleRecord = {
   productDraftId: string;
+  moderationRevision: number;
+  editable?: boolean;
   title: string;
   titleSource: ProductDraftTitleSource;
   productStatus: ProductDraftTitleStatus;
@@ -77,6 +79,7 @@ export interface ProductDraftTitleRepository {
   update(
     productDraftId: string,
     expectedSellerId: string,
+    expectedModerationRevision: number,
     titleWrite: HumanProductDraftTitleWrite | null,
     productFields: SellerProductFields,
   ): Promise<ProductDraftTitleUpdateResult>;
@@ -84,6 +87,7 @@ export interface ProductDraftTitleRepository {
   updateTitle(
     productDraftId: string,
     expectedSellerId: string | null,
+    expectedModerationRevision: number,
     titleWrite: HumanProductDraftTitleWrite,
   ): Promise<ProductDraftTitleUpdateResult>;
 

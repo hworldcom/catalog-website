@@ -14,7 +14,11 @@ import {
 
 export type ProductDraftTitleEditorClient = {
   get(productDraftId: string): Promise<ProductDraftTitleSnapshot>;
-  update(productDraftId: string, title: string): Promise<ProductDraftTitleSnapshot>;
+  update(
+    productDraftId: string,
+    title: string,
+    expectedModerationRevision: number,
+  ): Promise<ProductDraftTitleSnapshot>;
 };
 
 type ProductDraftTitleEditorProps = {
@@ -98,7 +102,8 @@ export function ProductDraftTitleEditor(props: ProductDraftTitleEditorProps) {
   const client = useMemo<ProductDraftTitleEditorClient>(
     () => ({
       get: (productDraftId) => getTitle({ data: { productDraftId } }),
-      update: (productDraftId, title) => updateTitle({ data: { productDraftId, title } }),
+      update: (productDraftId, title, expectedModerationRevision) =>
+        updateTitle({ data: { productDraftId, title, expectedModerationRevision } }),
     }),
     [getTitle, updateTitle],
   );
@@ -170,7 +175,7 @@ export function ProductDraftTitleEditorView({
     setSaveError(null);
     setSaved(false);
     try {
-      const nextSnapshot = await client.update(productDraftId, title);
+      const nextSnapshot = await client.update(productDraftId, title, snapshot.moderationRevision);
       replaceSnapshot(nextSnapshot);
       setSaved(true);
     } catch (error) {

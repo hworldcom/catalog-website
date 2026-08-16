@@ -22,6 +22,10 @@ import type {
   SellerProductPreviewCandidateRepository,
 } from "./seller-product-list.repository";
 import { SellerProductListRepositoryError } from "./seller-product-list.repository";
+import {
+  mapProductModerationStatus,
+  ProductModerationStatusMappingError,
+} from "./product-moderation-status.mapper";
 
 type PreviewDelivery = Pick<ProductDraftImageDeliveryEngine, "resolve">;
 
@@ -53,6 +57,7 @@ export class SellerProductListService {
     try {
       rows = await this.products.listProducts({
         sellerId,
+        status: request.status,
         limit: request.limit + 1,
         before,
       });
@@ -65,7 +70,15 @@ export class SellerProductListService {
 
     const hasMore = rows.length > request.limit;
     const pageRows = rows.slice(0, request.limit);
-    const browserProducts = pageRows.map((product) => browserProduct(product, this.logger));
+    let browserProducts: ReturnType<typeof browserProduct>[];
+    try {
+      browserProducts = pageRows.map((product) => browserProduct(product, this.logger));
+    } catch (error) {
+      if (error instanceof ProductModerationStatusMappingError) {
+        throw sellerProductListUnavailable();
+      }
+      throw error;
+    }
     const previewResult = await this.resolvePreviews(pageRows);
 
     return {
@@ -79,6 +92,7 @@ export class SellerProductListService {
               createdAt: pageRows[pageRows.length - 1]!.created_at,
               productId: pageRows[pageRows.length - 1]!.id,
               limit: request.limit,
+              status: request.status,
             })
           : null,
       previewDelivery: previewResult.delivery,
@@ -249,8 +263,8 @@ function browserProduct(product: SellerProductListRecord, logger: SellerProductL
     moq: product.moq,
     pack_size: product.pack_size,
     stock: product.stock,
-    status: product.status,
     created_at: product.created_at,
+    ...mapProductModerationStatus(product),
   };
 }
 

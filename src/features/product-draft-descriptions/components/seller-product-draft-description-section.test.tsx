@@ -223,6 +223,7 @@ function snapshot(
   };
   return {
     productDraftId,
+    moderationRevision: 3,
     productStatus: "draft",
     currentFactsRevision: 2,
     generationEligibility: { eligible: true, reason: null },
@@ -282,6 +283,7 @@ function humanEntry(
 function titleSnapshot(title: string, titleSource: "human" | "model" | null) {
   return {
     productDraftId,
+    moderationRevision: 3,
     title,
     titleSource,
     productStatus: "draft" as const,

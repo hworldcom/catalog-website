@@ -52,6 +52,7 @@ export function EditProductScreen({ productId }: { productId: string }) {
     null,
   );
   const [galleryState, setGalleryState] = useState<ProductEditorGalleryState>(emptyGalleryState);
+  const [moderationRevisionOverride, setModerationRevisionOverride] = useState<number | null>(null);
   const get = useServerFn(getMyProduct);
   const queryClient = useQueryClient();
   const { data, isError, isLoading } = useQuery({
@@ -82,6 +83,9 @@ export function EditProductScreen({ productId }: { productId: string }) {
 
   const handleGenerated = useCallback((result: { titleSnapshot: ProductDraftTitleSnapshot }) => {
     setDisplayTitle(result.titleSnapshot.title);
+    setModerationRevisionOverride((current) =>
+      Math.max(current ?? 1, result.titleSnapshot.moderationRevision),
+    );
     setTitleReplacement((current) => ({
       version: (current?.version ?? 0) + 1,
       snapshot: result.titleSnapshot,
@@ -90,6 +94,7 @@ export function EditProductScreen({ productId }: { productId: string }) {
 
   const handleProductSaved = useCallback((snapshot: SavedProductSnapshot) => {
     setDisplayTitle(snapshot.title);
+    setModerationRevisionOverride(snapshot.moderationRevision);
     setDescriptionRefreshRequest((value) => value + 1);
   }, []);
 
@@ -108,6 +113,9 @@ export function EditProductScreen({ productId }: { productId: string }) {
           gallery.status !== "available" ||
           gallery.images.some((image) => image.durableStatus !== "available"),
       });
+      setModerationRevisionOverride((current) =>
+        Math.max(current ?? 1, gallery.moderationRevision),
+      );
     },
     [],
   );
@@ -120,6 +128,7 @@ export function EditProductScreen({ productId }: { productId: string }) {
     setDisplayTitle(null);
     setTitleReplacement(null);
     setGalleryState(emptyGalleryState);
+    setModerationRevisionOverride(null);
   }, [productId]);
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
@@ -151,6 +160,7 @@ export function EditProductScreen({ productId }: { productId: string }) {
           productDraftId={productId}
           imageSourceMode={data.product.imageSourceMode}
           productStatus={data.product.status}
+          moderationEditable={data.product.moderation_editable}
           disabled={generationActive || productState.publicationActive}
           onGalleryChange={handleGalleryChange}
         />
@@ -162,6 +172,7 @@ export function EditProductScreen({ productId }: { productId: string }) {
         disabled={generationActive}
         titleReplacement={titleReplacement}
         galleryState={galleryState}
+        moderationRevisionOverride={moderationRevisionOverride}
         onStateChange={setProductState}
         onDisplayTitleChange={setDisplayTitle}
         onProductSaved={handleProductSaved}
@@ -171,7 +182,12 @@ export function EditProductScreen({ productId }: { productId: string }) {
         disabled={generationActive}
         refreshRequest={factsRefreshRequest}
         onStateChange={setFactsState}
-        onSaved={() => setDescriptionRefreshRequest((value) => value + 1)}
+        onSaved={(snapshot) => {
+          setDescriptionRefreshRequest((value) => value + 1);
+          setModerationRevisionOverride((current) =>
+            Math.max(current ?? 1, snapshot.moderationRevision),
+          );
+        }}
       />
       <SellerProductDraftDescriptionSection
         productDraftId={productId}
@@ -182,6 +198,11 @@ export function EditProductScreen({ productId }: { productId: string }) {
         onGenerationStateChange={setGenerationActive}
         onGenerated={handleGenerated}
         onRefreshContext={refreshGenerationContext}
+        onDescriptionSaved={(snapshot) =>
+          setModerationRevisionOverride((current) =>
+            Math.max(current ?? 1, snapshot.moderationRevision),
+          )
+        }
       />
     </div>
   );

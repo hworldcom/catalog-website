@@ -18,6 +18,7 @@ const sellerId = "00000000-0000-4000-8000-000000000002";
 
 const draftRecord: ProductDraftTitleRecord = {
   productDraftId,
+  moderationRevision: 3,
   title: "Draft title",
   titleSource: "human",
   productStatus: "draft",
@@ -50,6 +51,7 @@ class MemoryRepository implements ProductDraftTitleRepository {
   async update(
     _productDraftId: string,
     expectedSellerId: string,
+    _expectedModerationRevision: number,
     titleWrite: HumanProductDraftTitleWrite | null,
     productFields: SellerProductFields,
   ) {
@@ -62,6 +64,7 @@ class MemoryRepository implements ProductDraftTitleRepository {
   async updateTitle(
     _productDraftId: string,
     expectedSellerId: string | null,
+    _expectedModerationRevision: number,
     titleWrite: HumanProductDraftTitleWrite,
   ) {
     this.expectedSellerIds.push(expectedSellerId);
@@ -118,10 +121,10 @@ describe("ProductDraftTitleService", () => {
     const repository = new MemoryRepository();
     const service = new ProductDraftTitleService(repository);
 
-    await service.update(productDraftId, "  Black \n trousers ", ownerAccess);
+    await service.update(productDraftId, "  Black \n trousers ", 3, ownerAccess);
     expect(repository.titleWrites).toEqual([{ title: "Black trousers", titleSource: "human" }]);
 
-    await service.update(productDraftId, " \t ", ownerAccess);
+    await service.update(productDraftId, " \t ", 3, ownerAccess);
     expect(repository.titleWrites[1]).toEqual({ title: "", titleSource: null });
   });
 
@@ -229,6 +232,7 @@ describe("ProductDraftTitleService", () => {
     await expect(
       service.saveSellerProduct({
         productDraftId,
+        expectedModerationRevision: 3,
         sellerId,
         productFields,
       }),
@@ -250,6 +254,7 @@ describe("ProductDraftTitleService", () => {
 
     await service.saveSellerProduct({
       productDraftId,
+      expectedModerationRevision: 3,
       sellerId,
       title: " New   title ",
       productFields,
@@ -264,7 +269,7 @@ describe("ProductDraftTitleService", () => {
     const service = new ProductDraftTitleService(repository);
 
     repository.updateResult = { result: "not_found" };
-    await expect(service.update(productDraftId, "Title", ownerAccess)).rejects.toMatchObject({
+    await expect(service.update(productDraftId, "Title", 3, ownerAccess)).rejects.toMatchObject({
       statusCode: 404,
       code: "product_draft_not_found",
     });
@@ -274,13 +279,13 @@ describe("ProductDraftTitleService", () => {
       productDraftId,
       productStatus: "published",
     };
-    await expect(service.update(productDraftId, "Title", ownerAccess)).rejects.toMatchObject({
+    await expect(service.update(productDraftId, "Title", 3, ownerAccess)).rejects.toMatchObject({
       statusCode: 409,
       code: "product_draft_title_not_editable",
     });
 
     repository.updateResult = { result: "invalid" };
-    await expect(service.update(productDraftId, "Title", ownerAccess)).rejects.toMatchObject({
+    await expect(service.update(productDraftId, "Title", 3, ownerAccess)).rejects.toMatchObject({
       statusCode: 400,
       code: "product_draft_title_invalid",
     });
@@ -289,6 +294,7 @@ describe("ProductDraftTitleService", () => {
     await expect(
       service.saveSellerProduct({
         productDraftId,
+        expectedModerationRevision: 3,
         sellerId,
         productFields: { status: "published" },
       }),

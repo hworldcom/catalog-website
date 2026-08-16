@@ -20,6 +20,7 @@ const prepareFileSchema = z
 export const prepareProductDraftImageUploadsSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
     expectedGalleryRevision: z.number().int().nonnegative(),
     files: z.array(prepareFileSchema).min(1).max(PRODUCT_DRAFT_IMAGE_MAX_COUNT),
   })
@@ -38,6 +39,7 @@ export const prepareProductDraftImageUploadsSchema = z
 export const finalizeProductDraftImageUploadsSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
     imageIds: z.array(z.string().uuid()).min(1).max(PRODUCT_DRAFT_IMAGE_MAX_COUNT),
   })
   .strict()
@@ -54,6 +56,7 @@ export const finalizeProductDraftImageUploadsSchema = z
 export const updateProductDraftImageGallerySchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
     expectedGalleryRevision: z.number().int().nonnegative(),
     orderedAvailableImageIds: z.array(z.string().uuid()).min(1).max(PRODUCT_DRAFT_IMAGE_MAX_COUNT),
     coverImageId: z.string().uuid(),
@@ -75,6 +78,7 @@ export const updateProductDraftImageGallerySchema = z
 export const removeProductDraftImageSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
     imageId: z.string().uuid(),
     expectedGalleryRevision: z.number().int().nonnegative(),
   })
@@ -83,6 +87,7 @@ export const removeProductDraftImageSchema = z
 export const retryProductDraftImageCleanupSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
     imageId: z.string().uuid(),
   })
   .strict();
@@ -116,6 +121,7 @@ export type PreparedProductDraftImage = {
 export type PrepareProductDraftImageUploadsResponse = {
   productDraftId: string;
   galleryRevision: number;
+  moderationRevision: number;
   images: PreparedProductDraftImage[];
 };
 
@@ -128,12 +134,14 @@ export type FinalizedProductDraftImage = {
 export type FinalizeProductDraftImageUploadsResponse = {
   productDraftId: string;
   galleryRevision: number;
+  moderationRevision: number;
   images: FinalizedProductDraftImage[];
 };
 
 export type ProductDraftImageGalleryMutationResponse = {
   productDraftId: string;
   galleryRevision: number;
+  moderationRevision: number;
 };
 
 export type ProductDraftImageLifecycleErrorCode =
@@ -147,7 +155,9 @@ export type ProductDraftImageLifecycleErrorCode =
   | "product_draft_image_verification_failed"
   | "product_draft_image_upload_cleanup_failed"
   | "product_draft_image_delete_failed"
-  | "product_draft_image_storage_unavailable";
+  | "product_draft_image_storage_unavailable"
+  | "product_moderation_submission_conflict"
+  | "product_moderation_working_revision_conflict";
 
 export class ProductDraftImageLifecycleError extends Error {
   constructor(

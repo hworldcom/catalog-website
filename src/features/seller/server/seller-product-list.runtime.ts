@@ -14,14 +14,14 @@ import {
 type RequesterClient = SupabaseClient<Database>;
 
 export async function createSellerProductListService(
-  requesterDatabase: RequesterClient,
+  _requesterDatabase: RequesterClient,
 ): Promise<SellerProductListService> {
   const [{ supabaseAdmin }, delivery] = await Promise.all([
     import("@/lib/supabase/client.server"),
     createProductDraftImageDeliveryEngine(),
   ]);
   return new SellerProductListService(
-    new SupabaseSellerProductListRepository(requesterDatabase),
+    new SupabaseSellerProductListRepository(supabaseAdmin),
     new SupabaseSellerProductPreviewCandidateRepository(supabaseAdmin),
     delivery,
   );

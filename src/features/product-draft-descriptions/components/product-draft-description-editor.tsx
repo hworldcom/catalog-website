@@ -28,6 +28,7 @@ export type ProductDraftDescriptionEditorClient = {
   update(
     productDraftId: string,
     descriptions: ProductDraftDescriptionPatch,
+    expectedModerationRevision: number,
   ): Promise<ProductDraftDescriptionSnapshot>;
 };
 
@@ -154,6 +155,7 @@ export const ProductDraftDescriptionEditor = forwardRef<
     onStateChange?(state: ProductDraftDescriptionEditorState): void;
     onReadStateChange?(state: ProductDraftDescriptionReadState): void;
     onSnapshotChange?(snapshot: ProductDraftDescriptionSnapshot): void;
+    onSaved?(snapshot: ProductDraftDescriptionSnapshot): void;
   }
 >(function ProductDraftDescriptionEditor(
   {
@@ -164,6 +166,7 @@ export const ProductDraftDescriptionEditor = forwardRef<
     onStateChange,
     onReadStateChange,
     onSnapshotChange,
+    onSaved,
   },
   ref,
 ) {
@@ -306,7 +309,13 @@ export const ProductDraftDescriptionEditor = forwardRef<
     setSaveError(null);
     setSaved(false);
     try {
-      applySnapshot(await client.update(productDraftId, normalizedPatch), false);
+      const nextSnapshot = await client.update(
+        productDraftId,
+        normalizedPatch,
+        snapshot.moderationRevision,
+      );
+      applySnapshot(nextSnapshot, false);
+      onSaved?.(nextSnapshot);
       setSaved(true);
     } catch (error) {
       setSaveError(descriptionErrorMessage(error));

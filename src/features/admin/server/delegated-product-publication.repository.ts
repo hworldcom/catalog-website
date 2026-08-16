@@ -19,6 +19,7 @@ export type DelegatedProductDraftRecord = {
   };
   product: Product;
   audiences: string[];
+  moderationEditable: boolean;
 };
 
 export type DelegatedProductPublicationRunRecord = {

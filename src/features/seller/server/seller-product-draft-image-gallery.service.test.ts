@@ -180,6 +180,7 @@ describe("SellerProductDraftImageGalleryService", () => {
       status: "unavailable",
       errorCode: "product_draft_image_delivery_unavailable",
       galleryRevision: 0,
+      moderationRevision: 1,
       images: [],
     });
     expect(delivery.resolve).not.toHaveBeenCalled();

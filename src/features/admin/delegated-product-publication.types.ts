@@ -23,6 +23,7 @@ const uuidSchema = z
   .uuid()
   .transform((value) => value.toLowerCase());
 const stockSchema = z.enum(["in_stock", "low_stock", "out_of_stock", "made_to_order"]);
+const moderationRevisionSchema = z.number().int().positive();
 
 export const delegatedProductFieldsSchema = z
   .object({
@@ -47,12 +48,21 @@ const scopeSchema = z
 
 const workflowSchema = z.object({ workflowId: uuidSchema }).strict();
 
-const saveSchema = scopeSchema.extend(delegatedProductFieldsSchema.shape).strict();
+const saveSchema = scopeSchema
+  .extend({ expectedModerationRevision: moderationRevisionSchema })
+  .extend(delegatedProductFieldsSchema.shape)
+  .strict();
 const publishSchema = saveSchema.extend({ requestId: uuidSchema }).strict();
 const retrySchema = scopeSchema.extend({ requestId: uuidSchema }).strict();
-const updateFactsSchema = scopeSchema.extend({ patch: productDraftFactsPatchSchema }).strict();
+const updateFactsSchema = scopeSchema
+  .extend({
+    expectedModerationRevision: moderationRevisionSchema,
+    patch: productDraftFactsPatchSchema,
+  })
+  .strict();
 const updateDescriptionsSchema = scopeSchema
   .extend({
+    expectedModerationRevision: moderationRevisionSchema,
     descriptions: z
       .object({
         pl: z.string().nullable().optional(),
@@ -71,9 +81,11 @@ export type DelegatedProductSaveInput = z.infer<typeof saveSchema>;
 export type DelegatedProductPublishInput = z.infer<typeof publishSchema>;
 export type DelegatedProductRetryInput = z.infer<typeof retrySchema>;
 export type DelegatedProductFactsUpdateInput = DelegatedProductScope & {
+  expectedModerationRevision: number;
   patch: ProductDraftFactsPatch;
 };
 export type DelegatedProductDescriptionsUpdateInput = DelegatedProductScope & {
+  expectedModerationRevision: number;
   descriptions: ProductDraftDescriptionPatch;
 };
 
@@ -98,6 +110,7 @@ export type DelegatedProductDraftSnapshot = {
     classifierGroupId: string;
   };
   product: {
+    moderationRevision: number;
     audiences: ProductAudience[];
     status: "draft" | "published" | "archived";
     title: string;

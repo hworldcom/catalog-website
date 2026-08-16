@@ -35,6 +35,7 @@ class FactsRepository implements ProductDraftFactsRepository {
   expectedSellerIds: (string | null)[] = [];
   readResult: ProductDraftFactsReadResult = {
     productDraftId,
+    moderationRevision: 3,
     productStatus: "draft",
     factsRecord: {
       productDraftId,
@@ -46,6 +47,7 @@ class FactsRepository implements ProductDraftFactsRepository {
   patchResult: ProductDraftFactsPatchResult = {
     result: "updated",
     productDraftId,
+    moderationRevision: 4,
     facts: {
       ...canonicalFacts,
       materialComposition: "cotton",
@@ -65,6 +67,7 @@ class FactsRepository implements ProductDraftFactsRepository {
     _productDraftId: string,
     _patch: ProductDraftFactsPatch,
     expectedSellerId: string | null,
+    _expectedModerationRevision: number,
   ) {
     this.expectedSellerIds.push(expectedSellerId);
     return this.patchResult;
@@ -78,6 +81,7 @@ describe("ProductDraftFactsService", () => {
 
     await expect(service.get(productDraftId, ownerAccess)).resolves.toEqual({
       productDraftId,
+      moderationRevision: 3,
       facts: canonicalFacts,
       factsRevision: 1,
       updatedAt,
@@ -154,9 +158,10 @@ describe("ProductDraftFactsService", () => {
     const service = new ProductDraftFactsService(repository);
 
     await expect(
-      service.update(productDraftId, { materialComposition: "cotton" }, ownerAccess),
+      service.update(productDraftId, { materialComposition: "cotton" }, 3, ownerAccess),
     ).resolves.toEqual({
       productDraftId,
+      moderationRevision: 4,
       facts: repository.patchResult.result === "updated" ? repository.patchResult.facts : null,
       factsRevision: 2,
       updatedAt,
@@ -171,6 +176,7 @@ describe("ProductDraftFactsService", () => {
     repository.patchResult = {
       result: "unchanged",
       productDraftId,
+      moderationRevision: 3,
       facts: canonicalFacts,
       factsRevision: 3,
       updatedAt,
@@ -179,7 +185,7 @@ describe("ProductDraftFactsService", () => {
     const service = new ProductDraftFactsService(repository);
 
     await expect(
-      service.update(productDraftId, { colors: [] }, ownerAccess),
+      service.update(productDraftId, { colors: [] }, 3, ownerAccess),
     ).resolves.toMatchObject({
       factsRevision: 3,
       facts: canonicalFacts,
@@ -211,7 +217,7 @@ describe("ProductDraftFactsService", () => {
     const service = new ProductDraftFactsService(repository);
 
     await expect(
-      service.update(productDraftId, { materialComposition: null }, ownerAccess),
+      service.update(productDraftId, { materialComposition: null }, 3, ownerAccess),
     ).rejects.toMatchObject(expectedError);
   });
 });

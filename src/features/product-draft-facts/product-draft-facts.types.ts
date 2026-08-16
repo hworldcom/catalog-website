@@ -58,6 +58,7 @@ const getProductDraftFactsInputSchema = z
 const updateProductDraftFactsInputSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
     patch: productDraftFactsPatchSchema,
   })
   .strict();
@@ -69,6 +70,7 @@ export type UpdateProductDraftFactsInput = z.infer<typeof updateProductDraftFact
 
 export type ProductDraftFactsSnapshot = {
   productDraftId: string;
+  moderationRevision: number;
   facts: ProductDraftFacts;
   factsRevision: number;
   updatedAt: string;

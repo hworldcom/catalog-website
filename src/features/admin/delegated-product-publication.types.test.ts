@@ -11,6 +11,7 @@ describe("delegated ProductDraft publication types", () => {
       parseDelegatedProductPublish({
         workflowId: uuid(1).toUpperCase(),
         productDraftId: uuid(2),
+        expectedModerationRevision: 3,
         requestId: uuid(3),
         audiences: ["women", "men"],
         title: " Cotton shirt ",
@@ -25,6 +26,7 @@ describe("delegated ProductDraft publication types", () => {
     ).toEqual({
       workflowId: uuid(1),
       productDraftId: uuid(2),
+      expectedModerationRevision: 3,
       requestId: uuid(3),
       audiences: ["women", "men"],
       title: " Cotton shirt ",
@@ -41,6 +43,7 @@ describe("delegated ProductDraft publication types", () => {
       parseDelegatedProductPublish({
         workflowId: uuid(1),
         productDraftId: uuid(2),
+        expectedModerationRevision: 3,
         requestId: uuid(3),
         audiences: ["women"],
         title: "Cotton shirt",
@@ -57,11 +60,13 @@ describe("delegated ProductDraft publication types", () => {
       parseDelegatedProductDescriptionsUpdate({
         workflowId: uuid(1),
         productDraftId: uuid(2),
+        expectedModerationRevision: 3,
         descriptions: { en: "  A factual description. \r\n" },
       }),
     ).toEqual({
       workflowId: uuid(1),
       productDraftId: uuid(2),
+      expectedModerationRevision: 3,
       descriptions: { en: "A factual description." },
     });
   });

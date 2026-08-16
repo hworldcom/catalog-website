@@ -337,8 +337,8 @@ FROM public.set_seller_storefront_enabled(
 );
 
 SELECT results_eq(
-  $$ SELECT storefront_enabled, published FROM qa_0040a3_enabled $$,
-  $$ VALUES (true, true) $$,
+  $$ SELECT result, storefront_enabled FROM qa_0040a3_enabled $$,
+  $$ VALUES ('recorded'::text, true) $$,
   'an approved seller can enable the public storefront'
 );
 SELECT results_eq(
@@ -346,17 +346,17 @@ SELECT results_eq(
   $$ VALUES ('approved-seller'::text, false) $$,
   'canonical lookup resolves the enabled approved seller'
 );
-SELECT is(
-  (
-    SELECT published
+SELECT results_eq(
+  $$
+    SELECT result, storefront_enabled
     FROM public.set_seller_storefront_enabled(
       (SELECT id FROM qa_0040a3_seller),
       true,
       '40a30000-0000-4000-8000-000000000108',
       '40a30000-0000-4000-8000-000000000001'
     )
-  ),
-  true,
+  $$,
+  $$ VALUES ('replay'::text, true) $$,
   'storefront preference replay preserves its original successful outcome'
 );
 

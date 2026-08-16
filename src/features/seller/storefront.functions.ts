@@ -74,6 +74,27 @@ export const getMySellerProfileWorkingCopy = createServerFn({ method: "GET" })
     });
   });
 
+export const getMySellerProfileModerationSnapshot = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context as {
+      supabase: import("@supabase/supabase-js").SupabaseClient<
+        import("@/lib/supabase/types").Database
+      >;
+      userId: string;
+    };
+    const [{ supabaseAdmin }, { readOwnedSellerProfileModerationSnapshot }] = await Promise.all([
+      import("@/lib/supabase/client.server"),
+      import("./server/seller-profile-moderation.service"),
+    ]);
+
+    return readOwnedSellerProfileModerationSnapshot({
+      requester: supabase,
+      administrator: supabaseAdmin,
+      userId,
+    });
+  });
+
 export const saveMySellerProfileWorkingCopy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input) => {

@@ -9,6 +9,8 @@ import type { SellerProductListPage } from "../seller-product-list.types";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   archive: vi.fn(),
+  restore: vi.fn(),
+  navigate: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
 }));
@@ -19,11 +21,13 @@ vi.mock("@tanstack/react-start", () => ({
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+  useNavigate: () => mocks.navigate,
 }));
 
 vi.mock("@/features/seller/products.functions", () => ({
   listMyProducts: mocks.list,
   archiveMyProduct: mocks.archive,
+  restoreMyProduct: mocks.restore,
 }));
 
 vi.mock("sonner", () => ({
@@ -39,6 +43,13 @@ describe("ProductsScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.archive.mockResolvedValue({ productId: uuid(1), productStatus: "archived" });
+    mocks.restore.mockResolvedValue({
+      productId: uuid(1),
+      productStatus: "archived",
+      restorationDraft: true,
+      editRoute: `/seller/products/${uuid(1)}`,
+    });
+    mocks.navigate.mockResolvedValue(undefined);
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
@@ -73,7 +84,7 @@ describe("ProductsScreen", () => {
     mocks.list.mockResolvedValue(page({ nextCursor: "next-page" }));
     const onRequestChange = vi.fn();
     const { queryClient } = renderScreen({
-      request: { limit: 25, cursor: null },
+      request: { status: "active", limit: 25, cursor: null },
       onRequestChange,
     });
 
@@ -83,10 +94,19 @@ describe("ProductsScreen", () => {
     );
     expect(screen.getByText("Product code")).toBeVisible();
     expect(screen.getByText("SEL-F-TSH-ABCDEFGH")).toBeVisible();
-    expect(queryClient.getQueryData(["my-products", 25, null])).toBeDefined();
+    expect(screen.getByText("Public:")).toBeVisible();
+    expect(screen.getByText("Review:")).toBeVisible();
+    expect(screen.getByText("Activation:")).toBeVisible();
+    expect(screen.getByText("Not submitted")).toBeVisible();
+    expect(screen.getByText("Not started")).toBeVisible();
+    expect(queryClient.getQueryData(["my-products", "active", 25, null])).toBeDefined();
 
     await userEvent.click(screen.getByRole("button", { name: "Next page" }));
-    expect(onRequestChange).toHaveBeenCalledWith({ limit: 25, cursor: "next-page" });
+    expect(onRequestChange).toHaveBeenCalledWith({
+      status: "active",
+      limit: 25,
+      cursor: "next-page",
+    });
   });
 
   it("refreshes a failed private URL once and then renders a placeholder", async () => {
@@ -111,7 +131,7 @@ describe("ProductsScreen", () => {
     mocks.list.mockResolvedValue(page());
     const onRequestChange = vi.fn();
     const { queryClient } = renderScreen({
-      request: { limit: 25, cursor: "current-page" },
+      request: { status: "active", limit: 25, cursor: "current-page" },
       onRequestChange,
     });
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
@@ -119,11 +139,64 @@ describe("ProductsScreen", () => {
     await screen.findByText("Cotton shirt");
     await userEvent.click(screen.getByRole("button", { name: "Archive" }));
 
-    await waitFor(() => expect(mocks.archive).toHaveBeenCalledWith({ data: { id: uuid(1) } }));
+    await waitFor(() =>
+      expect(mocks.archive).toHaveBeenCalledWith({
+        data: {
+          id: uuid(1),
+          expectedModerationRevision: 3,
+          requestId: expect.any(String),
+        },
+      }),
+    );
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["my-products"] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["my-product-summary"] });
-    expect(onRequestChange).toHaveBeenCalledWith({ limit: 25, cursor: null });
+    expect(onRequestChange).toHaveBeenCalledWith({
+      status: "active",
+      limit: 25,
+      cursor: null,
+    });
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Product archived");
+  });
+
+  it("creates a restoration draft and opens it from the archived product list", async () => {
+    mocks.list.mockResolvedValue(page({ status: "archived" }));
+    renderScreen({ request: { status: "archived", limit: 25, cursor: null } });
+
+    await screen.findByText("Cotton shirt");
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+
+    await waitFor(() =>
+      expect(mocks.restore).toHaveBeenCalledWith({
+        data: {
+          id: uuid(1),
+          expectedModerationRevision: 3,
+          requestId: expect.any(String),
+        },
+      }),
+    );
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Restoration draft created");
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: "/seller/products/$id",
+      params: { id: uuid(1) },
+    });
+  });
+
+  it("resets pagination when switching between active and archived products", async () => {
+    mocks.list.mockResolvedValue(page());
+    const onRequestChange = vi.fn();
+    renderScreen({
+      request: { status: "active", limit: 25, cursor: "current-page" },
+      onRequestChange,
+    });
+
+    await screen.findByText("Cotton shirt");
+    await userEvent.click(screen.getByRole("button", { name: "Archived products" }));
+
+    expect(onRequestChange).toHaveBeenCalledWith({
+      status: "archived",
+      limit: 25,
+      cursor: null,
+    });
   });
 
   it.each([
@@ -132,7 +205,10 @@ describe("ProductsScreen", () => {
       "product_archive_not_allowed",
       "Wait for active publication or complete publication cleanup before archiving this product.",
     ],
-    ["product_archive_unavailable", "Product archival is temporarily unavailable."],
+    [
+      "product_moderation_activation_unavailable",
+      "Product archive and restore are temporarily unavailable.",
+    ],
   ])("shows localized guidance for %s", async (code, message) => {
     mocks.list.mockResolvedValue(page());
     mocks.archive.mockRejectedValue({ code });
@@ -146,11 +222,15 @@ describe("ProductsScreen", () => {
 });
 
 function renderScreen({
-  request = { limit: 25, cursor: null },
+  request = { status: "active", limit: 25, cursor: null },
   onRequestChange = vi.fn(),
 }: {
-  request?: { limit: number; cursor: string | null };
-  onRequestChange?: (request: { limit: number; cursor: string | null }) => void;
+  request?: { status: "active" | "archived"; limit: number; cursor: string | null };
+  onRequestChange?: (request: {
+    status: "active" | "archived";
+    limit: number;
+    cursor: string | null;
+  }) => void;
 } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -168,9 +248,11 @@ function renderScreen({
 function page({
   nextCursor = null,
   previewUrl = "https://signed.test/one",
+  status = "draft",
 }: {
   nextCursor?: string | null;
   previewUrl?: string;
+  status?: "draft" | "published" | "archived";
 } = {}): SellerProductListPage {
   return {
     products: [
@@ -184,7 +266,20 @@ function page({
         moq: null,
         pack_size: null,
         stock: "in_stock",
-        status: "draft",
+        publicState: status,
+        actionRevision: 3,
+        hasWorkingCopy: false,
+        review: null,
+        activation: null,
+        actions: {
+          canEdit: status !== "archived",
+          canSubmit: status !== "archived",
+          canWithdraw: false,
+          canAbandonFailedActivation: false,
+          canRetryAbandonmentCleanup: false,
+          canArchive: status !== "archived",
+          canRestore: status === "archived",
+        },
         created_at: "2026-07-27T10:00:00.000Z",
         preview: {
           source: "private_draft",

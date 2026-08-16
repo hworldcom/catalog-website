@@ -37,6 +37,8 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
 
     await expect(repository.claim(productDraftId, sellerId)).resolves.toEqual({
       result: "claimed",
+      workingCopy: false,
+      moderationRevision: 4,
       attemptToken: uuid(3),
       category: { id: uuid(4), slug: "t-shirts", name: "T-shirts" },
       factsRevision: 2,
@@ -55,6 +57,44 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
     expect(rpc).toHaveBeenCalledWith("claim_product_draft_description_generation", {
       p_product_draft_id: productDraftId,
       p_expected_seller_id: sellerId,
+    });
+  });
+
+  it("claims a published product through its private working-copy revision", async () => {
+    const rpc = vi.fn(async () => ({
+      data: [
+        {
+          result: "claimed",
+          attempt_token: uuid(3),
+          category_id: uuid(4),
+          category_slug: "t-shirts",
+          category_name: "T-shirts",
+          facts_revision: 2,
+          facts_json: facts(),
+          human_languages: [],
+          title_blank: false,
+          cover_source: "private_draft",
+          cover_image_id: uuid(5),
+          cover_image_url: null,
+          cover_storage_bucket: "product-draft-images",
+          cover_object_key: "drafts/cover.jpg",
+          cover_content_type: "image/jpeg",
+          cover_size_bytes: 4,
+        },
+      ],
+      error: null,
+    }));
+    const repository = repositoryWith(rpc, { workingCopy: true, productStatus: "published" });
+
+    await expect(repository.claim(productDraftId, sellerId)).resolves.toMatchObject({
+      result: "claimed",
+      workingCopy: true,
+      moderationRevision: 4,
+    });
+    expect(rpc).toHaveBeenCalledWith("claim_product_moderation_working_description_generation", {
+      p_product_id: productDraftId,
+      p_seller_id: sellerId,
+      p_expected_revision: 4,
     });
   });
 
@@ -99,6 +139,7 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
           description_snapshot: descriptionSnapshot(),
           title_snapshot: {
             productDraftId,
+            moderationRevision: 4,
             title: "Cotton T-shirt",
             titleSource: "model",
             productStatus: "draft",
@@ -232,10 +273,59 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
   });
 });
 
-function repositoryWith(rpc: ReturnType<typeof vi.fn>) {
+function repositoryWith(
+  rpc: ReturnType<typeof vi.fn>,
+  options: {
+    workingCopy?: boolean;
+    productStatus?: "draft" | "published" | "archived";
+  } = {},
+) {
+  const databaseRpc = vi.fn(async (operation: string, parameters: unknown) => {
+    if (operation === "read_product_moderation_edit_state") {
+      return {
+        data: [editState(options)],
+        error: null,
+      };
+    }
+    return rpc(operation, parameters);
+  });
   return new SupabaseProductDraftDescriptionGenerationRepository({
-    rpc,
+    rpc: databaseRpc,
   } as unknown as SupabaseClient<Database>);
+}
+
+function editState(options: {
+  workingCopy?: boolean;
+  productStatus?: "draft" | "published" | "archived";
+}) {
+  return {
+    product_id: productDraftId,
+    seller_id: sellerId,
+    product_status: options.productStatus ?? "draft",
+    revision: 4,
+    editable: true,
+    working_copy: options.workingCopy ?? false,
+    snapshot_json: {
+      schemaVersion: 1,
+      productId: productDraftId,
+      sellerId,
+      productCode: "SEL-F-TSH-0001",
+      productCodeInput: null,
+      title: "Cotton T-shirt",
+      titleSource: "human",
+      categoryId: uuid(4),
+      audiences: ["women"],
+      descriptions: [],
+      facts: { factsRevision: 2, facts: facts() },
+      minimumOrder: null,
+      packSize: null,
+      price: null,
+      currency: "EUR",
+      stock: "made_to_order",
+      imageIds: [uuid(5)],
+      coverImageId: uuid(5),
+    },
+  };
 }
 
 function facts() {
@@ -251,6 +341,7 @@ function facts() {
 function descriptionSnapshot() {
   return {
     productDraftId,
+    moderationRevision: 4,
     productStatus: "draft",
     categoryId: uuid(4),
     currentFactsRevision: 2,

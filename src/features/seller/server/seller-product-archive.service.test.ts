@@ -6,62 +6,90 @@ import { SellerProductArchiveService } from "./seller-product-archive.service";
 
 const productId = uuid(1);
 const sellerId = uuid(2);
+const actorUserId = uuid(3);
+const requestId = uuid(4);
 
 describe("SellerProductArchiveService", () => {
-  it("returns the archived snapshot and preserves idempotent success", async () => {
+  it("returns the moderation-aware archived snapshot", async () => {
     const repository = memoryRepository();
-    const service = new SellerProductArchiveService(repository);
 
-    await expect(service.archive(productId, sellerId)).resolves.toEqual({
+    await expect(new SellerProductArchiveService(repository).archive(input())).resolves.toEqual({
       productId,
       productStatus: "archived",
+      moderationRevision: 4,
     });
-    await expect(service.archive(productId, sellerId)).resolves.toEqual({
+    expect(repository.archive).toHaveBeenCalledWith(input());
+  });
+
+  it("returns the restoration route and private revision", async () => {
+    const repository = memoryRepository();
+
+    await expect(new SellerProductArchiveService(repository).restore(input())).resolves.toEqual({
       productId,
       productStatus: "archived",
+      moderationRevision: 5,
+      restorationDraft: true,
+      editRoute: `/seller/products/${productId}`,
     });
-    expect(repository.archive).toHaveBeenCalledTimes(2);
+    expect(repository.restore).toHaveBeenCalledWith(input());
   });
 
   it.each([
-    ["malformed product", "not-a-uuid", sellerId],
-    ["missing seller", productId, null],
-  ])("masks a %s as product not found", async (_label, selectedProductId, selectedSellerId) => {
+    ["malformed product", { productId: "not-a-uuid" }],
+    ["missing seller", { sellerId: null }],
+    ["malformed actor", { actorUserId: "not-a-uuid" }],
+    ["malformed request", { requestId: "not-a-uuid" }],
+    ["invalid revision", { expectedModerationRevision: 0 }],
+  ])("masks %s before invoking the repository", async (_label, override) => {
     const repository = memoryRepository();
 
     await expect(
-      new SellerProductArchiveService(repository).archive(selectedProductId, selectedSellerId),
+      new SellerProductArchiveService(repository).archive(input(override)),
     ).rejects.toMatchObject({ statusCode: 404, code: "product_not_found" });
     expect(repository.archive).not.toHaveBeenCalled();
   });
 
-  it("maps missing and other-seller products to the same not-found error", async () => {
+  it.each([
+    ["product_not_found", 404],
+    ["product_archive_moderation_active", 409],
+    ["product_restore_moderation_active", 409],
+    ["product_moderation_revision_conflict", 409],
+    ["product_archive_not_allowed", 409],
+    ["product_restore_not_allowed", 409],
+    ["product_archive_request_conflict", 409],
+    ["product_restore_request_conflict", 409],
+  ] as const)("maps %s to its stable operation error", async (code, statusCode) => {
     const repository = memoryRepository();
-    repository.archive.mockResolvedValue({ result: "product_not_found" });
+    repository.archive.mockResolvedValue({ result: code });
 
     await expect(
-      new SellerProductArchiveService(repository).archive(productId, sellerId),
-    ).rejects.toMatchObject({ statusCode: 404, code: "product_not_found" });
-  });
-
-  it("maps active publication to the stable conflict", async () => {
-    const repository = memoryRepository();
-    repository.archive.mockResolvedValue({ result: "product_archive_not_allowed" });
-
-    await expect(
-      new SellerProductArchiveService(repository).archive(productId, sellerId),
-    ).rejects.toMatchObject({ statusCode: 409, code: "product_archive_not_allowed" });
+      new SellerProductArchiveService(repository).archive(input()),
+    ).rejects.toMatchObject({ statusCode, code });
   });
 
   it("does not expose unexpected database errors", async () => {
     const repository = memoryRepository();
-    repository.archive.mockRejectedValue(new SellerProductArchiveRepositoryError("raw error"));
+    repository.restore.mockRejectedValue(new SellerProductArchiveRepositoryError("raw error"));
 
     await expect(
-      new SellerProductArchiveService(repository).archive(productId, sellerId),
-    ).rejects.toMatchObject({ statusCode: 503, code: "product_archive_unavailable" });
+      new SellerProductArchiveService(repository).restore(input()),
+    ).rejects.toMatchObject({
+      statusCode: 503,
+      code: "product_moderation_activation_unavailable",
+    });
   });
 });
+
+function input(overrides: Partial<Parameters<SellerProductArchiveService["archive"]>[0]> = {}) {
+  return {
+    productId,
+    sellerId,
+    actorUserId,
+    expectedModerationRevision: 3,
+    requestId,
+    ...overrides,
+  };
+}
 
 function memoryRepository() {
   return {
@@ -69,6 +97,15 @@ function memoryRepository() {
       result: "archived" as const,
       productId,
       productStatus: "archived" as const,
+      moderationRevision: 4,
+      restorationDraft: false as const,
+    })),
+    restore: vi.fn(async () => ({
+      result: "restoration_draft" as const,
+      productId,
+      productStatus: "archived" as const,
+      moderationRevision: 5,
+      restorationDraft: true as const,
     })),
   } satisfies SellerProductArchiveRepository;
 }

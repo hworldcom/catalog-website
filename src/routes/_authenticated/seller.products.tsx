@@ -11,6 +11,7 @@ import {
 const searchSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(SELLER_PRODUCT_LIST_DEFAULT_LIMIT),
   cursor: z.string().min(1).optional(),
+  status: z.enum(["active", "archived"]).default("active"),
 });
 
 export const Route = createFileRoute("/_authenticated/seller/products")({
@@ -24,6 +25,7 @@ function SellerProductsRoute() {
   const request: SellerProductListRequest = {
     limit: search.limit,
     cursor: search.cursor ?? null,
+    status: search.status,
   };
 
   return (
@@ -35,6 +37,7 @@ function SellerProductsRoute() {
             ...previous,
             limit: nextRequest.limit,
             cursor: nextRequest.cursor ?? undefined,
+            status: nextRequest.status,
           }),
         })
       }

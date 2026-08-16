@@ -8,6 +8,7 @@ const sellerProfileErrorCodes = [
   "seller_approval_required",
   "seller_approval_not_found",
   "seller_profile_image_not_ready",
+  "seller_profile_moderation_status_unavailable",
 ] as const;
 
 const sellerIdentitySchema = z.object({

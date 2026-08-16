@@ -32,6 +32,7 @@ export class ProductDraftDescriptionService {
   async update(
     productDraftId: string,
     patch: ProductDraftDescriptionPatch,
+    expectedModerationRevision: number,
     access: ProductDraftAccess,
   ): Promise<ProductDraftDescriptionSnapshot> {
     try {
@@ -39,6 +40,7 @@ export class ProductDraftDescriptionService {
         productDraftId,
         patch,
         expectedProductDraftSellerId(access),
+        expectedModerationRevision,
       );
       if (result.result === "applied") {
         return snapshot(result.snapshot);
@@ -64,13 +66,14 @@ function snapshot(
 ): ProductDraftDescriptionSnapshot {
   if (record.currentFactsRevision === null) throw productDraftFactsMissing();
 
-  const generationEligibility =
-    record.productStatus !== "draft"
-      ? { eligible: false, reason: "product_not_draft" as const }
-      : { eligible: true, reason: null };
+  const editable = record.editable ?? record.productStatus === "draft";
+  const generationEligibility = !editable
+    ? { eligible: false, reason: "product_not_draft" as const }
+    : { eligible: true, reason: null };
 
   return {
     productDraftId: record.productDraftId,
+    moderationRevision: record.moderationRevision,
     productStatus: record.productStatus,
     currentFactsRevision: record.currentFactsRevision,
     generationEligibility,

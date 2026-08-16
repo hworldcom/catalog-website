@@ -12,6 +12,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
         {
           result: "created",
           product_draft_id: uuid(1),
+          moderation_revision: 1,
           product_code: "QAR-F-TSH-ABCDEFGH",
           title: "Blue cotton shirt",
           title_source: "human",
@@ -42,9 +43,10 @@ describe("SupabaseProductDraftTitleRepository", () => {
       },
     );
 
-    expect(rpc).toHaveBeenCalledWith("save_seller_product_with_description", {
+    expect(rpc).toHaveBeenCalledWith("save_initial_product_draft_with_description", {
       p_product_draft_id: null,
       p_seller_id: uuid(2),
+      p_expected_moderation_revision: null,
       p_title_patch_present: true,
       p_title: "Blue cotton shirt",
       p_description_patch_present: false,
@@ -64,6 +66,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
     expect(result).toEqual({
       result: "created",
       productDraftId: uuid(1),
+      moderationRevision: 1,
       title: "Blue cotton shirt",
       titleSource: "human",
       productStatus: "draft",
@@ -76,6 +79,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
         {
           result: "created",
           product_draft_id: uuid(1),
+          moderation_revision: 1,
           product_code: null,
           title: "",
           title_source: null,
@@ -100,14 +104,16 @@ describe("SupabaseProductDraftTitleRepository", () => {
     ).resolves.toEqual({
       result: "created",
       productDraftId: uuid(1),
+      moderationRevision: 1,
       title: "",
       titleSource: null,
       productStatus: "draft",
     });
 
-    expect(rpc).toHaveBeenCalledWith("save_seller_product_with_description", {
+    expect(rpc).toHaveBeenCalledWith("save_initial_product_draft_with_description", {
       p_product_draft_id: null,
       p_seller_id: uuid(2),
+      p_expected_moderation_revision: null,
       p_title_patch_present: false,
       p_title: null,
       p_description_patch_present: false,
@@ -124,6 +130,38 @@ describe("SupabaseProductDraftTitleRepository", () => {
       p_status: "draft",
       p_audiences: null,
     });
+  });
+
+  it("does not misreport an incomplete creation response as an invalid title", async () => {
+    const repository = new SupabaseProductDraftTitleRepository({
+      rpc: vi.fn(async () => ({
+        data: [
+          {
+            result: "created",
+            product_draft_id: uuid(1),
+            moderation_revision: null,
+            title: "Valid title",
+            title_source: "human",
+            product_status: "draft",
+            english_description: null,
+          },
+        ],
+        error: null,
+      })),
+    } as unknown as SupabaseClient<Database>);
+
+    await expect(
+      repository.create(
+        uuid(2),
+        { title: "Valid title", titleSource: "human" },
+        {
+          currency: "EUR",
+          stock: "in_stock",
+          trending: false,
+          status: "draft",
+        },
+      ),
+    ).rejects.toThrow("Seller ProductDraft creation returned an incomplete result.");
   });
 
   it("returns stable product-code allocation failures from direct creation", async () => {
@@ -165,6 +203,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
         {
           result: "updated",
           product_draft_id: uuid(1),
+          moderation_revision: 4,
           title: "Blue cotton shirt",
           title_source: "human",
           product_status: "draft",
@@ -180,6 +219,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
     const result = await repository.update(
       uuid(1),
       uuid(2),
+      3,
       {
         title: "Blue cotton shirt",
         titleSource: "human",
@@ -200,9 +240,10 @@ describe("SupabaseProductDraftTitleRepository", () => {
     );
 
     expect(rpc).toHaveBeenCalledOnce();
-    expect(rpc).toHaveBeenCalledWith("save_seller_product_with_description", {
+    expect(rpc).toHaveBeenCalledWith("save_initial_product_draft_with_description", {
       p_product_draft_id: uuid(1),
       p_seller_id: uuid(2),
+      p_expected_moderation_revision: 3,
       p_title_patch_present: true,
       p_title: "Blue cotton shirt",
       p_description_patch_present: true,
@@ -222,6 +263,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
     expect(result).toEqual({
       result: "updated",
       productDraftId: uuid(1),
+      moderationRevision: 4,
       title: "Blue cotton shirt",
       titleSource: "human",
       productStatus: "draft",
@@ -234,6 +276,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
         {
           result: "updated",
           product_draft_id: uuid(1),
+          moderation_revision: 4,
           title: "Model title",
           title_source: "model",
           product_status: "draft",
@@ -246,7 +289,7 @@ describe("SupabaseProductDraftTitleRepository", () => {
       rpc,
     } as unknown as SupabaseClient<Database>);
 
-    await repository.update(uuid(1), uuid(2), null, {
+    await repository.update(uuid(1), uuid(2), 3, null, {
       category_id: null,
       moq: 1,
       pack_size: "1",
@@ -259,8 +302,9 @@ describe("SupabaseProductDraftTitleRepository", () => {
     });
 
     expect(rpc).toHaveBeenLastCalledWith(
-      "save_seller_product_with_description",
+      "save_initial_product_draft_with_description",
       expect.objectContaining({
+        p_expected_moderation_revision: 3,
         p_title_patch_present: false,
         p_title: null,
         p_description_patch_present: false,

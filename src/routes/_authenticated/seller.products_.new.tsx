@@ -9,6 +9,10 @@ export const Route = createFileRoute("/_authenticated/seller/products_/new")({
 function NewProduct() {
   const navigate = useNavigate();
   return (
-    <NewProductScreen onSaved={(id) => navigate({ to: "/seller/products/$id", params: { id } })} />
+    <NewProductScreen
+      onSaved={(id) => {
+        void navigate({ to: "/seller/products/$id", params: { id }, replace: true });
+      }}
+    />
   );
 }

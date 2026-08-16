@@ -21,6 +21,7 @@ export type ProductDraftTitleAccess = ProductDraftAccess;
 
 export type SellerProductSave = {
   productDraftId?: string;
+  expectedModerationRevision?: number;
   sellerId: string;
   title?: string;
   productFields: SellerProductFields;
@@ -41,11 +42,13 @@ export class ProductDraftTitleService {
   async update(
     productDraftId: string,
     title: string,
+    expectedModerationRevision: number,
     access: ProductDraftTitleAccess,
   ): Promise<ProductDraftTitleSnapshot> {
     const result = await this.repository.updateTitle(
       productDraftId,
       expectedProductDraftSellerId(access),
+      expectedModerationRevision,
       humanTitleWrite(title),
     );
     return updateSnapshot(result);
@@ -68,6 +71,7 @@ export class ProductDraftTitleService {
       await this.repository.update(
         input.productDraftId,
         input.sellerId,
+        requireExpectedModerationRevision(input.expectedModerationRevision),
         titleWrite,
         input.productFields,
       ),
@@ -94,13 +98,15 @@ function rejectBlankPublication(
 
 function snapshot(record: {
   productDraftId: string;
+  moderationRevision: number;
+  editable?: boolean;
   title: string;
   titleSource: "human" | "model" | null;
   productStatus: "draft" | "published" | "archived";
 }): ProductDraftTitleSnapshot {
   return {
     ...record,
-    editable: record.productStatus === "draft",
+    editable: record.editable ?? record.productStatus === "draft",
   };
 }
 
@@ -250,4 +256,9 @@ function productDraftNotFound(): ProductDraftTitleError {
     "product_draft_not_found",
     "The ProductDraft was not found.",
   );
+}
+
+function requireExpectedModerationRevision(value: number | undefined): number {
+  if (!value || !Number.isInteger(value) || value < 1) throw invalidProductDraftTitle();
+  return value;
 }

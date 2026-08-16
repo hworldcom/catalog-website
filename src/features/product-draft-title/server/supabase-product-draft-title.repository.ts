@@ -5,6 +5,7 @@ import {
   productAudienceUnavailable,
 } from "@/features/product-audience/product-audience.types";
 import type { Database } from "@/lib/supabase/types";
+import { readProductModerationEditState } from "@/features/seller/server/product-moderation-edit-state";
 
 import type {
   HumanProductDraftTitleWrite,
@@ -14,11 +15,14 @@ import type {
   ProductDraftTitleUpdateResult,
   SellerProductFields,
 } from "../product-draft-title.repository";
-import { parseStoredProductDraftTitleSource } from "../product-draft-title.types";
+import {
+  parseStoredProductDraftTitleSource,
+  ProductDraftTitleError,
+} from "../product-draft-title.types";
 
 type AdminClient = SupabaseClient<Database>;
 
-const titleFields = "id,title,title_source,status" as const;
+const titleFields = "id,title,title_source,status,moderation_revision" as const;
 
 export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRepository {
   constructor(private readonly database: AdminClient) {}
@@ -27,23 +31,33 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     productDraftId: string,
     expectedSellerId: string | null,
   ): Promise<ProductDraftTitleRecord | null> {
-    let query = this.database.from("products").select(titleFields).eq("id", productDraftId);
-    if (expectedSellerId) query = query.eq("seller_id", expectedSellerId);
-
-    const response = await query.maybeSingle();
-    if (response.error) throwDatabaseError(response.error);
-    return response.data ? record(response.data) : null;
+    const state = await readProductModerationEditState(
+      this.database,
+      productDraftId,
+      expectedSellerId,
+    );
+    if (!state) return null;
+    return {
+      productDraftId: state.productId,
+      moderationRevision: state.revision,
+      editable: state.editable,
+      title: state.snapshot.title,
+      titleSource: state.snapshot.titleSource,
+      productStatus: state.productStatus,
+    };
   }
 
   async update(
     productDraftId: string,
     expectedSellerId: string,
+    expectedModerationRevision: number,
     titleWrite: HumanProductDraftTitleWrite | null,
     productFields: SellerProductFields,
   ): Promise<ProductDraftTitleUpdateResult> {
     const result = await this.saveSellerProduct(
       productDraftId,
       expectedSellerId,
+      expectedModerationRevision,
       titleWrite,
       productFields,
     );
@@ -72,9 +86,15 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
   async updateTitle(
     productDraftId: string,
     expectedSellerId: string | null,
+    expectedModerationRevision: number,
     titleWrite: HumanProductDraftTitleWrite,
   ): Promise<ProductDraftTitleUpdateResult> {
-    return this.applyTitleUpdate(productDraftId, expectedSellerId, titleWrite);
+    return this.applyTitleUpdate(
+      productDraftId,
+      expectedSellerId,
+      expectedModerationRevision,
+      titleWrite,
+    );
   }
 
   async create(
@@ -82,9 +102,10 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
     titleWrite: HumanProductDraftTitleWrite | null,
     productFields: SellerProductFields,
   ): Promise<ProductDraftTitleCreateResult> {
-    const response = await this.database.rpc("save_seller_product_with_description", {
+    const response = await this.database.rpc("save_initial_product_draft_with_description", {
       p_product_draft_id: null,
       p_seller_id: sellerId,
+      p_expected_moderation_revision: null,
       p_title_patch_present: titleWrite !== null,
       p_title: titleWrite?.title ?? null,
       p_description_patch_present: hasDescriptionPatch(productFields),
@@ -102,7 +123,7 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       p_audiences: productFields.audiences ?? null,
     });
     if (response.error) {
-      if (isTitleInvalid(response.error)) return { result: "invalid" };
+      if (isTitleInvalid(response.error)) return { result: "title_invalid" };
       if (isAudienceInvalid(response.error)) throw productAudienceInvalid();
       if (productFields.audiences !== undefined) throw productAudienceUnavailable();
       throwDatabaseError(response.error);
@@ -129,13 +150,15 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       row.result !== "created" ||
       !row.product_draft_id ||
       row.title === null ||
-      !row.product_status
+      !row.product_status ||
+      row.moderation_revision === null
     ) {
-      return { result: "invalid" };
+      throw new Error("Seller ProductDraft creation returned an incomplete result.");
     }
     const result: ProductDraftTitleCreateResult = {
       result: "created",
       productDraftId: row.product_draft_id,
+      moderationRevision: row.moderation_revision,
       title: row.title,
       titleSource: parseStoredProductDraftTitleSource(row.title_source),
       productStatus: row.product_status,
@@ -146,6 +169,7 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
   private async saveSellerProduct(
     productDraftId: string | null,
     expectedSellerId: string,
+    expectedModerationRevision: number,
     titleWrite: HumanProductDraftTitleWrite | null,
     productFields: Partial<SellerProductFields>,
   ): Promise<
@@ -174,9 +198,10 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       }
     | { result: "invalid" }
   > {
-    const response = await this.database.rpc("save_seller_product_with_description", {
+    const response = await this.database.rpc("save_initial_product_draft_with_description", {
       p_product_draft_id: productDraftId,
       p_seller_id: expectedSellerId,
+      p_expected_moderation_revision: expectedModerationRevision,
       p_title_patch_present: titleWrite !== null,
       p_title: titleWrite?.title ?? null,
       p_description_patch_present: hasDescriptionPatch(productFields),
@@ -194,7 +219,7 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       p_audiences: productFields.audiences ?? null,
     });
     if (response.error) {
-      if (isTitleInvalid(response.error)) return { result: "invalid" };
+      if (isTitleInvalid(response.error)) return { result: "title_invalid" };
       if (isAudienceInvalid(response.error)) throw productAudienceInvalid();
       if (productFields.audiences !== undefined) throw productAudienceUnavailable();
       throwDatabaseError(response.error);
@@ -233,13 +258,15 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       (result.result !== "created" && result.result !== "updated") ||
       !result.product_draft_id ||
       result.title === null ||
-      !result.product_status
+      !result.product_status ||
+      result.moderation_revision === null
     ) {
-      return { result: "invalid" };
+      throw new Error("Seller ProductDraft save returned an incomplete result.");
     }
     return {
       result: result.result,
       productDraftId: result.product_draft_id,
+      moderationRevision: result.moderation_revision,
       title: result.title,
       titleSource: parseStoredProductDraftTitleSource(result.title_source),
       productStatus: result.product_status,
@@ -249,18 +276,18 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
   private async applyTitleUpdate(
     productDraftId: string,
     expectedSellerId: string | null,
+    expectedModerationRevision: number,
     titleWrite: HumanProductDraftTitleWrite,
   ): Promise<ProductDraftTitleUpdateResult> {
-    const payload: Database["public"]["Tables"]["products"]["Update"] = {
-      title: titleWrite.title,
-      title_source: titleWrite.titleSource,
-    };
-
-    let query = this.database.from("products").update(payload).eq("id", productDraftId);
-    if (expectedSellerId) query = query.eq("seller_id", expectedSellerId);
-    query = query.eq("status", "draft");
-
-    const response = await query.select(titleFields).maybeSingle();
+    const response = await this.database
+      .rpc("update_initial_product_draft_title", {
+        p_product_draft_id: productDraftId,
+        p_expected_seller_id: expectedSellerId,
+        p_expected_moderation_revision: expectedModerationRevision,
+        p_title: titleWrite.title,
+        p_title_source: titleWrite.titleSource,
+      })
+      .maybeSingle();
     if (response.error) {
       if (isTitleInvalid(response.error)) return { result: "invalid" };
       if (isTitleNotEditable(response.error)) {
@@ -275,7 +302,18 @@ export class SupabaseProductDraftTitleRepository implements ProductDraftTitleRep
       }
       throwDatabaseError(response.error);
     }
-    if (response.data) return { result: "updated", ...record(response.data) };
+    if (response.data) {
+      return {
+        result: "updated",
+        ...record({
+          id: response.data.product_draft_id,
+          moderation_revision: response.data.moderation_revision,
+          title: response.data.title,
+          title_source: response.data.title_source,
+          status: response.data.product_status,
+        }),
+      };
+    }
 
     const current = await this.get(productDraftId, expectedSellerId);
     if (!current) return { result: "not_found" };
@@ -300,12 +338,15 @@ function hasCoverImageUrlPatch(productFields: Partial<SellerProductFields>): boo
 
 function record(value: {
   id: string;
+  moderation_revision: number;
   title: string;
   title_source: string | null;
   status: "draft" | "published" | "archived";
 }): ProductDraftTitleRecord {
   return {
     productDraftId: value.id,
+    moderationRevision: value.moderation_revision,
+    editable: true,
     title: value.title,
     titleSource: parseStoredProductDraftTitleSource(value.title_source),
     productStatus: value.status,
@@ -325,6 +366,20 @@ function isAudienceInvalid(error: { message: string }): boolean {
 }
 
 function throwDatabaseError(error: { message: string }): never {
+  if (error.message.includes("product_moderation_working_revision_conflict")) {
+    throw new ProductDraftTitleError(
+      409,
+      "product_moderation_working_revision_conflict",
+      "The ProductDraft changed. Refresh it before saving again.",
+    );
+  }
+  if (error.message.includes("product_moderation_submission_conflict")) {
+    throw new ProductDraftTitleError(
+      409,
+      "product_moderation_submission_conflict",
+      "The ProductDraft is locked by an active moderation submission.",
+    );
+  }
   console.error("[ProductDraft title] Database operation failed.", error);
   throw new Error("ProductDraft title database operation failed.");
 }

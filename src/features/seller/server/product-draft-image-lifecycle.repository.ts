@@ -30,6 +30,7 @@ export type PrepareProductDraftImageRecordsResult = {
     | "cleanup_required"
     | "verification_required";
   galleryRevision: number | null;
+  moderationRevision: number | null;
   images: PreparedProductDraftImageRecord[];
 };
 
@@ -58,6 +59,7 @@ export interface ProductDraftImageLifecycleRepository {
   prepare(input: {
     productDraftId: string;
     sellerId: string;
+    expectedModerationRevision: number;
     expectedGalleryRevision: number;
     files: Array<{
       clientUploadId: string;
@@ -70,21 +72,25 @@ export interface ProductDraftImageLifecycleRepository {
   finalize(input: {
     productDraftId: string;
     sellerId: string;
+    expectedModerationRevision: number;
     results: FinalizeProductDraftImageRecord[];
   }): Promise<ProductDraftImageGalleryMutationResponse & { result: string }>;
   failUploadCleanup(input: {
     productDraftId: string;
     sellerId: string;
     imageId: string;
+    expectedModerationRevision: number;
   }): Promise<ProductDraftImageGalleryMutationResponse & { result: string }>;
   completeUploadCleanup(input: {
     productDraftId: string;
     sellerId: string;
     imageId: string;
+    expectedModerationRevision: number;
   }): Promise<ProductDraftImageGalleryMutationResponse & { result: string }>;
   update(input: {
     productDraftId: string;
     sellerId: string;
+    expectedModerationRevision: number;
     expectedGalleryRevision: number;
     orderedAvailableImageIds: string[];
     coverImageId: string;
@@ -93,6 +99,7 @@ export interface ProductDraftImageLifecycleRepository {
     productDraftId: string;
     sellerId: string;
     imageId: string;
+    expectedModerationRevision: number;
     expectedGalleryRevision: number;
   }): Promise<
     ProductDraftImageGalleryMutationResponse & {
@@ -104,10 +111,12 @@ export interface ProductDraftImageLifecycleRepository {
     productDraftId: string;
     sellerId: string;
     imageId: string;
+    expectedModerationRevision: number;
   }): Promise<ProductDraftImageGalleryMutationResponse & { result: string }>;
   failRemoval(input: {
     productDraftId: string;
     sellerId: string;
     imageId: string;
+    expectedModerationRevision: number;
   }): Promise<ProductDraftImageGalleryMutationResponse & { result: string }>;
 }

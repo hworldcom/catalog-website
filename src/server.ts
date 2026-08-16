@@ -8,6 +8,15 @@ type ServerEntry = {
 };
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
+let productActivationRecoveryPromise: Promise<void> | undefined;
+
+function startProductActivationRecovery(): Promise<void> {
+  productActivationRecoveryPromise ??=
+    import("./features/admin/server/product-activation.runtime").then((runtime) =>
+      runtime.startProductActivationRecovery(),
+    );
+  return productActivationRecoveryPromise;
+}
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
@@ -47,6 +56,7 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      await startProductActivationRecovery();
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

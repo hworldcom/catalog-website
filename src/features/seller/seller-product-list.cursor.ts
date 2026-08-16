@@ -6,7 +6,7 @@ import {
   type SellerProductListRequest,
 } from "./seller-product-list.types";
 
-const CURSOR_VERSION = 1;
+const CURSOR_VERSION = 2;
 
 const cursorSchema = z
   .object({
@@ -14,6 +14,7 @@ const cursorSchema = z
     createdAt: z.string().datetime({ offset: true }),
     productId: z.string().uuid(),
     limit: z.number().int().min(1).max(SELLER_PRODUCT_LIST_MAX_LIMIT),
+    status: z.enum(["active", "archived"]),
   })
   .strict();
 
@@ -29,7 +30,7 @@ export function encodeSellerProductListCursor(
 
 export function decodeSellerProductListCursor(
   value: string,
-  request: Pick<SellerProductListRequest, "limit">,
+  request: Pick<SellerProductListRequest, "limit" | "status">,
 ): SellerProductListCursor {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw invalidSellerProductListRequest();
 
@@ -45,7 +46,11 @@ export function decodeSellerProductListCursor(
   }
 
   const parsed = cursorSchema.safeParse(parsedValue);
-  if (!parsed.success || parsed.data.limit !== request.limit) {
+  if (
+    !parsed.success ||
+    parsed.data.limit !== request.limit ||
+    parsed.data.status !== request.status
+  ) {
     throw invalidSellerProductListRequest();
   }
   return parsed.data;

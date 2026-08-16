@@ -295,6 +295,8 @@ const S = {
 type ProductInitial = {
   audiences: ProductAudience[];
   id: string;
+  moderation_revision: number;
+  moderation_editable?: boolean;
   title: string;
   product_code: string | null;
   title_source: "human" | "model" | null;
@@ -357,6 +359,7 @@ export type ProductEditorGalleryState = {
 
 export type SavedProductSnapshot = {
   id: string;
+  moderationRevision: number;
   title: string;
   titleSource: "human" | "model" | null;
   status: "draft" | "published" | "archived";
@@ -373,6 +376,7 @@ export function ProductEditor({
   onStateChange,
   onDisplayTitleChange,
   galleryState,
+  moderationRevisionOverride = null,
 }: {
   initial: ProductInitial;
   factsState?: ProductDraftFactsEditorState;
@@ -384,6 +388,7 @@ export function ProductEditor({
   onStateChange?: (state: ProductEditorCoordinationState) => void;
   onDisplayTitleChange?: (title: string) => void;
   galleryState?: ProductEditorGalleryState;
+  moderationRevisionOverride?: number | null;
 }) {
   const save = useServerFn(saveMyProduct);
   const publish = useServerFn(publishMyProduct);
@@ -399,6 +404,9 @@ export function ProductEditor({
   const [titleTouched, setTitleTouched] = useState(false);
   const [descriptionTouched, setDescriptionTouched] = useState(false);
   const [titleSource, setTitleSource] = useState(initial?.title_source ?? null);
+  const [moderationRevision, setModerationRevision] = useState(
+    initial?.moderation_revision ?? null,
+  );
   const [publicationSnapshot, setPublicationSnapshot] =
     useState<SellerProductPublicationSnapshot | null>(null);
   const completionHandled = useRef(initial?.status === "published");
@@ -435,6 +443,7 @@ export function ProductEditor({
     setTitleTouched(false);
     setDescriptionTouched(false);
     setTitleSource(initial.title_source);
+    setModerationRevision(initial.moderation_revision);
   }, [initial]);
 
   useEffect(() => {
@@ -443,7 +452,13 @@ export function ProductEditor({
     setSavedForm((current) => ({ ...current, title: titleReplacement.snapshot.title }));
     setTitleTouched(false);
     setTitleSource(titleReplacement.snapshot.titleSource);
+    setModerationRevision(titleReplacement.snapshot.moderationRevision);
   }, [titleReplacement]);
+
+  useEffect(() => {
+    if (moderationRevisionOverride === null) return;
+    setModerationRevision((current) => Math.max(current ?? 1, moderationRevisionOverride));
+  }, [moderationRevisionOverride]);
 
   useEffect(() => {
     onStateChange?.({ dirty, saving: busy, publicationActive });
@@ -477,12 +492,13 @@ export function ProductEditor({
       const res = await save({
         data: {
           ...productFields(form, {
-            includeAudiences: !isPublished,
+            includeAudiences: true,
             includeCover: false,
             titleTouched,
             descriptionTouched,
           }),
           id: form.id,
+          expectedModerationRevision: form.id ? (moderationRevision ?? undefined) : undefined,
           publish: isPublished,
         },
       });
@@ -522,6 +538,7 @@ export function ProductEditor({
             descriptionTouched,
           }),
           id: form.id,
+          expectedModerationRevision: moderationRevision ?? undefined,
         },
       });
       replacePublicationSnapshot(snapshot);
@@ -571,6 +588,7 @@ export function ProductEditor({
     setTitleTouched(false);
     setDescriptionTouched(false);
     setTitleSource(saved.titleSource);
+    setModerationRevision(saved.moderationRevision);
     onDisplayTitleChange?.(saved.title);
     onProductSaved?.(saved);
   }
@@ -581,7 +599,9 @@ export function ProductEditor({
   }
 
   const inputCls = "border border-border bg-background px-3 py-2 text-sm";
-  const titleReadOnly = initial?.status === "published" || initial?.status === "archived";
+  const titleReadOnly = Boolean(
+    initial && !(initial.moderation_editable ?? initial.status === "draft"),
+  );
   const descriptionReadOnly = titleReadOnly;
   const publishBlockedByEditors =
     factsState.dirty || factsState.saving || descriptionState.dirty || descriptionState.saving;
@@ -589,7 +609,7 @@ export function ProductEditor({
   const publishBlockedByAudience = form.audiences.length === 0;
   const publishBlockedByGallery =
     !productId || !resolvedGalleryState.hasAvailableCover || resolvedGalleryState.incomplete;
-  const actionsDisabled = disabled || busy || publicationActive;
+  const actionsDisabled = disabled || busy || publicationActive || titleReadOnly;
 
   return (
     <div className="flex flex-col gap-6">
@@ -649,7 +669,7 @@ export function ProductEditor({
             titleSource={titleSource}
             disabled={disabled || publicationActive}
             titleDisabled={titleReadOnly || disabled || publicationActive}
-            audienceDisabled={isPublished || disabled || publicationActive}
+            audienceDisabled={titleReadOnly || disabled || publicationActive}
             onChange={(next) => {
               if (next.title !== form.title) setTitleTouched(true);
               if (next.title !== form.title) onDisplayTitleChange?.(next.title);

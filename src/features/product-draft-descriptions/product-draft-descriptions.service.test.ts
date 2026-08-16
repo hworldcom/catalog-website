@@ -27,6 +27,7 @@ class MemoryRepository implements ProductDraftDescriptionRepository {
     _productDraftId: string,
     _patch: Parameters<ProductDraftDescriptionRepository["applyPatch"]>[1],
     expectedSellerId: string | null,
+    _expectedModerationRevision: number,
   ) {
     this.expectedSellerId = expectedSellerId;
     return this.patchResult;
@@ -66,13 +67,17 @@ describe("ProductDraftDescriptionService", () => {
     const service = new ProductDraftDescriptionService(repository);
 
     repository.patchResult = { result: "not_editable" };
-    await expect(service.update(productDraftId, { en: "Updated" }, access)).rejects.toMatchObject({
+    await expect(
+      service.update(productDraftId, { en: "Updated" }, 3, access),
+    ).rejects.toMatchObject({
       statusCode: 409,
       code: "product_draft_description_not_editable",
     });
 
     repository.patchResult = { result: "facts_missing" };
-    await expect(service.update(productDraftId, { en: "Updated" }, access)).rejects.toMatchObject({
+    await expect(
+      service.update(productDraftId, { en: "Updated" }, 3, access),
+    ).rejects.toMatchObject({
       statusCode: 500,
       code: "product_draft_facts_missing",
     });
@@ -99,7 +104,7 @@ describe("ProductDraftDescriptionService", () => {
     await service.get(productDraftId, sellerAccess);
     expect(repository.expectedSellerId).toBe(uuid(2));
 
-    await service.update(productDraftId, { en: "Updated" }, sellerAccess);
+    await service.update(productDraftId, { en: "Updated" }, 3, sellerAccess);
     expect(repository.expectedSellerId).toBe(uuid(2));
   });
 });
@@ -107,6 +112,7 @@ describe("ProductDraftDescriptionService", () => {
 function descriptionRecord(): Exclude<ProductDraftDescriptionRecord, null> {
   return {
     productDraftId,
+    moderationRevision: 3,
     productStatus: "draft",
     categoryId: "00000000-0000-4000-8000-000000000002",
     currentFactsRevision: 4,

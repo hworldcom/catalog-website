@@ -33,14 +33,33 @@ const sellerProductFieldsSchema = z
   })
   .strict();
 
-export const sellerProductSaveSchema = sellerProductFieldsSchema.extend({
-  id: sellerProductIdSchema.optional(),
-  publish: z.boolean().default(false),
-});
+export const sellerProductSaveSchema = sellerProductFieldsSchema
+  .extend({
+    id: sellerProductIdSchema.optional(),
+    expectedModerationRevision: z.number().int().positive().optional(),
+    publish: z.boolean().default(false),
+  })
+  .superRefine((value, context) => {
+    if (value.id && value.expectedModerationRevision === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expectedModerationRevision"],
+        message: "The expected moderation revision is required for an existing draft.",
+      });
+    }
+    if (!value.id && value.expectedModerationRevision !== undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expectedModerationRevision"],
+        message: "A new draft cannot have an expected moderation revision.",
+      });
+    }
+  });
 
 export const sellerProductPublicationSchema = sellerProductFieldsSchema.extend({
   audiences: productAudienceSetSchema,
   id: sellerProductIdSchema,
+  expectedModerationRevision: z.number().int().positive(),
 });
 
 export type SellerProductPublicationInput = z.infer<typeof sellerProductPublicationSchema>;

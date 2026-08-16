@@ -107,6 +107,7 @@ describe("SellerProductDraftReadService", () => {
         audiences: ["women", "men"],
         imagePublicationMode: "durable",
         imageSourceMode: "classifier_import",
+        moderation_editable: true,
       },
       gallery: {
         status: "available",

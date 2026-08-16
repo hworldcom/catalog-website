@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import type { PrototypeAdministratorRequestContext } from "@/features/admin/prototype-administrator.middleware";
+import {
+  sellerProfileModerationSnapshotSchema,
+  sellerStorefrontPreferenceReceiptSchema,
+  type SellerProfileModerationSnapshot,
+  type SellerStorefrontPreferenceReceipt,
+} from "@/features/seller/seller-profile-moderation.types";
 
 import {
   findOwnedSellerProfileIdentity,
@@ -37,19 +43,41 @@ const sellerProfileSubmissionSchema = z.object({
   updated_at: z.string(),
 });
 
-const sellerIdentityResultSchema = z.object({
-  id: z.string().uuid(),
-  slug: z.string(),
-  company_code: z.string(),
-  company_code_locked_at: z.string().nullable(),
-  primary_category_id: z.string().uuid().nullable(),
-  approved_profile_submission_id: z.string().uuid().nullable(),
+const sellerStorefrontPreferenceDatabaseReceiptSchema = z.object({
+  result: z.enum(["recorded", "replay"]),
   storefront_enabled: z.boolean(),
-  published: z.boolean(),
 });
 
 export type SellerProfileSubmission = z.infer<typeof sellerProfileSubmissionSchema>;
 export type SellerProfileDecision = "approve" | "request_changes" | "reject";
+
+export async function readOwnedSellerProfileModerationSnapshot({
+  requester,
+  administrator,
+  userId,
+}: {
+  requester: SellerProfileRequester;
+  administrator: SellerProfileAdministrator;
+  userId: string;
+}): Promise<SellerProfileModerationSnapshot> {
+  const seller = await requireOwnedSeller({ requester, userId });
+  const { data, error } = await administrator.rpc("read_seller_profile_moderation_snapshot", {
+    p_seller_id: seller.id,
+  });
+  if (error) {
+    console.error("[Seller profile moderation] Snapshot read failed.", {
+      databaseCode: error.code ?? "unknown",
+    });
+    throw new Error("seller_profile_moderation_status_unavailable");
+  }
+
+  const parsed = sellerProfileModerationSnapshotSchema.safeParse(data);
+  if (!parsed.success) {
+    console.error("[Seller profile moderation] Snapshot response was invalid.");
+    throw new Error("seller_profile_moderation_status_unavailable");
+  }
+  return parsed.data;
+}
 
 export async function submitOwnedSellerProfile({
   requester,
@@ -120,9 +148,9 @@ export async function setOwnedSellerStorefrontEnabled({
   userId: string;
   enabled: boolean;
   requestId: string;
-}): Promise<{ seller: SellerProfileIdentity }> {
+}): Promise<{ receipt: SellerStorefrontPreferenceReceipt }> {
   const seller = await requireOwnedSeller({ requester, userId });
-  const result = await runSingleRowOperation(
+  const databaseReceipt = await runSingleRowOperation(
     administrator,
     "set_seller_storefront_enabled",
     {
@@ -131,9 +159,13 @@ export async function setOwnedSellerStorefrontEnabled({
       p_request_id: requestId,
       p_actor_user_id: userId,
     },
-    sellerIdentityResultSchema,
+    sellerStorefrontPreferenceDatabaseReceiptSchema,
   );
-  return { seller: result };
+  const receipt = sellerStorefrontPreferenceReceiptSchema.parse({
+    result: databaseReceipt.result,
+    storefrontEnabled: databaseReceipt.storefront_enabled,
+  });
+  return { receipt };
 }
 
 export async function decideSellerProfileSubmission({

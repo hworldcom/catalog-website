@@ -3,12 +3,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
 import { getCurrentSellerId } from "./current-seller.service";
+import {
+  readProductModerationEditState,
+  type ProductModerationEditState,
+} from "./product-moderation-edit-state";
 import type { SellerProductDraftReadRepository } from "./seller-product-draft-read.service";
 
 type RequesterClient = SupabaseClient<Database>;
 type AdminClient = SupabaseClient<Database>;
 
 export class SupabaseSellerProductDraftReadRepository implements SellerProductDraftReadRepository {
+  private readonly editStates = new Map<string, ProductModerationEditState>();
+
   constructor(
     private readonly database: RequesterClient,
     private readonly adminDatabase: AdminClient,
@@ -27,10 +33,29 @@ export class SupabaseSellerProductDraftReadRepository implements SellerProductDr
       .select("*")
       .eq("id", productDraftId)
       .eq("seller_id", sellerId)
-      .neq("status", "archived")
       .maybeSingle();
     if (result.error) throw new Error(result.error.message);
-    return result.data;
+    if (!result.data) return null;
+    const state = await readProductModerationEditState(
+      this.adminDatabase,
+      productDraftId,
+      sellerId,
+    );
+    if (!state) return null;
+    this.editStates.set(productDraftId, state);
+    return {
+      ...result.data,
+      title: state.snapshot.title,
+      title_source: state.snapshot.titleSource,
+      category_id: state.snapshot.categoryId,
+      moq: state.snapshot.minimumOrder,
+      pack_size: state.snapshot.packSize,
+      price: state.snapshot.price,
+      currency: state.snapshot.currency,
+      stock: state.snapshot.stock,
+      cover_image_id: state.snapshot.coverImageId,
+      moderation_revision: state.revision,
+    };
   }
 
   async getImageSourceState(productDraftId: string) {
@@ -59,6 +84,8 @@ export class SupabaseSellerProductDraftReadRepository implements SellerProductDr
   }
 
   async getAudiences(productDraftId: string): Promise<string[]> {
+    const state = this.editStates.get(productDraftId);
+    if (state) return state.snapshot.audiences;
     const response = await this.adminDatabase
       .from("product_audience_memberships")
       .select("audience")
@@ -66,5 +93,9 @@ export class SupabaseSellerProductDraftReadRepository implements SellerProductDr
       .order("audience");
     if (response.error) throw new Error(response.error.message);
     return (response.data ?? []).map((membership) => membership.audience);
+  }
+
+  isModerationEditable(productDraftId: string): boolean {
+    return this.editStates.get(productDraftId)?.editable ?? false;
   }
 }

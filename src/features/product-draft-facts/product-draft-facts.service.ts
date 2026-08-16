@@ -24,23 +24,26 @@ export class ProductDraftFactsService {
 
     return {
       productDraftId: result.productDraftId,
+      moderationRevision: result.moderationRevision,
       facts: result.factsRecord.facts,
       factsRevision: result.factsRecord.factsRevision,
       updatedAt: result.factsRecord.updatedAt,
       productStatus: result.productStatus,
-      editable: result.productStatus === "draft",
+      editable: result.editable ?? result.productStatus === "draft",
     };
   }
 
   async update(
     productDraftId: string,
     patch: ProductDraftFactsPatch,
+    expectedModerationRevision: number,
     access: ProductDraftFactsAccess,
   ): Promise<ProductDraftFactsSnapshot> {
     const result = await this.repository.applyPatch(
       productDraftId,
       patch,
       expectedProductDraftSellerId(access),
+      expectedModerationRevision,
     );
 
     if (result.result === "not_found") throw productDraftNotFound();
@@ -55,11 +58,12 @@ export class ProductDraftFactsService {
 
     return {
       productDraftId: result.productDraftId,
+      moderationRevision: result.moderationRevision,
       facts: result.facts,
       factsRevision: result.factsRevision,
       updatedAt: result.updatedAt,
       productStatus: result.productStatus,
-      editable: result.productStatus === "draft",
+      editable: true,
     };
   }
 }

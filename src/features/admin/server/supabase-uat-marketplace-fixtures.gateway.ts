@@ -192,6 +192,7 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
 
     await this.draftTitles.saveSellerProduct({
       productDraftId: product.id,
+      expectedModerationRevision: product.moderation_revision,
       sellerId: input.sellerId,
       title: input.fixture.title,
       productFields: productFields(input, categoryId),
@@ -207,6 +208,7 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
     }));
     const prepared = await this.draftImages.prepare(input.sellerId, {
       productDraftId: product.id,
+      expectedModerationRevision: product.moderation_revision,
       expectedGalleryRevision: product.image_gallery_revision,
       files: files.map((file) => ({
         clientUploadId: file.clientUploadId,
@@ -234,6 +236,7 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
 
     const finalized = await this.draftImages.finalize(input.sellerId, {
       productDraftId: product.id,
+      expectedModerationRevision: prepared.moderationRevision,
       imageIds: prepared.images.map((image) => image.imageId),
     });
     if (finalized.images.some((image) => image.durableStatus !== "available")) {
@@ -241,6 +244,7 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
     }
     await this.draftImages.update(input.sellerId, {
       productDraftId: product.id,
+      expectedModerationRevision: finalized.moderationRevision,
       expectedGalleryRevision: finalized.galleryRevision,
       orderedAvailableImageIds: prepared.images.map((image) => image.imageId),
       coverImageId: prepared.images[0]!.imageId,

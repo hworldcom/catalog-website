@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "@/lib/supabase/types";
+import { readProductModerationEditState } from "@/features/seller/server/product-moderation-edit-state";
 
 import type {
   ProductDraftFactsPatchResult,
@@ -9,6 +10,7 @@ import type {
 } from "../product-draft-facts.repository";
 import {
   productDraftFactsDocumentSchema,
+  ProductDraftFactsError,
   type ProductDraftFactsPatch,
 } from "../product-draft-facts.types";
 
@@ -21,29 +23,25 @@ export class SupabaseProductDraftFactsRepository implements ProductDraftFactsRep
     productDraftId: string,
     expectedSellerId: string | null,
   ): Promise<ProductDraftFactsReadResult> {
-    let productQuery = this.database
-      .from("products")
-      .select(
-        "id,status,facts:product_draft_facts(product_draft_id,facts_json,facts_revision,updated_at)",
-      )
-      .eq("id", productDraftId);
-    if (expectedSellerId) productQuery = productQuery.eq("seller_id", expectedSellerId);
-
-    const productResult = await productQuery.maybeSingle();
-    if (productResult.error) throwDatabaseError(productResult.error);
-    if (!productResult.data) return null;
-
-    const facts = productResult.data.facts;
+    const state = await readProductModerationEditState(
+      this.database,
+      productDraftId,
+      expectedSellerId,
+    );
+    if (!state) return null;
+    const facts = state.snapshot.facts;
 
     return {
-      productDraftId: productResult.data.id,
-      productStatus: productResult.data.status,
+      productDraftId: state.productId,
+      moderationRevision: state.revision,
+      editable: state.editable,
+      productStatus: state.productStatus,
       factsRecord: facts
         ? {
-            productDraftId: facts.product_draft_id,
-            facts: parseStoredFacts(facts.facts_json),
-            factsRevision: facts.facts_revision,
-            updatedAt: facts.updated_at,
+            productDraftId: state.productId,
+            facts: parseStoredFacts(facts.facts as Json),
+            factsRevision: facts.factsRevision,
+            updatedAt: new Date().toISOString(),
           }
         : null,
     };
@@ -53,11 +51,13 @@ export class SupabaseProductDraftFactsRepository implements ProductDraftFactsRep
     productDraftId: string,
     patch: ProductDraftFactsPatch,
     expectedSellerId: string | null,
+    expectedModerationRevision: number,
   ): Promise<ProductDraftFactsPatchResult> {
-    const response = await this.database.rpc("apply_product_draft_facts_patch", {
+    const response = await this.database.rpc("apply_initial_product_draft_facts_patch", {
       p_product_draft_id: productDraftId,
       p_normalized_patch: patch as Json,
       p_expected_seller_id: expectedSellerId,
+      p_expected_moderation_revision: expectedModerationRevision,
     });
     if (response.error) throwDatabaseError(response.error);
 
@@ -87,7 +87,8 @@ export class SupabaseProductDraftFactsRepository implements ProductDraftFactsRep
       !result.facts_json ||
       result.facts_revision === null ||
       !result.updated_at ||
-      !result.product_status
+      !result.product_status ||
+      result.moderation_revision === null
     ) {
       throw new Error("ProductDraft facts patch returned an incomplete snapshot.");
     }
@@ -95,6 +96,7 @@ export class SupabaseProductDraftFactsRepository implements ProductDraftFactsRep
     return {
       result: result.result,
       productDraftId: result.product_draft_id,
+      moderationRevision: result.moderation_revision,
       facts: parseStoredFacts(result.facts_json),
       factsRevision: result.facts_revision,
       updatedAt: result.updated_at,
@@ -110,6 +112,20 @@ function parseStoredFacts(value: Json) {
 }
 
 function throwDatabaseError(error: { message: string }): never {
+  if (error.message.includes("product_moderation_working_revision_conflict")) {
+    throw new ProductDraftFactsError(
+      409,
+      "product_moderation_working_revision_conflict",
+      "The ProductDraft changed. Refresh it before saving again.",
+    );
+  }
+  if (error.message.includes("product_moderation_submission_conflict")) {
+    throw new ProductDraftFactsError(
+      409,
+      "product_moderation_submission_conflict",
+      "The ProductDraft is locked by an active moderation submission.",
+    );
+  }
   console.error("[ProductDraft facts] Database operation failed.", error);
   throw new Error("ProductDraft facts database operation failed.");
 }

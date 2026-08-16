@@ -13,6 +13,7 @@ describe("SupabaseProductDraftDescriptionRepository", () => {
       data: [
         {
           result: "applied",
+          moderation_revision: 4,
           snapshot: {
             productDraftId,
             productStatus: "draft",
@@ -33,11 +34,17 @@ describe("SupabaseProductDraftDescriptionRepository", () => {
       rpc,
     } as unknown as SupabaseClient<Database>);
 
-    const result = await repository.applyPatch(productDraftId, { en: "Updated English" }, uuid(2));
+    const result = await repository.applyPatch(
+      productDraftId,
+      { en: "Updated English" },
+      uuid(2),
+      3,
+    );
 
-    expect(rpc).toHaveBeenCalledWith("apply_scoped_product_draft_description_patch", {
+    expect(rpc).toHaveBeenCalledWith("apply_initial_product_draft_description_patch", {
       p_product_draft_id: productDraftId,
       p_expected_seller_id: uuid(2),
+      p_expected_moderation_revision: 3,
       p_pl_patch_present: false,
       p_pl_description: null,
       p_en_patch_present: true,
@@ -49,7 +56,7 @@ describe("SupabaseProductDraftDescriptionRepository", () => {
     });
     expect(result).toMatchObject({
       result: "applied",
-      snapshot: { currentFactsRevision: 2 },
+      snapshot: { moderationRevision: 4, currentFactsRevision: 2 },
     });
   });
 });

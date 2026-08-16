@@ -19,6 +19,7 @@ export type SellerProductDraftGalleryRecord = {
 export interface SellerProductDraftImageGalleryRepository {
   list(productDraftId: string): Promise<{
     galleryRevision: number;
+    moderationRevision: number;
     records: SellerProductDraftGalleryRecord[];
   }>;
 }

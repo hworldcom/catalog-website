@@ -37,11 +37,13 @@ describe("ProductDraft description request types", () => {
   it("rejects empty or unsupported-language patches", () => {
     expectInvalidPatch({
       productDraftId: "00000000-0000-4000-8000-000000000001",
+      expectedModerationRevision: 3,
       descriptions: {},
     });
 
     expectInvalidPatch({
       productDraftId: "00000000-0000-4000-8000-000000000001",
+      expectedModerationRevision: 3,
       descriptions: { fr: "French" },
     });
   });

@@ -52,6 +52,7 @@ export class ProductDraftImageLifecycleService {
           productDraftId: input.productDraftId,
           sellerId,
           imageId: image.imageId,
+          expectedModerationRevision: input.expectedModerationRevision,
         });
         throw new ProductDraftImageLifecycleError(
           503,
@@ -65,11 +66,16 @@ export class ProductDraftImageLifecycleService {
     const prepared = await this.repository.prepare({
       productDraftId: input.productDraftId,
       sellerId,
+      expectedModerationRevision: input.expectedModerationRevision,
       expectedGalleryRevision: input.expectedGalleryRevision,
       files: input.files,
       verifiedAbsentImageIds,
     });
-    if (prepared.result !== "prepared" || prepared.galleryRevision === null) {
+    if (
+      prepared.result !== "prepared" ||
+      prepared.galleryRevision === null ||
+      prepared.moderationRevision === null
+    ) {
       throw prepareError(prepared.result);
     }
 
@@ -115,6 +121,7 @@ export class ProductDraftImageLifecycleService {
     return {
       productDraftId: input.productDraftId,
       galleryRevision: prepared.galleryRevision,
+      moderationRevision: prepared.moderationRevision,
       images,
     };
   }
@@ -142,6 +149,7 @@ export class ProductDraftImageLifecycleService {
       const persisted = await this.repository.finalize({
         productDraftId: input.productDraftId,
         sellerId,
+        expectedModerationRevision: input.expectedModerationRevision,
         results: verified.map((result) => result.database),
       });
       if (persisted.result === "not_found" || persisted.result === "image_not_found") {
@@ -153,6 +161,7 @@ export class ProductDraftImageLifecycleService {
       return {
         productDraftId: input.productDraftId,
         galleryRevision: persisted.galleryRevision,
+        moderationRevision: persisted.moderationRevision,
         images: verified.map((result) => result.response),
       };
     } finally {
@@ -169,6 +178,7 @@ export class ProductDraftImageLifecycleService {
       return {
         productDraftId: input.productDraftId,
         galleryRevision: result.galleryRevision,
+        moderationRevision: result.moderationRevision,
       };
     }
     throw mutationError(result.result);
@@ -195,6 +205,7 @@ export class ProductDraftImageLifecycleService {
       productDraftId: input.productDraftId,
       sellerId,
       imageId: input.imageId,
+      expectedModerationRevision: input.expectedModerationRevision,
     });
     if (completed.result !== "cleanup_completed" && completed.result !== "noop") {
       throw mutationError(completed.result);
@@ -202,6 +213,7 @@ export class ProductDraftImageLifecycleService {
     return {
       productDraftId: input.productDraftId,
       galleryRevision: completed.galleryRevision,
+      moderationRevision: completed.moderationRevision,
     };
   }
 
@@ -210,6 +222,13 @@ export class ProductDraftImageLifecycleService {
     input: RemoveProductDraftImageInput,
   ): Promise<ProductDraftImageGalleryMutationResponse> {
     const begun = await this.repository.beginRemoval({ ...input, sellerId });
+    if (begun.result === "removed") {
+      return {
+        productDraftId: input.productDraftId,
+        galleryRevision: begun.galleryRevision,
+        moderationRevision: begun.moderationRevision,
+      };
+    }
     if (begun.result !== "cleanup_required" || !begun.destinationKey) {
       throw mutationError(begun.result);
     }
@@ -220,17 +239,20 @@ export class ProductDraftImageLifecycleService {
         productDraftId: input.productDraftId,
         sellerId,
         imageId: input.imageId,
+        expectedModerationRevision: begun.moderationRevision,
       });
       if (completed.result !== "removed") throw mutationError(completed.result);
       return {
         productDraftId: input.productDraftId,
         galleryRevision: completed.galleryRevision,
+        moderationRevision: completed.moderationRevision,
       };
     } catch (error) {
       await this.repository.failRemoval({
         productDraftId: input.productDraftId,
         sellerId,
         imageId: input.imageId,
+        expectedModerationRevision: begun.moderationRevision,
       });
       if (error instanceof ProductDraftImageLifecycleError) throw error;
       throw new ProductDraftImageLifecycleError(

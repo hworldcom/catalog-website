@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   productDraftImageContentTypeSchema,
+  ProductDraftImageLifecycleError,
   type ProductDraftImageContentType,
 } from "../product-draft-image-lifecycle.types";
 import type {
@@ -12,6 +13,7 @@ import type {
   ProductDraftImageLifecycleRepository,
 } from "./product-draft-image-lifecycle.repository";
 import type { Database, Json } from "@/lib/supabase/types";
+import { readProductModerationEditState } from "./product-moderation-edit-state";
 
 type AdminClient = SupabaseClient<Database>;
 
@@ -31,6 +33,7 @@ const preparedPayloadSchema = z.object({
     "verification_required",
   ]),
   galleryRevision: z.number().int().nonnegative().optional(),
+  moderationRevision: z.number().int().positive().optional(),
   images: z
     .array(
       z.object({
@@ -49,6 +52,7 @@ const preparedPayloadSchema = z.object({
 const mutationPayloadSchema = z.object({
   result: z.string().min(1),
   galleryRevision: z.number().int().nonnegative().optional(),
+  moderationRevision: z.number().int().positive(),
   destinationKey: z.string().min(1).optional(),
 });
 
@@ -74,9 +78,10 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
   async prepare(
     input: Parameters<ProductDraftImageLifecycleRepository["prepare"]>[0],
   ): Promise<PrepareProductDraftImageRecordsResult> {
-    const response = await this.database.rpc("prepare_seller_product_draft_image_uploads", {
+    const response = await this.database.rpc("prepare_initial_product_draft_image_uploads", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_expected_moderation_revision: input.expectedModerationRevision,
       p_expected_gallery_revision: input.expectedGalleryRevision,
       p_files: input.files.map((file) => ({
         client_upload_id: file.clientUploadId,
@@ -92,6 +97,7 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
     return {
       result: parsed.data.result,
       galleryRevision: parsed.data.galleryRevision ?? null,
+      moderationRevision: parsed.data.moderationRevision ?? null,
       images: (parsed.data.images ?? []).map((image) => ({
         imageId: image.imageId,
         productDraftId: input.productDraftId,
@@ -109,11 +115,13 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
   async finalize(input: {
     productDraftId: string;
     sellerId: string;
+    expectedModerationRevision: number;
     results: FinalizeProductDraftImageRecord[];
   }) {
-    return this.mutate("finalize_seller_product_draft_image_uploads", {
+    return this.mutate("finalize_initial_product_draft_image_uploads", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_expected_moderation_revision: input.expectedModerationRevision,
       p_results: input.results.map((result) => ({
         image_id: result.imageId,
         outcome: result.outcome,
@@ -127,9 +135,10 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
   async failUploadCleanup(
     input: Parameters<ProductDraftImageLifecycleRepository["failUploadCleanup"]>[0],
   ) {
-    return this.mutate("fail_seller_product_draft_image_upload_cleanup", {
+    return this.mutate("fail_initial_product_draft_image_upload_cleanup", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_expected_moderation_revision: input.expectedModerationRevision,
       p_product_draft_image_id: input.imageId,
     });
   }
@@ -137,17 +146,19 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
   async completeUploadCleanup(
     input: Parameters<ProductDraftImageLifecycleRepository["completeUploadCleanup"]>[0],
   ) {
-    return this.mutate("complete_seller_product_draft_image_upload_cleanup", {
+    return this.mutate("complete_initial_product_draft_image_upload_cleanup", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_expected_moderation_revision: input.expectedModerationRevision,
       p_product_draft_image_id: input.imageId,
     });
   }
 
   async update(input: Parameters<ProductDraftImageLifecycleRepository["update"]>[0]) {
-    return this.mutate("update_seller_product_draft_image_gallery", {
+    return this.mutate("update_initial_product_draft_image_gallery", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_expected_moderation_revision: input.expectedModerationRevision,
       p_expected_gallery_revision: input.expectedGalleryRevision,
       p_ordered_available_image_ids: input.orderedAvailableImageIds,
       p_cover_image_id: input.coverImageId,
@@ -155,9 +166,10 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
   }
 
   async beginRemoval(input: Parameters<ProductDraftImageLifecycleRepository["beginRemoval"]>[0]) {
-    return this.mutate("begin_seller_product_draft_image_removal", {
+    return this.mutate("begin_initial_product_draft_image_removal", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_expected_moderation_revision: input.expectedModerationRevision,
       p_product_draft_image_id: input.imageId,
       p_expected_gallery_revision: input.expectedGalleryRevision,
     });
@@ -166,17 +178,19 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
   async completeRemoval(
     input: Parameters<ProductDraftImageLifecycleRepository["completeRemoval"]>[0],
   ) {
-    return this.mutate("complete_seller_product_draft_image_removal", {
+    return this.mutate("complete_initial_product_draft_image_removal", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_expected_moderation_revision: input.expectedModerationRevision,
       p_product_draft_image_id: input.imageId,
     });
   }
 
   async failRemoval(input: Parameters<ProductDraftImageLifecycleRepository["failRemoval"]>[0]) {
-    return this.mutate("fail_seller_product_draft_image_removal", {
+    return this.mutate("fail_initial_product_draft_image_removal", {
       p_product_draft_id: input.productDraftId,
       p_seller_id: input.sellerId,
+      p_expected_moderation_revision: input.expectedModerationRevision,
       p_product_draft_image_id: input.imageId,
     });
   }
@@ -188,17 +202,10 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
     identifiers: string[],
   ): Promise<ProductDraftImageLifecycleRecord[]> {
     if (identifiers.length === 0) return [];
-    const product = await this.database
-      .from("products")
-      .select("id")
-      .eq("id", productDraftId)
-      .eq("seller_id", sellerId)
-      .eq("status", "draft")
-      .maybeSingle();
-    if (product.error) throw databaseError(product.error);
-    if (!product.data) return [];
+    const editState = await readProductModerationEditState(this.database, productDraftId, sellerId);
+    if (!editState || !editState.editable) return [];
 
-    const response = await this.database
+    let query = this.database
       .from("product_draft_images")
       .select(
         "id,product_draft_id,client_upload_id,original_filename,content_type,size_bytes,destination_key,status,lifecycle_error_code",
@@ -206,6 +213,19 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
       .eq("product_draft_id", productDraftId)
       .eq("source_kind", "seller_upload")
       .in(identifierColumn, identifiers);
+    if (editState.workingCopy) {
+      const memberships = await this.database
+        .from("product_moderation_working_copy_images")
+        .select("product_draft_image_id")
+        .eq("product_id", productDraftId);
+      if (memberships.error) throw databaseError(memberships.error);
+      const workingImageIds = (memberships.data ?? []).map(
+        (membership) => membership.product_draft_image_id,
+      );
+      if (workingImageIds.length === 0) return [];
+      query = query.in("id", workingImageIds);
+    }
+    const response = await query;
     if (response.error) throw databaseError(response.error);
 
     return (response.data ?? []).map((row) => {
@@ -234,13 +254,13 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
 
   private async mutate(
     functionName:
-      | "finalize_seller_product_draft_image_uploads"
-      | "complete_seller_product_draft_image_upload_cleanup"
-      | "fail_seller_product_draft_image_upload_cleanup"
-      | "update_seller_product_draft_image_gallery"
-      | "begin_seller_product_draft_image_removal"
-      | "complete_seller_product_draft_image_removal"
-      | "fail_seller_product_draft_image_removal",
+      | "finalize_initial_product_draft_image_uploads"
+      | "complete_initial_product_draft_image_upload_cleanup"
+      | "fail_initial_product_draft_image_upload_cleanup"
+      | "update_initial_product_draft_image_gallery"
+      | "begin_initial_product_draft_image_removal"
+      | "complete_initial_product_draft_image_removal"
+      | "fail_initial_product_draft_image_removal",
     args: Record<string, Json | undefined>,
   ) {
     const response = await this.database.rpc(functionName, args as never);
@@ -251,6 +271,7 @@ export class SupabaseProductDraftImageLifecycleRepository implements ProductDraf
       productDraftId: String(args.p_product_draft_id),
       result: parsed.data.result,
       galleryRevision: parsed.data.galleryRevision ?? 0,
+      moderationRevision: parsed.data.moderationRevision,
       destinationKey: parsed.data.destinationKey ?? null,
     };
   }
@@ -263,6 +284,20 @@ function parseContentType(value: string | null): ProductDraftImageContentType {
 }
 
 function databaseError(error: { message: string }): Error {
+  if (error.message.includes("product_moderation_working_revision_conflict")) {
+    return new ProductDraftImageLifecycleError(
+      409,
+      "product_moderation_working_revision_conflict",
+      "The ProductDraft changed. Refresh it before changing pictures again.",
+    );
+  }
+  if (error.message.includes("product_moderation_submission_conflict")) {
+    return new ProductDraftImageLifecycleError(
+      409,
+      "product_moderation_submission_conflict",
+      "The ProductDraft pictures are locked by an active moderation submission.",
+    );
+  }
   return new Error(`ProductDraft image lifecycle database operation failed: ${error.message}`);
 }
 

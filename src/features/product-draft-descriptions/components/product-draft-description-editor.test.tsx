@@ -43,10 +43,14 @@ describe("ProductDraftDescriptionEditor", () => {
     await userEvent.type(polish, "   ");
     await userEvent.click(screen.getByRole("button", { name: "Save descriptions" }));
 
-    expect(update).toHaveBeenCalledWith(productDraftId, {
-      en: "Revised English description",
-      pl: null,
-    });
+    expect(update).toHaveBeenCalledWith(
+      productDraftId,
+      {
+        en: "Revised English description",
+        pl: null,
+      },
+      3,
+    );
     expect(await screen.findByText("Product descriptions were saved.")).toBeVisible();
   });
 
@@ -160,6 +164,7 @@ function snapshot(
   };
   return {
     productDraftId,
+    moderationRevision: 3,
     productStatus: "draft",
     currentFactsRevision: 1,
     generationEligibility: { eligible: true, reason: null },

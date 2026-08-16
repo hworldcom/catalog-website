@@ -9,6 +9,7 @@ import {
 import { productDraftFactsDocumentSchema } from "@/features/product-draft-facts/product-draft-facts.types";
 import type { ProductDraftTitleSnapshot } from "@/features/product-draft-title/product-draft-title.types";
 import type { Database, Json } from "@/lib/supabase/types";
+import { readProductModerationEditState } from "@/features/seller/server/product-moderation-edit-state";
 
 import type {
   ProductDescriptionGenerationClaimResult,
@@ -44,6 +45,7 @@ const supportedCoverContentTypeSchema = z.enum(["image/jpeg", "image/png", "imag
 const titleSnapshotSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    moderationRevision: z.number().int().positive(),
     title: z.string(),
     titleSource: z.enum(["human", "model"]).nullable(),
     productStatus: z.enum(["draft", "published", "archived"]),
@@ -58,10 +60,26 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
     productDraftId: string,
     expectedSellerId: string,
   ): Promise<ProductDescriptionGenerationClaimResult> {
-    const response = await this.database.rpc("claim_product_draft_description_generation", {
-      p_product_draft_id: productDraftId,
-      p_expected_seller_id: expectedSellerId,
-    });
+    const editState = await readProductModerationEditState(
+      this.database,
+      productDraftId,
+      expectedSellerId,
+    );
+    if (!editState) return { result: "not_found" };
+    if (!editState.editable) return { result: "not_editable" };
+    const response = editState.workingCopy
+      ? await this.database.rpc(
+          "claim_product_moderation_working_description_generation" as never,
+          {
+            p_product_id: productDraftId,
+            p_seller_id: expectedSellerId,
+            p_expected_revision: editState.revision,
+          } as never,
+        )
+      : await this.database.rpc("claim_product_draft_description_generation", {
+          p_product_draft_id: productDraftId,
+          p_expected_seller_id: expectedSellerId,
+        });
     if (response.error) throwDatabaseError(response.error);
 
     const row = response.data?.[0];
@@ -96,6 +114,8 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
 
     return {
       result: "claimed",
+      workingCopy: editState.workingCopy,
+      moderationRevision: editState.revision,
       attemptToken: row.attempt_token,
       category,
       factsRevision,
@@ -109,32 +129,38 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
   async finalize(
     input: Parameters<ProductDescriptionGenerationRepository["finalize"]>[0],
   ): Promise<ProductDescriptionGenerationFinalizationResult> {
-    const response = await this.database.rpc("finalize_product_draft_description_generation", {
-      p_product_draft_id: input.productDraftId,
-      p_expected_seller_id: input.expectedSellerId,
-      p_attempt_token: input.claim.attemptToken,
-      p_expected_category_id: input.claim.category?.id ?? null,
-      p_expected_facts_revision: input.claim.factsRevision,
-      p_expected_cover_source: input.claim.cover.source,
-      p_expected_cover_image_id:
-        input.claim.cover.source === "private_draft" ? input.claim.cover.imageId : null,
-      p_expected_cover_image_url:
-        input.claim.cover.source === "public_product_upload" ? input.claim.cover.imageUrl : null,
-      p_expected_cover_storage_bucket:
-        input.claim.cover.source === "private_draft" ? input.claim.cover.storageBucket : null,
-      p_expected_cover_object_key:
-        input.claim.cover.source === "private_draft" ? input.claim.cover.objectKey : null,
-      p_expected_cover_content_type:
-        input.claim.cover.source === "private_draft" ? input.claim.cover.contentType : null,
-      p_expected_cover_size_bytes:
-        input.claim.cover.source === "private_draft" ? input.claim.cover.sizeBytes : null,
-      p_descriptions: input.output.descriptions,
-      p_title_proposal: input.output.titleProposal,
-      p_provider: input.provider,
-      p_model: input.model,
-      p_pipeline_version: input.pipelineVersion,
-      p_generated_at: input.generatedAt,
-    });
+    const functionName = input.claim.workingCopy
+      ? "finalize_product_moderation_working_description_generation"
+      : "finalize_product_draft_description_generation";
+    const response = await this.database.rpc(
+      functionName as never,
+      {
+        p_product_draft_id: input.productDraftId,
+        p_expected_seller_id: input.expectedSellerId,
+        p_attempt_token: input.claim.attemptToken,
+        p_expected_category_id: input.claim.category?.id ?? null,
+        p_expected_facts_revision: input.claim.factsRevision,
+        p_expected_cover_source: input.claim.cover.source,
+        p_expected_cover_image_id:
+          input.claim.cover.source === "private_draft" ? input.claim.cover.imageId : null,
+        p_expected_cover_image_url:
+          input.claim.cover.source === "public_product_upload" ? input.claim.cover.imageUrl : null,
+        p_expected_cover_storage_bucket:
+          input.claim.cover.source === "private_draft" ? input.claim.cover.storageBucket : null,
+        p_expected_cover_object_key:
+          input.claim.cover.source === "private_draft" ? input.claim.cover.objectKey : null,
+        p_expected_cover_content_type:
+          input.claim.cover.source === "private_draft" ? input.claim.cover.contentType : null,
+        p_expected_cover_size_bytes:
+          input.claim.cover.source === "private_draft" ? input.claim.cover.sizeBytes : null,
+        p_descriptions: input.output.descriptions,
+        p_title_proposal: input.output.titleProposal,
+        p_provider: input.provider,
+        p_model: input.model,
+        p_pipeline_version: input.pipelineVersion,
+        p_generated_at: input.generatedAt,
+      } as never,
+    );
     if (response.error) throwDatabaseError(response.error);
 
     const row = response.data?.[0];
@@ -148,7 +174,10 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
 
     return {
       result: "completed",
-      descriptionSnapshot: publicDescriptionSnapshot(row.description_snapshot as Json),
+      descriptionSnapshot: publicDescriptionSnapshot(
+        row.description_snapshot as Json,
+        input.claim.workingCopy === true,
+      ),
       titleSnapshot: parseTitleSnapshot(row.title_snapshot),
     };
   }
@@ -218,15 +247,24 @@ function parseCover(row: {
   } as const;
 }
 
-function publicDescriptionSnapshot(value: Json): ProductDraftDescriptionSnapshot {
-  const snapshot = parseProductDraftDescriptionDatabaseSnapshot(value);
+function publicDescriptionSnapshot(
+  value: Json,
+  workingCopy: boolean,
+): ProductDraftDescriptionSnapshot {
+  const valueWithRevision = z
+    .object({ moderationRevision: z.number().int().positive() })
+    .passthrough()
+    .parse(value);
+  const { moderationRevision, ...databaseSnapshot } = valueWithRevision;
+  const snapshot = parseProductDraftDescriptionDatabaseSnapshot(databaseSnapshot);
   const generationEligibility =
-    snapshot.productStatus !== "draft"
+    snapshot.productStatus !== "draft" && !workingCopy
       ? { eligible: false, reason: "product_not_draft" as const }
       : { eligible: true, reason: null };
 
   return {
     productDraftId: snapshot.productDraftId,
+    moderationRevision,
     productStatus: snapshot.productStatus,
     currentFactsRevision: snapshot.currentFactsRevision,
     generationEligibility,

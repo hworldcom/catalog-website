@@ -46,6 +46,7 @@ const getProductDraftDescriptionsInputSchema = z
 const updateProductDraftDescriptionsInputSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
     descriptions: z
       .object({
         pl: descriptionValueSchema.optional(),
@@ -62,6 +63,7 @@ const updateProductDraftDescriptionsInputSchema = z
 
 export type ProductDraftDescriptionSnapshot = {
   productDraftId: string;
+  moderationRevision: number;
   productStatus: ProductDraftDescriptionStatus;
   currentFactsRevision: number;
   generationEligibility: {

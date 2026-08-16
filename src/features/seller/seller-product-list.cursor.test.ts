@@ -11,25 +11,30 @@ describe("seller product list cursor", () => {
       createdAt: "2026-07-27T10:00:00.000Z",
       productId: uuid(1),
       limit: 25,
+      status: "active",
     });
 
-    expect(decodeSellerProductListCursor(encoded, { limit: 25 })).toEqual({
-      version: 1,
+    expect(decodeSellerProductListCursor(encoded, { limit: 25, status: "active" })).toEqual({
+      version: 2,
       createdAt: "2026-07-27T10:00:00.000Z",
       productId: uuid(1),
       limit: 25,
+      status: "active",
     });
-    expect(() => decodeSellerProductListCursor(encoded, { limit: 50 })).toThrowError(
-      expect.objectContaining({ code: "seller_product_list_invalid" }),
-    );
+    expect(() =>
+      decodeSellerProductListCursor(encoded, { limit: 50, status: "active" }),
+    ).toThrowError(expect.objectContaining({ code: "seller_product_list_invalid" }));
+    expect(() =>
+      decodeSellerProductListCursor(encoded, { limit: 25, status: "archived" }),
+    ).toThrowError(expect.objectContaining({ code: "seller_product_list_invalid" }));
   });
 
   it.each(["not base64", "e30=", "eyJ2ZXJzaW9uIjoyfQ"])(
     "rejects malformed or noncanonical cursor %s",
     (value) => {
-      expect(() => decodeSellerProductListCursor(value, { limit: 25 })).toThrowError(
-        expect.objectContaining({ code: "seller_product_list_invalid" }),
-      );
+      expect(() =>
+        decodeSellerProductListCursor(value, { limit: 25, status: "active" }),
+      ).toThrowError(expect.objectContaining({ code: "seller_product_list_invalid" }));
     },
   );
 });

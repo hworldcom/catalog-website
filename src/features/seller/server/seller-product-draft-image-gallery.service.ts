@@ -40,11 +40,13 @@ export class SellerProductDraftImageGalleryService {
     const productDraftId = ownedProductDraft.id;
     let records: SellerProductDraftGalleryRecord[] = [];
     let galleryRevision = 0;
+    let moderationRevision = 1;
     try {
       const loaded = await this.repository.list(productDraftId);
       records = loaded.records;
       galleryRevision = loaded.galleryRevision;
-      if (records.length === 0) return availableGallery(galleryRevision, []);
+      moderationRevision = loaded.moderationRevision;
+      if (records.length === 0) return availableGallery(galleryRevision, moderationRevision, []);
 
       const response = await this.delivery.resolve([
         {
@@ -57,6 +59,7 @@ export class SellerProductDraftImageGalleryService {
 
       return availableGallery(
         galleryRevision,
+        moderationRevision,
         records.map((record) => mapImage(record, resultByImageId.get(record.imageId)!)),
       );
     } catch (error) {
@@ -68,6 +71,7 @@ export class SellerProductDraftImageGalleryService {
         status: "unavailable",
         errorCode: "product_draft_image_delivery_unavailable",
         galleryRevision,
+        moderationRevision,
         images: records.map(unavailableImage),
       };
     }
@@ -143,12 +147,14 @@ function unavailableImage(record: SellerProductDraftGalleryRecord): SellerProduc
 
 function availableGallery(
   galleryRevision: number,
+  moderationRevision: number,
   images: SellerProductDraftGalleryImage[],
 ): SellerProductDraftGallery {
   return {
     status: "available",
     errorCode: null,
     galleryRevision,
+    moderationRevision,
     images,
   };
 }

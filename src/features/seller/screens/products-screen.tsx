@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { archiveMyProduct, listMyProducts } from "@/features/seller/products.functions";
+import {
+  archiveMyProduct,
+  listMyProducts,
+  restoreMyProduct,
+} from "@/features/seller/products.functions";
 import { productCodeCopy } from "@/features/product-code/product-code.copy";
 import type {
   SellerProductListItem,
   SellerProductListRequest,
   SellerProductPreview,
 } from "@/features/seller/seller-product-list.types";
+import type { ProductActivationDisplayState } from "@/features/seller/product-moderation-status.types";
 import { t, tr } from "@/lib/i18n";
 
 const S = {
@@ -43,6 +48,9 @@ const S = {
   preview: t("Preview", "Podgląd", "Vorschau", "Xem trước"),
   title: t("Title", "Tytuł", "Titel", "Tiêu đề"),
   status: t("Status", "Status", "Status", "Trạng thái"),
+  publicStatus: t("Public", "Publiczny", "Öffentlich", "Công khai"),
+  reviewStatus: t("Review", "Weryfikacja", "Prüfung", "Kiểm duyệt"),
+  activationStatus: t("Activation", "Aktywacja", "Aktivierung", "Kích hoạt"),
   price: t("Price", "Cena", "Preis", "Giá"),
   moq: t("Minimum order", "Minimalne zamówienie", "Mindestbestellmenge", "Đơn hàng tối thiểu"),
   actions: t("Actions", "Działania", "Aktionen", "Thao tác"),
@@ -55,10 +63,10 @@ const S = {
   edit: t("Edit", "Edytuj", "Bearbeiten", "Chỉnh sửa"),
   archive: t("Archive", "Archiwizuj", "Archivieren", "Lưu trữ"),
   archiveConfirm: t(
-    "Archive this product? It will disappear from your product list and cannot be restored.",
-    "Zarchiwizować ten produkt? Zniknie z listy produktów i nie będzie można go przywrócić.",
-    "Dieses Produkt archivieren? Es verschwindet aus Ihrer Produktliste und kann nicht wiederhergestellt werden.",
-    "Lưu trữ sản phẩm này? Sản phẩm sẽ biến mất khỏi danh sách và không thể khôi phục.",
+    "Archive this product? It will leave the public catalog. Any unsent product edits will be discarded.",
+    "Zarchiwizować ten produkt? Zniknie z publicznego katalogu. Niezapisane zmiany produktu zostaną odrzucone.",
+    "Dieses Produkt archivieren? Es wird aus dem öffentlichen Katalog entfernt. Nicht eingereichte Produktänderungen werden verworfen.",
+    "Lưu trữ sản phẩm này? Sản phẩm sẽ rời khỏi danh mục công khai. Mọi chỉnh sửa chưa gửi sẽ bị hủy.",
   ),
   archiveSuccess: t(
     "Product archived",
@@ -79,7 +87,7 @@ const S = {
     "Không tìm thấy sản phẩm.",
   ),
   archiveUnavailable: t(
-    "Product archival is temporarily unavailable.",
+    "Product archive and restore are temporarily unavailable.",
     "Archiwizacja produktu jest tymczasowo niedostępna.",
     "Die Produktarchivierung ist vorübergehend nicht verfügbar.",
     "Tính năng lưu trữ sản phẩm tạm thời không khả dụng.",
@@ -124,6 +132,118 @@ const S = {
   draft: t("Draft", "Szkic", "Entwurf", "Bản nháp"),
   published: t("Published", "Opublikowany", "Veröffentlicht", "Đã xuất bản"),
   archived: t("Archived", "Zarchiwizowany", "Archiviert", "Đã lưu trữ"),
+  notSubmitted: t("Not submitted", "Niewysłany", "Nicht eingereicht", "Chưa gửi"),
+  draftChanges: t("Draft changes", "Zmiany robocze", "Entwurfsänderungen", "Thay đổi nháp"),
+  pendingReview: t(
+    "Pending review",
+    "Oczekuje na weryfikację",
+    "Prüfung ausstehend",
+    "Đang chờ duyệt",
+  ),
+  changesRequested: t(
+    "Changes requested",
+    "Wymagane zmiany",
+    "Änderungen angefordert",
+    "Yêu cầu thay đổi",
+  ),
+  rejected: t("Rejected", "Odrzucony", "Abgelehnt", "Bị từ chối"),
+  withdrawn: t("Withdrawn", "Wycofany", "Zurückgezogen", "Đã rút"),
+  approved: t("Approved", "Zatwierdzony", "Genehmigt", "Đã duyệt"),
+  notStarted: t("Not started", "Nierozpoczęta", "Nicht gestartet", "Chưa bắt đầu"),
+  waitingForDispatch: t(
+    "Waiting for dispatch",
+    "Oczekuje na wysłanie",
+    "Wartet auf Versand",
+    "Đang chờ gửi",
+  ),
+  dispatchFailed: t(
+    "Dispatch failed",
+    "Wysłanie nie powiodło się",
+    "Versand fehlgeschlagen",
+    "Gửi thất bại",
+  ),
+  publishing: t("Publishing", "Publikowanie", "Veröffentlichung", "Đang xuất bản"),
+  activationFailed: t(
+    "Activation failed",
+    "Aktywacja nie powiodła się",
+    "Aktivierung fehlgeschlagen",
+    "Kích hoạt thất bại",
+  ),
+  abandonmentCleanup: t(
+    "Abandonment cleanup",
+    "Czyszczenie po anulowaniu",
+    "Abbruchbereinigung",
+    "Dọn dẹp sau hủy",
+  ),
+  abandonmentCleanupRequired: t(
+    "Abandonment cleanup required",
+    "Wymagane czyszczenie po anulowaniu",
+    "Abbruchbereinigung erforderlich",
+    "Cần dọn dẹp sau hủy",
+  ),
+  publicCleanup: t(
+    "Public cleanup",
+    "Czyszczenie publiczne",
+    "Öffentliche Bereinigung",
+    "Dọn dẹp công khai",
+  ),
+  publicCleanupRequired: t(
+    "Public cleanup required",
+    "Wymagane czyszczenie publiczne",
+    "Öffentliche Bereinigung erforderlich",
+    "Cần dọn dẹp công khai",
+  ),
+  completed: t("Completed", "Zakończona", "Abgeschlossen", "Hoàn tất"),
+  abandoned: t("Abandoned", "Anulowana", "Abgebrochen", "Đã hủy"),
+  activeProducts: t(
+    "Active products",
+    "Aktywne produkty",
+    "Aktive Produkte",
+    "Sản phẩm đang hoạt động",
+  ),
+  archivedProducts: t(
+    "Archived products",
+    "Zarchiwizowane produkty",
+    "Archivierte Produkte",
+    "Sản phẩm đã lưu trữ",
+  ),
+  restore: t("Restore", "Przywróć", "Wiederherstellen", "Khôi phục"),
+  continueEditing: t(
+    "Continue editing",
+    "Kontynuuj edycję",
+    "Weiter bearbeiten",
+    "Tiếp tục chỉnh sửa",
+  ),
+  restoreSuccess: t(
+    "Restoration draft created",
+    "Utworzono szkic przywracania",
+    "Wiederherstellungsentwurf erstellt",
+    "Đã tạo bản nháp khôi phục",
+  ),
+  moderationActive: t(
+    "Complete or safely abandon active publication work before trying again.",
+    "Zakończ lub bezpiecznie porzuć aktywne publikowanie przed ponowną próbą.",
+    "Schließen Sie die aktive Veröffentlichung ab oder brechen Sie sie sicher ab, bevor Sie es erneut versuchen.",
+    "Hoàn tất hoặc hủy an toàn công việc xuất bản đang hoạt động trước khi thử lại.",
+  ),
+  revisionConflict: t(
+    "The product changed. Refresh the list and try again.",
+    "Produkt uległ zmianie. Odśwież listę i spróbuj ponownie.",
+    "Das Produkt wurde geändert. Aktualisieren Sie die Liste und versuchen Sie es erneut.",
+    "Sản phẩm đã thay đổi. Hãy làm mới danh sách rồi thử lại.",
+  ),
+  restoreNotAllowed: t(
+    "This archived product cannot be restored.",
+    "Tego zarchiwizowanego produktu nie można przywrócić.",
+    "Dieses archivierte Produkt kann nicht wiederhergestellt werden.",
+    "Không thể khôi phục sản phẩm đã lưu trữ này.",
+  ),
+  requestConflict: t(
+    "This action could not be replayed. Refresh the list and try again.",
+    "Nie można ponowić tej operacji. Odśwież listę i spróbuj ponownie.",
+    "Diese Aktion konnte nicht wiederholt werden. Aktualisieren Sie die Liste und versuchen Sie es erneut.",
+    "Không thể phát lại thao tác này. Hãy làm mới danh sách rồi thử lại.",
+  ),
 };
 
 export type ProductsScreenProps = {
@@ -134,15 +254,19 @@ export type ProductsScreenProps = {
 export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps) {
   const listProducts = useServerFn(listMyProducts);
   const archive = useServerFn(archiveMyProduct);
+  const restore = useServerFn(restoreMyProduct);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [locallyUnavailable, setLocallyUnavailable] = useState<Set<string>>(new Set());
   const [refreshError, setRefreshError] = useState(false);
   const refreshInFlight = useRef<Promise<void> | null>(null);
   const pendingRefreshImageIds = useRef(new Set<string>());
   const replacementPendingImageIds = useRef(new Set<string>());
+  const archiveRequestIds = useRef(new Map<string, string>());
+  const restoreRequestIds = useRef(new Map<string, string>());
 
   const query = useQuery({
-    queryKey: ["my-products", request.limit, request.cursor],
+    queryKey: ["my-products", request.status, request.limit, request.cursor],
     queryFn: () => listProducts({ data: request }),
   });
   const { data, refetch } = query;
@@ -153,7 +277,7 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
     refreshInFlight.current = null;
     pendingRefreshImageIds.current.clear();
     replacementPendingImageIds.current.clear();
-  }, [request.limit, request.cursor]);
+  }, [request.status, request.limit, request.cursor]);
 
   const markUnavailable = useCallback((keys: string[]) => {
     if (keys.length === 0) return;
@@ -219,10 +343,12 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
     return () => window.clearTimeout(timer);
   }, [data, locallyUnavailable, refreshPrivatePreviews]);
 
-  async function handleArchive(id: string) {
+  async function handleArchive(id: string, expectedModerationRevision: number) {
     if (!window.confirm(tr(S.archiveConfirm))) return;
+    const requestId = operationRequestId(archiveRequestIds.current, id);
     try {
-      await archive({ data: { id } });
+      await archive({ data: { id, expectedModerationRevision, requestId } });
+      archiveRequestIds.current.delete(id);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["my-products"] }),
         queryClient.invalidateQueries({ queryKey: ["my-product-summary"] }),
@@ -232,6 +358,21 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
         onRequestChange({ ...request, cursor: null });
       }
     } catch (error) {
+      if (hasStableErrorCode(error)) archiveRequestIds.current.delete(id);
+      toast.error(productArchiveErrorMessage(error));
+    }
+  }
+
+  async function handleRestore(id: string, expectedModerationRevision: number) {
+    const requestId = operationRequestId(restoreRequestIds.current, id);
+    try {
+      const result = await restore({ data: { id, expectedModerationRevision, requestId } });
+      restoreRequestIds.current.delete(id);
+      await queryClient.invalidateQueries({ queryKey: ["my-products"] });
+      toast.success(tr(S.restoreSuccess));
+      await navigate({ to: "/seller/products/$id", params: { id: result.productId } });
+    } catch (error) {
+      if (hasStableErrorCode(error)) restoreRequestIds.current.delete(id);
       toast.error(productArchiveErrorMessage(error));
     }
   }
@@ -252,6 +393,25 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
           <p className="text-sm text-muted-foreground">{tr(S.description)}</p>
         </div>
         <ProductEntryActions />
+      </div>
+
+      <div className="flex flex-wrap gap-2" aria-label={tr(S.products)}>
+        <button
+          type="button"
+          aria-pressed={request.status === "active"}
+          onClick={() => onRequestChange({ ...request, status: "active", cursor: null })}
+          className={productStatusFilterClass(request.status === "active")}
+        >
+          {tr(S.activeProducts)}
+        </button>
+        <button
+          type="button"
+          aria-pressed={request.status === "archived"}
+          onClick={() => onRequestChange({ ...request, status: "archived", cursor: null })}
+          className={productStatusFilterClass(request.status === "archived")}
+        >
+          {tr(S.archivedProducts)}
+        </button>
       </div>
 
       {query.isLoading ? (
@@ -299,21 +459,34 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
                         />
                       </td>
                       <td className="p-3">
-                        <Link
-                          to="/seller/products/$id"
-                          params={{ id: product.id }}
-                          className="hover:text-primary"
-                        >
-                          {product.title.trim() || tr(S.untitled)}
-                        </Link>
+                        {product.publicState !== "archived" || product.hasWorkingCopy ? (
+                          <Link
+                            to="/seller/products/$id"
+                            params={{ id: product.id }}
+                            className="hover:text-primary"
+                          >
+                            {product.title.trim() || tr(S.untitled)}
+                          </Link>
+                        ) : (
+                          product.title.trim() || tr(S.untitled)
+                        )}
                       </td>
                       <td className="select-text p-3 font-mono text-xs">
                         {product.product_code ?? tr(productCodeCopy.assignedWhenPublishing)}
                       </td>
                       <td className="p-3">
-                        <span className={statusClass(product.status)}>
-                          {localizedStatus(product.status)}
-                        </span>
+                        <div className="flex min-w-44 flex-col gap-1 text-xs">
+                          <StatusAxis
+                            label={tr(S.publicStatus)}
+                            value={localizedPublicState(product.publicState)}
+                            className={publicStateClass(product.publicState)}
+                          />
+                          <StatusAxis label={tr(S.reviewStatus)} value={reviewState(product)} />
+                          <StatusAxis
+                            label={tr(S.activationStatus)}
+                            value={activationState(product.activation?.displayState ?? null)}
+                          />
+                        </div>
                       </td>
                       <td className="p-3">
                         {product.price != null
@@ -322,20 +495,48 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
                       </td>
                       <td className="p-3">{product.moq ?? "—"}</td>
                       <td className="p-3 text-right">
-                        <Link
-                          to="/seller/products/$id"
-                          params={{ id: product.id }}
-                          className="mr-3 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          {tr(S.edit)}
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => void handleArchive(product.id)}
-                          className="text-xs text-rose-400 hover:text-rose-300"
-                        >
-                          {tr(S.archive)}
-                        </button>
+                        {product.publicState === "archived" ? (
+                          product.actions.canEdit ? (
+                            <Link
+                              to="/seller/products/$id"
+                              params={{ id: product.id }}
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              {tr(S.continueEditing)}
+                            </Link>
+                          ) : product.actions.canRestore ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleRestore(product.id, product.actionRevision)}
+                              className="text-xs text-primary hover:text-primary/80"
+                            >
+                              {tr(S.restore)}
+                            </button>
+                          ) : null
+                        ) : (
+                          <>
+                            {product.actions.canEdit ? (
+                              <Link
+                                to="/seller/products/$id"
+                                params={{ id: product.id }}
+                                className="mr-3 text-xs text-muted-foreground hover:text-foreground"
+                              >
+                                {tr(S.edit)}
+                              </Link>
+                            ) : null}
+                            {product.actions.canArchive ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleArchive(product.id, product.actionRevision)
+                                }
+                                className="text-xs text-rose-400 hover:text-rose-300"
+                              >
+                                {tr(S.archive)}
+                              </button>
+                            ) : null}
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -409,9 +610,45 @@ function productArchiveErrorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null && "code" in error) {
     if (error.code === "product_not_found") return tr(S.productNotFound);
     if (error.code === "product_archive_not_allowed") return tr(S.archiveNotAllowed);
-    if (error.code === "product_archive_unavailable") return tr(S.archiveUnavailable);
+    if (error.code === "product_restore_not_allowed") return tr(S.restoreNotAllowed);
+    if (
+      error.code === "product_archive_moderation_active" ||
+      error.code === "product_restore_moderation_active"
+    ) {
+      return tr(S.moderationActive);
+    }
+    if (error.code === "product_moderation_revision_conflict") {
+      return tr(S.revisionConflict);
+    }
+    if (
+      error.code === "product_archive_request_conflict" ||
+      error.code === "product_restore_request_conflict"
+    ) {
+      return tr(S.requestConflict);
+    }
+    if (error.code === "product_moderation_activation_unavailable") {
+      return tr(S.archiveUnavailable);
+    }
   }
   return tr(S.archiveUnavailable);
+}
+
+function operationRequestId(requests: Map<string, string>, productId: string): string {
+  const existing = requests.get(productId);
+  if (existing) return existing;
+  const created = crypto.randomUUID();
+  requests.set(productId, created);
+  return created;
+}
+
+function hasStableErrorCode(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error;
+}
+
+function productStatusFilterClass(selected: boolean): string {
+  return selected
+    ? "border border-primary bg-primary px-3 py-2 text-xs text-primary-foreground"
+    : "border border-border bg-card px-3 py-2 text-xs hover:border-primary";
 }
 
 function ProductPreview({
@@ -489,16 +726,60 @@ function previewLabel(preview: SellerProductPreview, locallyUnavailable: boolean
   return tr(S.unavailable);
 }
 
-function localizedStatus(status: SellerProductListItem["status"]): string {
+function localizedPublicState(status: SellerProductListItem["publicState"]): string {
   if (status === "published") return tr(S.published);
   if (status === "archived") return tr(S.archived);
   return tr(S.draft);
 }
 
-function statusClass(status: SellerProductListItem["status"]): string {
+function publicStateClass(status: SellerProductListItem["publicState"]): string {
   if (status === "published") return "text-emerald-400";
   if (status === "draft") return "text-amber-400";
   return "text-muted-foreground";
+}
+
+function reviewState(product: SellerProductListItem): string {
+  const status = product.review?.status;
+  if (!status) return product.hasWorkingCopy ? tr(S.draftChanges) : tr(S.notSubmitted);
+  if (status === "pending") return tr(S.pendingReview);
+  if (status === "changes_requested") return tr(S.changesRequested);
+  if (status === "rejected") return tr(S.rejected);
+  if (status === "withdrawn") return tr(S.withdrawn);
+  if (product.hasWorkingCopy && product.activation?.displayState === "completed") {
+    return tr(S.draftChanges);
+  }
+  return tr(S.approved);
+}
+
+function activationState(state: ProductActivationDisplayState | null): string {
+  if (!state) return tr(S.notStarted);
+  if (state === "waiting_for_dispatch") return tr(S.waitingForDispatch);
+  if (state === "dispatch_failed") return tr(S.dispatchFailed);
+  if (state === "publishing") return tr(S.publishing);
+  if (state === "activation_failed") return tr(S.activationFailed);
+  if (state === "abandonment_cleanup") return tr(S.abandonmentCleanup);
+  if (state === "abandonment_cleanup_required") return tr(S.abandonmentCleanupRequired);
+  if (state === "public_cleanup") return tr(S.publicCleanup);
+  if (state === "public_cleanup_required") return tr(S.publicCleanupRequired);
+  if (state === "completed") return tr(S.completed);
+  return tr(S.abandoned);
+}
+
+function StatusAxis({
+  label,
+  value,
+  className = "text-foreground",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <span>
+      <span className="text-muted-foreground">{label}:</span>{" "}
+      <span className={className}>{value}</span>
+    </span>
+  );
 }
 
 function publicPreviewKey(productId: string): string {

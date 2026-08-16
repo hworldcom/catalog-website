@@ -6,6 +6,8 @@ import type {
 
 export type ProductDraftDescriptionRecord = {
   productDraftId: string;
+  moderationRevision: number;
+  editable?: boolean;
   productStatus: ProductDraftDescriptionStatus;
   categoryId: string | null;
   currentFactsRevision: number | null;
@@ -28,5 +30,6 @@ export interface ProductDraftDescriptionRepository {
     productDraftId: string,
     patch: ProductDraftDescriptionPatch,
     expectedSellerId: string | null,
+    expectedModerationRevision: number,
   ): Promise<ProductDraftDescriptionPatchResult>;
 }

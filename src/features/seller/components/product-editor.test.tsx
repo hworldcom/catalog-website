@@ -65,12 +65,14 @@ type InitialProduct = {
   cover_image_url: string | null;
   trending: boolean;
   status: "draft" | "published" | "archived";
+  moderation_editable?: boolean;
   imagePublicationMode?: "durable" | "direct";
   imageSourceMode?: "classifier_import" | "seller_upload";
 };
 
 const initial: InitialProduct = {
   id: productId,
+  moderation_revision: 3,
   title: "Model title",
   product_code: "SEL-F-TSH-ABCDEFGH",
   title_source: "model" as const,
@@ -107,6 +109,7 @@ describe("ProductEditor title and description behavior", () => {
     mocks.save.mockResolvedValue({
       id: productId,
       title: "Model title",
+      moderationRevision: 4,
       titleSource: "model",
       status: "draft",
     });
@@ -274,6 +277,9 @@ describe("ProductEditor title and description behavior", () => {
 
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledTimes(1));
     expect(mocks.publish.mock.calls[0]?.[0].data).not.toHaveProperty("cover_image_url");
+    expect(mocks.publish.mock.calls[0]?.[0].data).toMatchObject({
+      expectedModerationRevision: 3,
+    });
     expect(mocks.save).not.toHaveBeenCalled();
     expect(await screen.findByText("Publishing product and images")).toBeInTheDocument();
   });
@@ -526,6 +532,7 @@ describe("ProductEditor title and description behavior", () => {
     renderEditor({
       ...initial,
       status: "published",
+      moderation_editable: true,
       imagePublicationMode: "durable",
     });
 
@@ -533,6 +540,18 @@ describe("ProductEditor title and description behavior", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
     expect(mocks.publish).not.toHaveBeenCalled();
+  });
+
+  it("locks a published product while its update submission is under review", () => {
+    renderEditor({
+      ...initial,
+      status: "published",
+      moderation_editable: false,
+      imagePublicationMode: "durable",
+    });
+
+    expect(screen.getByDisplayValue("Model title")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
   });
 });
 

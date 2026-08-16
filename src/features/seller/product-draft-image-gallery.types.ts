@@ -28,11 +28,13 @@ export type SellerProductDraftGallery =
       status: "available";
       errorCode: null;
       galleryRevision: number;
+      moderationRevision: number;
       images: SellerProductDraftGalleryImage[];
     }
   | {
       status: "unavailable";
       errorCode: "product_draft_image_delivery_unavailable";
       galleryRevision: number;
+      moderationRevision: number;
       images: SellerProductDraftGalleryImage[];
     };
