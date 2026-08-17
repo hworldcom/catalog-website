@@ -101,18 +101,13 @@ const H = {
     "Thương lượng giá, SL tối thiểu và vận chuyển ngoài nền tảng.",
   ),
   browseCta: t("Browse products", "Przeglądaj produkty", "Produkte durchsuchen", "Xem sản phẩm"),
-  sellerNudge: t(
-    "Are you a wholesaler?",
-    "Jesteś hurtownikiem?",
-    "Sind Sie Großhändler?",
-    "Bạn là nhà bán buôn?",
+  sellCta: t(
+    "Sell on Bazoria",
+    "Sprzedawaj na Bazoria",
+    "Auf Bazoria verkaufen",
+    "Bán hàng trên Bazoria",
   ),
-  listCta: t(
-    "List your catalog →",
-    "Dodaj swój katalog →",
-    "Katalog einstellen →",
-    "Đăng danh mục →",
-  ),
+  joinCta: t("Join the network", "Dołącz do sieci", "Netzwerk beitreten", "Tham gia mạng lưới"),
   sellerBannerTitle: t(
     "Sell wholesale on Bazoria",
     "Sprzedawaj hurtowo na Bazoria",
@@ -166,12 +161,20 @@ export function MarketplaceHomeScreen({ audience }: { audience: PublicAudience }
               {tr(H.browseCta)}
             </Link>
             <Link
-              to="/auth"
+              to="/join"
+              hash="for-sellers"
+              search={(previous) => ({ ...previous, audience })}
               className="inline-flex items-center border border-primary/60 px-5 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
             >
-              {tr(H.listCta)}
+              {tr(H.sellCta)}
             </Link>
-            <span className="text-xs text-muted-foreground">{tr(H.sellerNudge)}</span>
+            <Link
+              to="/join"
+              search={(previous) => ({ ...previous, audience })}
+              className="inline-flex items-center border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:border-primary hover:bg-primary/10"
+            >
+              {tr(H.joinCta)}
+            </Link>
           </div>
         </div>
       </section>

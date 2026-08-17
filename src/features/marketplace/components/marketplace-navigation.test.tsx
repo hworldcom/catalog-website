@@ -119,17 +119,43 @@ describe("MarketplaceNavigation", () => {
     expect(screen.queryByRole("region", { name: "Clothing" })).not.toBeInTheDocument();
   });
 
-  it("places the primary marketplace sections below the left-aligned audience row", () => {
+  it("places All first and the primary marketplace sections below the audience row", () => {
     render(<MarketplaceNavigation audience="women" />);
 
     const audienceRow = screen.getByTestId("marketplace-audience-row");
     const sectionRow = screen.getByTestId("marketplace-section-row");
+    const kids = within(audienceRow).getByRole("button", { name: "Kids" });
+    const joinUs = within(audienceRow).getByRole("link", { name: "Join Us" });
+    const all = within(audienceRow).getByRole("button", { name: "All" });
+    const women = within(audienceRow).getByRole("button", { name: "Women" });
 
     expect(audienceRow.nextElementSibling).toBe(sectionRow);
+    expect(audienceRow).toHaveClass("border-b", "border-border/60", "bg-secondary/30");
     expect(sectionRow).toHaveClass("lg:justify-start");
-    expect(within(audienceRow).getByRole("button", { name: "Women" })).toBeVisible();
+    expect(sectionRow).not.toHaveClass("bg-secondary/30");
+    expect(all.nextElementSibling).toBe(women);
     expect(within(sectionRow).getByRole("button", { name: "Clothing" })).toBeVisible();
     expect(within(sectionRow).getByRole("button", { name: "Sellers" })).toBeVisible();
+    expect(kids.nextElementSibling).toBe(joinUs);
+    expect(joinUs).toHaveClass("ml-auto", "min-h-11", "shrink-0");
+    expect(within(sectionRow).queryByRole("link", { name: "Join Us" })).not.toBeInTheDocument();
+  });
+
+  it("marks All as the selected virtual audience", () => {
+    render(<MarketplaceNavigation audience="all" />);
+
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Women" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("closes an open disclosure when focus moves to the Join Us link", () => {
+    render(<MarketplaceNavigation audience="women" />);
+
+    fireEvent.focus(screen.getByRole("button", { name: "Clothing" }));
+    expect(screen.getByRole("region", { name: "Clothing" })).toBeVisible();
+
+    fireEvent.focus(screen.getByRole("link", { name: "Join Us" }));
+    expect(screen.queryByRole("region", { name: "Clothing" })).not.toBeInTheDocument();
   });
 
   it("opens on keyboard focus and Escape closes the panel and restores trigger focus", () => {
@@ -219,6 +245,10 @@ describe("MarketplaceNavigation", () => {
 
     await user.click(screen.getByRole("button", { name: "Sellers" }));
     expect(screen.getByRole("link", { name: "Kesar Textiles" })).toHaveAttribute(
+      "data-route-search",
+      JSON.stringify({ lang: "DE", audience: "kids" }),
+    );
+    expect(screen.getByRole("link", { name: "Join Us" })).toHaveAttribute(
       "data-route-search",
       JSON.stringify({ lang: "DE", audience: "kids" }),
     );

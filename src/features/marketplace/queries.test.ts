@@ -28,11 +28,11 @@ import {
 describe("audience-aware marketplace query options", () => {
   it("uses audience in homepage cache keys and requests", async () => {
     mocks.listMarketplace.mockResolvedValue({ trending: [], sellers: [] });
-    const options = marketplaceQueryOptions("men");
+    const options = marketplaceQueryOptions("all");
 
-    expect(options.queryKey).toEqual(["marketplace", "home", "men"]);
+    expect(options.queryKey).toEqual(["marketplace", "home", "all"]);
     await options.queryFn?.({} as never);
-    expect(mocks.listMarketplace).toHaveBeenCalledWith({ data: { audience: "men" } });
+    expect(mocks.listMarketplace).toHaveBeenCalledWith({ data: { audience: "all" } });
   });
 
   it("uses audience in navigation cache keys and requests", async () => {

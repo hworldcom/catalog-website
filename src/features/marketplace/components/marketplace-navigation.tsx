@@ -18,11 +18,13 @@ const N = {
     "Điều hướng chợ",
   ),
   audience: t("Shop for", "Kupuj dla", "Einkaufen für", "Mua sắm cho"),
+  all: t("All", "Wszystko", "Alle", "Tất cả"),
   women: t("Women", "Kobiety", "Damen", "Nữ"),
   men: t("Men", "Mężczyźni", "Herren", "Nam"),
   kids: t("Kids", "Dzieci", "Kinder", "Trẻ em"),
   clothing: t("Clothing", "Odzież", "Bekleidung", "Quần áo"),
   sellers: t("Sellers", "Sprzedawcy", "Verkäufer", "Nhà bán"),
+  joinUs: t("Join Us", "Dołącz do nas", "Mitmachen", "Tham gia cùng chúng tôi"),
   clothingEmpty: t(
     "No clothing categories are available for this audience yet.",
     "Brak kategorii odzieży dla tej grupy.",
@@ -38,6 +40,7 @@ const N = {
 };
 
 const audienceLabels = {
+  all: N.all,
   women: N.women,
   men: N.men,
   kids: N.kids,
@@ -141,7 +144,7 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
         <div className="flex flex-col gap-2 py-2 lg:gap-0 lg:py-0">
           <div
             data-testid="marketplace-audience-row"
-            className="flex min-w-0 items-center gap-1 overflow-x-auto lg:min-h-12"
+            className="-mx-4 flex min-w-0 items-center gap-1 overflow-x-auto border-b border-border/60 bg-secondary/30 px-4 sm:-mx-6 sm:px-6 lg:min-h-12"
             role="group"
             aria-label={tr(N.audience)}
           >
@@ -164,6 +167,16 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
                 </button>
               );
             })}
+            <Link
+              to="/join"
+              search={(previous) => ({ ...previous, audience })}
+              onFocus={() => setOpenPanel(null)}
+              onPointerEnter={() => setOpenPanel(null)}
+              onClick={() => setOpenPanel(null)}
+              className="ml-auto inline-flex min-h-11 shrink-0 items-center justify-center border border-primary/50 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 data-[status=active]:bg-primary/10 data-[status=active]:text-foreground"
+            >
+              {tr(N.joinUs)}
+            </Link>
           </div>
 
           <div

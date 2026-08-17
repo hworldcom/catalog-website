@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { t, tr } from "@/lib/i18n";
+import { marketplaceHomeSearch } from "@/features/marketplace/public-audience";
 
 import { PublicShell } from "./public-shell";
 
@@ -29,6 +30,7 @@ export function NotFound({ title, message }: { title?: string; message?: string 
         <div className="mt-6">
           <Link
             to="/"
+            search={marketplaceHomeSearch}
             className="inline-flex items-center bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             {tr(S.backToMarketplace)}

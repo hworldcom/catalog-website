@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizePublicAudience, publicAudienceSchema } from "./public-audience";
+import {
+  marketplaceHomeSearch,
+  normalizePublicAudience,
+  publicAudienceSchema,
+} from "./public-audience";
 
 describe("public audience", () => {
   it.each([
+    ["all", "all"],
     ["women", "women"],
     [" MEN ", "men"],
     ["Kids", "kids"],
@@ -12,11 +17,15 @@ describe("public audience", () => {
     expect(publicAudienceSchema.parse(input)).toBe(expected);
   });
 
-  it.each([undefined, null, "", "unisex", 42])(
-    "defaults unsupported input %j to women",
-    (input) => {
-      expect(normalizePublicAudience(input)).toBe("women");
-      expect(publicAudienceSchema.parse(input)).toBe("women");
-    },
-  );
+  it.each([undefined, null, "", "unisex", 42])("defaults unsupported input %j to all", (input) => {
+    expect(normalizePublicAudience(input)).toBe("all");
+    expect(publicAudienceSchema.parse(input)).toBe("all");
+  });
+
+  it("resets explicit marketplace-home navigation to all while preserving root search", () => {
+    expect(marketplaceHomeSearch({ lang: "DE", audience: "kids" })).toEqual({
+      lang: "DE",
+      audience: "all",
+    });
+  });
 });

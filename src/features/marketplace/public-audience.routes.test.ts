@@ -12,6 +12,7 @@ describe("public audience route contract", () => {
 
   it.each([
     ["index.tsx", "marketplaceQueryOptions(deps.audience)"],
+    ["join.tsx", "audienceNavigationQueryOptions(deps.audience)"],
     ["c.$category.tsx", "categoryQueryOptions(params.category, deps.audience)"],
     ["s.$sellerSlug.tsx", "sellerQueryOptions(params.sellerSlug, deps.audience)"],
     ["p.$productId.tsx", "productQueryOptions(params.productId, deps.language, deps.audience)"],

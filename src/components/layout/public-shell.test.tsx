@@ -3,7 +3,28 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a>,
+  Link: ({
+    children,
+    search,
+    to,
+    ...props
+  }: {
+    children: ReactNode;
+    search?: (previous: Record<string, unknown>) => Record<string, unknown>;
+    to?: string;
+    [key: string]: unknown;
+  }) => {
+    const resolvedSearch = search?.({ lang: "DE", audience: "kids" });
+    return (
+      <a
+        {...props}
+        href={to ?? "/"}
+        data-route-search={resolvedSearch ? JSON.stringify(resolvedSearch) : undefined}
+      >
+        {children}
+      </a>
+    );
+  },
 }));
 
 vi.mock("@/features/marketplace/components/marketplace-navigation", () => ({
@@ -50,5 +71,23 @@ describe("PublicShell marketplace navigation", () => {
     );
 
     expect(screen.queryByTestId("marketplace-navigation")).not.toBeInTheDocument();
+  });
+
+  it("resets the logo and Home destinations to All while preserving language", () => {
+    render(
+      <PublicShell marketplaceAudience="kids">
+        <p>Marketplace content</p>
+      </PublicShell>,
+    );
+
+    const expected = JSON.stringify({ lang: "DE", audience: "all" });
+    expect(screen.getByRole("link", { name: "Bazoria" })).toHaveAttribute(
+      "data-route-search",
+      expected,
+    );
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute(
+      "data-route-search",
+      expected,
+    );
   });
 });

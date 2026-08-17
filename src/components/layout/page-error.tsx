@@ -2,6 +2,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { reportClientError } from "@/lib/client-error-reporting";
+import { marketplaceHomeSearch } from "@/features/marketplace/public-audience";
 import { t, tr } from "@/lib/i18n";
 
 import { PublicShell } from "./public-shell";
@@ -45,6 +46,7 @@ export function PageError({ error, reset }: { error: Error; reset: () => void })
           </button>
           <Link
             to="/"
+            search={marketplaceHomeSearch}
             className="inline-flex items-center border border-border px-4 py-2 text-sm hover:border-primary"
           >
             {tr(S.homeShort)}

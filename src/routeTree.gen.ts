@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -52,6 +53,11 @@ import { Route as AuthenticatedAdminClassifierUploadsWorkflowIdProductsProductDr
 import { Route as V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRouteImport } from './routes/v1.seller.classifier-batches.$workflowId.images.$imageId.thumbnail'
 import { Route as V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRouteImport } from './routes/v1.admin.classifier-uploads.$workflowId.images.$imageId.thumbnail'
 
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -300,6 +306,7 @@ const V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/join': typeof JoinRoute
   '/seller': typeof AuthenticatedSellerRouteWithChildren
   '/c/$category': typeof CCategoryRoute
   '/demo/kesar-textiles': typeof DemoKesarTextilesRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/join': typeof JoinRoute
   '/c/$category': typeof CCategoryRoute
   '/demo/kesar-textiles': typeof DemoKesarTextilesRoute
   '/demo/marketplace': typeof DemoMarketplaceRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/join': typeof JoinRoute
   '/_authenticated/seller': typeof AuthenticatedSellerRouteWithChildren
   '/c/$category': typeof CCategoryRoute
   '/demo/kesar-textiles': typeof DemoKesarTextilesRoute
@@ -432,6 +441,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/join'
     | '/seller'
     | '/c/$category'
     | '/demo/kesar-textiles'
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/join'
     | '/c/$category'
     | '/demo/kesar-textiles'
     | '/demo/marketplace'
@@ -518,6 +529,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/join'
     | '/_authenticated/seller'
     | '/c/$category'
     | '/demo/kesar-textiles'
@@ -563,6 +575,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  JoinRoute: typeof JoinRoute
   CCategoryRoute: typeof CCategoryRoute
   DemoKesarTextilesRoute: typeof DemoKesarTextilesRoute
   DemoMarketplaceRoute: typeof DemoMarketplaceRoute
@@ -579,6 +592,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -1007,6 +1027,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  JoinRoute: JoinRoute,
   CCategoryRoute: CCategoryRoute,
   DemoKesarTextilesRoute: DemoKesarTextilesRoute,
   DemoMarketplaceRoute: DemoMarketplaceRoute,
