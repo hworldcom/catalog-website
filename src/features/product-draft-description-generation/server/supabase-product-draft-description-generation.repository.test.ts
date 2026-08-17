@@ -35,7 +35,7 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
     }));
     const repository = repositoryWith(rpc);
 
-    await expect(repository.claim(productDraftId, sellerId)).resolves.toEqual({
+    await expect(repository.claim(productDraftId, sellerId, 4)).resolves.toEqual({
       result: "claimed",
       workingCopy: false,
       moderationRevision: 4,
@@ -86,7 +86,7 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
     }));
     const repository = repositoryWith(rpc, { workingCopy: true, productStatus: "published" });
 
-    await expect(repository.claim(productDraftId, sellerId)).resolves.toMatchObject({
+    await expect(repository.claim(productDraftId, sellerId, 4)).resolves.toMatchObject({
       result: "claimed",
       workingCopy: true,
       moderationRevision: 4,
@@ -124,7 +124,7 @@ describe("SupabaseProductDraftDescriptionGenerationRepository", () => {
       error: null,
     }));
 
-    await expect(repositoryWith(rpc).claim(productDraftId, sellerId)).resolves.toMatchObject({
+    await expect(repositoryWith(rpc).claim(productDraftId, sellerId, 4)).resolves.toMatchObject({
       result: "claimed",
       category: null,
       titleBlank: true,

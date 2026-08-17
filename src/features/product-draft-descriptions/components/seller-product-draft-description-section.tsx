@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { generateMyProductDraftDescriptions } from "@/features/product-draft-description-generation/product-draft-description-generation.functions";
 import type { ProductDraftTitleSnapshot } from "@/features/product-draft-title/product-draft-title.types";
 import { t, tr } from "@/lib/i18n";
+import type { ProductModerationMutationCoordinator } from "@/features/seller/product-moderation-mutation-coordinator";
 
 import {
   getMyProductDraftDescriptions,
@@ -37,7 +38,10 @@ export type SellerDescriptionCoordinationState = {
 };
 
 export type SellerProductDraftDescriptionClient = ProductDraftDescriptionEditorClient & {
-  generate(productDraftId: string): Promise<{
+  generate(
+    productDraftId: string,
+    expectedModerationRevision: number,
+  ): Promise<{
     descriptionSnapshot: ProductDraftDescriptionSnapshot;
     titleSnapshot: ProductDraftTitleSnapshot;
   }>;
@@ -219,6 +223,7 @@ export function SellerProductDraftDescriptionSection({
   onGenerated,
   onRefreshContext,
   onDescriptionSaved,
+  mutationCoordinator,
 }: {
   productDraftId: string;
   title: string;
@@ -232,6 +237,7 @@ export function SellerProductDraftDescriptionSection({
   }): void;
   onRefreshContext(scope: DescriptionGenerationRefreshScope): Promise<void>;
   onDescriptionSaved?(snapshot: ProductDraftDescriptionSnapshot): void;
+  mutationCoordinator?: ProductModerationMutationCoordinator;
 }) {
   const getDescriptions = useServerFn(getMyProductDraftDescriptions);
   const updateDescriptions = useServerFn(updateMyProductDraftDescriptions);
@@ -239,13 +245,25 @@ export function SellerProductDraftDescriptionSection({
   const client = useMemo<SellerProductDraftDescriptionClient>(
     () => ({
       get: (id) => getDescriptions({ data: { productDraftId: id } }),
-      update: (id, descriptions, expectedModerationRevision) =>
-        updateDescriptions({
-          data: { productDraftId: id, descriptions, expectedModerationRevision },
+      update: (id, descriptions, expectedModerationRevision) => {
+        const update = (expectedRevision: number) =>
+          updateDescriptions({
+            data: {
+              productDraftId: id,
+              descriptions,
+              expectedModerationRevision: expectedRevision,
+            },
+          });
+        return mutationCoordinator
+          ? mutationCoordinator.run(update, (result) => result.moderationRevision)
+          : update(expectedModerationRevision);
+      },
+      generate: (id, expectedModerationRevision) =>
+        generateDescriptions({
+          data: { productDraftId: id, expectedModerationRevision },
         }),
-      generate: (id) => generateDescriptions({ data: { productDraftId: id } }),
     }),
-    [generateDescriptions, getDescriptions, updateDescriptions],
+    [generateDescriptions, getDescriptions, mutationCoordinator, updateDescriptions],
   );
   return (
     <SellerProductDraftDescriptionSectionView
@@ -259,6 +277,7 @@ export function SellerProductDraftDescriptionSection({
       onGenerated={onGenerated}
       onRefreshContext={onRefreshContext}
       onDescriptionSaved={onDescriptionSaved}
+      mutationCoordinator={mutationCoordinator}
     />
   );
 }
@@ -274,6 +293,7 @@ export function SellerProductDraftDescriptionSectionView({
   onGenerated,
   onRefreshContext,
   onDescriptionSaved,
+  mutationCoordinator,
 }: {
   productDraftId: string;
   title: string;
@@ -288,6 +308,7 @@ export function SellerProductDraftDescriptionSectionView({
   }): void;
   onRefreshContext(scope: DescriptionGenerationRefreshScope): Promise<void>;
   onDescriptionSaved?(snapshot: ProductDraftDescriptionSnapshot): void;
+  mutationCoordinator?: ProductModerationMutationCoordinator;
 }) {
   const editorRef = useRef<ProductDraftDescriptionEditorHandle>(null);
   const previousRefreshRequest = useRef(refreshRequest);
@@ -348,7 +369,11 @@ export function SellerProductDraftDescriptionSectionView({
     setGenerationError(null);
     setGenerationSuccess(false);
     try {
-      const result = await client.generate(productDraftId);
+      const generate = (expectedRevision: number) =>
+        client.generate(productDraftId, expectedRevision);
+      const result = mutationCoordinator
+        ? await mutationCoordinator.run(generate, (next) => next.titleSnapshot.moderationRevision)
+        : await generate(snapshot.moderationRevision);
       editorRef.current?.replaceSnapshot(result.descriptionSnapshot);
       setSnapshot(result.descriptionSnapshot);
       onGenerated(result);
@@ -408,7 +433,9 @@ export function SellerProductDraftDescriptionSectionView({
         ref={editorRef}
         productDraftId={productDraftId}
         client={client}
-        disabled={coordination.product.publicationActive || generationActive}
+        disabled={
+          coordination.product.publicationActive || generationActive || mutationCoordinator?.busy
+        }
         disabledReason={generationActive ? "generation" : "publication"}
         onStateChange={handleEditorStateChange}
         onReadStateChange={setReadState}

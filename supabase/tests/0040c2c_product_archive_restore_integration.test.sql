@@ -378,7 +378,7 @@ SELECT * FROM pg_temp.create_published_product(
   '40c2c000-0000-4000-8000-000000000202',
   'https://example.test/pending-update-initial.jpg'
 );
-SELECT count(*) FROM public.ensure_product_moderation_working_copy(
+SELECT count(*) FROM public.begin_product_moderation_editing(
   (SELECT product_id FROM pending_product),
   '40c2c000-0000-4000-8000-000000000001'
 );
@@ -461,7 +461,7 @@ SELECT * FROM pg_temp.create_published_product(
   '40c2c000-0000-4000-8000-000000000203',
   'https://example.test/active-initial.jpg'
 );
-SELECT count(*) FROM public.ensure_product_moderation_working_copy(
+SELECT count(*) FROM public.begin_product_moderation_editing(
   (SELECT product_id FROM active_product),
   '40c2c000-0000-4000-8000-000000000001'
 );

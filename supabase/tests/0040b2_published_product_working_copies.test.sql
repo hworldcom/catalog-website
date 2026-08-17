@@ -95,12 +95,12 @@ WHERE product.id = (SELECT product_draft_id FROM qa_product);
 SET LOCAL session_replication_role = origin;
 
 SELECT is(
-  (SELECT count(*)::integer FROM public.ensure_product_moderation_working_copy(
+  (SELECT count(*)::integer FROM public.begin_product_moderation_editing(
     (SELECT product_draft_id FROM qa_product),
     '40b20000-0000-4000-8000-000000000001'
   )),
   1,
-  'the first edit creates one working copy'
+  'deliberate Begin edit creates one working copy'
 );
 
 SELECT is(

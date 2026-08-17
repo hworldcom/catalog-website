@@ -179,6 +179,24 @@ describe("ProductDraftFactsEditorView", () => {
     expect(screen.getByRole("button", { name: "Save facts" })).toBeEnabled();
   });
 
+  it("preserves unsaved facts when the parent replaces its client adapter", async () => {
+    const initialClient = client();
+    const replacementClient = client();
+    const view = render(
+      <ProductDraftFactsEditorView productDraftId={productDraftId} client={initialClient} />,
+    );
+
+    const materialComposition = await screen.findByLabelText("Material composition");
+    await userEvent.type(materialComposition, "cotton");
+    view.rerender(
+      <ProductDraftFactsEditorView productDraftId={productDraftId} client={replacementClient} />,
+    );
+
+    expect(materialComposition).toHaveValue("cotton");
+    expect(initialClient.get).toHaveBeenCalledOnce();
+    expect(replacementClient.get).not.toHaveBeenCalled();
+  });
+
   it("disables Save again when a touched value is reverted", async () => {
     const existingFacts = { ...canonicalFacts, materialComposition: "cotton" };
     const testClient = client({

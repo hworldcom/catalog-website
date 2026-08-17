@@ -1,31 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
 import { ProductDraftFields } from "@/components/product/product-draft-fields";
-import { ProductPublicationStatus } from "@/components/product/product-publication-status";
-import { isActiveProductPublication } from "@/components/product/product-publication-status.utils";
 import { productCodeCopy } from "@/features/product-code/product-code.copy";
 import type { ProductAudience } from "@/features/product-audience/product-audience.types";
-import type { ProductDraftDescriptionEditorState } from "@/features/product-draft-descriptions/components/product-draft-description-editor";
 import { PRODUCT_DRAFT_DESCRIPTION_MAX_LENGTH } from "@/features/product-draft-descriptions/product-draft-descriptions.types";
-import type { ProductDraftFactsEditorState } from "@/features/product-draft-facts/components/product-draft-facts-editor";
 import type { ProductDraftTitleSnapshot } from "@/features/product-draft-title/product-draft-title.types";
 import { t, tr } from "@/lib/i18n";
 import { listProductCategories } from "@/features/seller/categories.functions";
-import {
-  getMyProductPublication,
-  publishMyProduct,
-  retryMyProductPublication,
-} from "@/features/seller/product-publication.functions";
-import type {
-  SellerProductImagePublicationMode,
-  SellerProductPublicationSnapshot,
-} from "@/features/seller/seller-product-publication.types";
-import type { SellerProductImageSourceMode } from "@/features/seller/server/seller-product-draft-read.service";
 import { saveMyProduct } from "@/features/seller/products.functions";
+import type { ProductModerationMutationCoordinator } from "@/features/seller/product-moderation-mutation-coordinator";
 
 import { Field } from "./field";
 
@@ -310,8 +297,6 @@ type ProductInitial = {
   cover_image_url: string | null;
   trending: boolean;
   status: "draft" | "published" | "archived";
-  imagePublicationMode?: SellerProductImagePublicationMode;
-  imageSourceMode?: SellerProductImageSourceMode;
 } | null;
 
 type ProductForm = {
@@ -327,16 +312,6 @@ type ProductForm = {
   stock: "in_stock" | "low_stock" | "out_of_stock" | "made_to_order";
   cover_image_url: string;
   trending: boolean;
-};
-
-const cleanFactsState: ProductDraftFactsEditorState = {
-  dirty: false,
-  saving: false,
-};
-
-const cleanDescriptionState: ProductDraftDescriptionEditorState = {
-  dirty: false,
-  saving: false,
 };
 
 export type ProductEditorCoordinationState = {
@@ -367,33 +342,26 @@ export type SavedProductSnapshot = {
 
 export function ProductEditor({
   initial,
-  factsState = cleanFactsState,
-  descriptionState = cleanDescriptionState,
   disabled = false,
   titleReplacement = null,
   onSaved,
   onProductSaved,
   onStateChange,
   onDisplayTitleChange,
-  galleryState,
   moderationRevisionOverride = null,
+  mutationCoordinator,
 }: {
   initial: ProductInitial;
-  factsState?: ProductDraftFactsEditorState;
-  descriptionState?: ProductDraftDescriptionEditorState;
   disabled?: boolean;
   titleReplacement?: ProductEditorTitleReplacement | null;
   onSaved?: (id: string) => void;
   onProductSaved?: (snapshot: SavedProductSnapshot) => void;
   onStateChange?: (state: ProductEditorCoordinationState) => void;
   onDisplayTitleChange?: (title: string) => void;
-  galleryState?: ProductEditorGalleryState;
   moderationRevisionOverride?: number | null;
+  mutationCoordinator?: ProductModerationMutationCoordinator;
 }) {
   const save = useServerFn(saveMyProduct);
-  const publish = useServerFn(publishMyProduct);
-  const getPublication = useServerFn(getMyProductPublication);
-  const retryPublication = useServerFn(retryMyProductPublication);
   const listCats = useServerFn(listProductCategories);
   const queryClient = useQueryClient();
   const cats = useQuery({ queryKey: ["product-categories"], queryFn: () => listCats() });
@@ -407,32 +375,9 @@ export function ProductEditor({
   const [moderationRevision, setModerationRevision] = useState(
     initial?.moderation_revision ?? null,
   );
-  const [publicationSnapshot, setPublicationSnapshot] =
-    useState<SellerProductPublicationSnapshot | null>(null);
-  const completionHandled = useRef(initial?.status === "published");
 
-  const productId = initial?.id ?? null;
-  const imagePublicationMode = initial?.imagePublicationMode ?? "direct";
-  const imageSourceMode = initial?.imageSourceMode ?? "seller_upload";
-  const resolvedGalleryState = galleryState ?? {
-    activeImageCount: imagePublicationMode === "durable" ? 1 : 0,
-    hasDurableImages: imagePublicationMode === "durable",
-    hasAvailableCover: imagePublicationMode === "durable",
-    incomplete: false,
-  };
-  const usesDurablePublication =
-    imageSourceMode === "classifier_import" || resolvedGalleryState.hasDurableImages;
   const isPublished = initial?.status === "published";
-  const publicationQuery = useQuery({
-    queryKey: ["my-product-publication", productId],
-    queryFn: () => getPublication({ data: { productDraftId: productId! } }),
-    enabled: Boolean(productId && usesDurablePublication),
-    retry: false,
-    refetchInterval: (query) =>
-      isActiveProductPublication(query.state.data?.publicationStatus) ? 2_000 : false,
-  });
-  const currentPublication = publicationSnapshot ?? publicationQuery.data ?? null;
-  const publicationActive = isActiveProductPublication(currentPublication?.publicationStatus);
+  const publicationActive = false;
   const dirty = !sameProductForm(form, savedForm);
 
   useEffect(() => {
@@ -457,7 +402,7 @@ export function ProductEditor({
 
   useEffect(() => {
     if (moderationRevisionOverride === null) return;
-    setModerationRevision((current) => Math.max(current ?? 1, moderationRevisionOverride));
+    setModerationRevision(moderationRevisionOverride);
   }, [moderationRevisionOverride]);
 
   useEffect(() => {
@@ -469,113 +414,51 @@ export function ProductEditor({
     [onStateChange],
   );
 
-  useEffect(() => {
-    if (publicationQuery.data) setPublicationSnapshot(publicationQuery.data);
-  }, [publicationQuery.data]);
-
-  useEffect(() => {
-    const completed =
-      currentPublication?.publicationStatus === "completed" ||
-      (currentPublication?.publicationStatus === "not_required" &&
-        currentPublication.productStatus === "published");
-    if (!completed || completionHandled.current || !productId) return;
-    completionHandled.current = true;
-
-    void refreshCompletedProduct(queryClient, productId).then(() => {
-      toast.success("Product and images were published.");
-    });
-  }, [currentPublication, productId, queryClient]);
-
   async function submitDraft() {
     setBusy(true);
     try {
-      const res = await save({
-        data: {
-          ...productFields(form, {
-            includeAudiences: true,
-            includeCover: false,
-            titleTouched,
-            descriptionTouched,
-          }),
-          id: form.id,
-          expectedModerationRevision: form.id ? (moderationRevision ?? undefined) : undefined,
-          publish: isPublished,
-        },
-      });
+      const performSave = (expectedModerationRevision?: number) =>
+        save({
+          data: {
+            ...productFields(form, {
+              includeAudiences: true,
+              includeCover: false,
+              titleTouched,
+              descriptionTouched,
+            }),
+            id: form.id,
+            ...(form.id
+              ? {
+                  expectedModerationRevision:
+                    expectedModerationRevision ?? moderationRevision ?? undefined,
+                }
+              : {}),
+          },
+        });
+      const res =
+        form.id && mutationCoordinator
+          ? await mutationCoordinator.run(performSave, (result) => result.moderationRevision)
+          : await performSave();
       applySavedProduct(res);
       await refreshSavedProduct(queryClient, form.id, initial?.status, res.status);
-      toast.success(isPublished ? "Changes saved" : "Draft saved");
+      toast.success(
+        tr(t("Draft saved", "Szkic zapisany", "Entwurf gespeichert", "Đã lưu bản nháp")),
+      );
       if (!form.id && onSaved) onSaved(res.id);
     } catch (error) {
-      if (publicationErrorCode(error) === "product_publication_not_allowed" && form.id) {
-        await queryClient.invalidateQueries({ queryKey: ["my-product", form.id] });
-      }
-      toast.error(publicationErrorMessage(error, "Product could not be saved."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitPublication() {
-    if (!form.id) return;
-    if (
-      factsState.dirty ||
-      factsState.saving ||
-      descriptionState.dirty ||
-      descriptionState.saving
-    ) {
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const snapshot = await publish({
-        data: {
-          ...productFields(form, {
-            includeAudiences: true,
-            includeCover: false,
-            titleTouched,
-            descriptionTouched,
-          }),
-          id: form.id,
-          expectedModerationRevision: moderationRevision ?? undefined,
-        },
-      });
-      replacePublicationSnapshot(snapshot);
-      if (snapshot.publicationStatus === "pending" || snapshot.publicationStatus === "running") {
-        toast.success(tr(S.publicationStarted));
-      }
-    } catch (error) {
-      const code = publicationErrorCode(error);
-      if (code === "product_publication_in_progress") {
-        await observeCurrentPublication();
-      }
-      if (code === "product_publication_not_allowed") {
-        await queryClient.invalidateQueries({ queryKey: ["my-product", form.id] });
-      }
-      toast.error(publicationErrorMessage(error, tr(S.publishFailed)));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function observeCurrentPublication() {
-    if (!form.id) return;
-    const result = await publicationQuery.refetch();
-    if (result.data) replacePublicationSnapshot(result.data);
-  }
-
-  async function retryDurablePublication() {
-    if (!form.id) return;
-    setBusy(true);
-    try {
-      const snapshot = await retryPublication({
-        data: { productDraftId: form.id },
-      });
-      replacePublicationSnapshot(snapshot);
-      toast.success(tr(S.publicationRetryStarted));
-    } catch (error) {
-      toast.error(publicationErrorMessage(error, tr(S.retryFailed)));
+      toast.error(
+        publicationErrorMessage(
+          error,
+          tr(
+            t(
+              "Product could not be saved.",
+              "Nie można zapisać produktu.",
+              "Das Produkt konnte nicht gespeichert werden.",
+              "Không thể lưu sản phẩm.",
+            ),
+          ),
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -593,33 +476,48 @@ export function ProductEditor({
     onProductSaved?.(saved);
   }
 
-  function replacePublicationSnapshot(snapshot: SellerProductPublicationSnapshot) {
-    setPublicationSnapshot(snapshot);
-    queryClient.setQueryData(["my-product-publication", snapshot.productDraftId], snapshot);
-  }
-
   const inputCls = "border border-border bg-background px-3 py-2 text-sm";
   const titleReadOnly = Boolean(
     initial && !(initial.moderation_editable ?? initial.status === "draft"),
   );
   const descriptionReadOnly = titleReadOnly;
-  const publishBlockedByEditors =
-    factsState.dirty || factsState.saving || descriptionState.dirty || descriptionState.saving;
-  const publishBlockedByRequiredFields = form.title.trim() === "" || form.category_id.trim() === "";
-  const publishBlockedByAudience = form.audiences.length === 0;
-  const publishBlockedByGallery =
-    !productId || !resolvedGalleryState.hasAvailableCover || resolvedGalleryState.incomplete;
-  const actionsDisabled = disabled || busy || publicationActive || titleReadOnly;
+  const actionsDisabled =
+    disabled || busy || mutationCoordinator?.busy || publicationActive || titleReadOnly;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold">
-            {initial ? "Edit product" : "New product"}
+            {initial
+              ? tr(
+                  t(
+                    "Edit private draft",
+                    "Edytuj prywatny szkic",
+                    "Privaten Entwurf bearbeiten",
+                    "Chỉnh sửa bản nháp riêng",
+                  ),
+                )
+              : tr(t("New product", "Nowy produkt", "Neues Produkt", "Sản phẩm mới"))}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {isPublished ? "Live on your storefront." : "Draft — not visible to buyers yet."}
+            {isPublished
+              ? tr(
+                  t(
+                    "These private changes are not visible to buyers until approved.",
+                    "Te prywatne zmiany nie są widoczne dla kupujących do czasu zatwierdzenia.",
+                    "Diese privaten Änderungen sind bis zur Genehmigung für Käufer nicht sichtbar.",
+                    "Các thay đổi riêng này chưa hiển thị cho người mua cho đến khi được duyệt.",
+                  ),
+                )
+              : tr(
+                  t(
+                    "Draft — not visible to buyers yet.",
+                    "Szkic — jeszcze niewidoczny dla kupujących.",
+                    "Entwurf — für Käufer noch nicht sichtbar.",
+                    "Bản nháp — chưa hiển thị cho người mua.",
+                  ),
+                )}
           </p>
           {initial ? (
             <p className="mt-2 text-xs text-muted-foreground">
@@ -631,19 +529,9 @@ export function ProductEditor({
           ) : null}
         </div>
         <Link to="/seller/products" className="text-xs text-muted-foreground hover:text-foreground">
-          ← Back
+          ← {tr(t("Back", "Wróć", "Zurück", "Quay lại"))}
         </Link>
       </div>
-
-      {initial && usesDurablePublication ? (
-        <ProductPublicationStatus
-          snapshot={currentPublication}
-          statusReadFailed={publicationQuery.isError}
-          busy={busy || disabled}
-          onRefresh={() => void observeCurrentPublication()}
-          onRetry={() => void retryDurablePublication()}
-        />
-      ) : null}
 
       <form
         onSubmit={(event) => {
@@ -705,50 +593,14 @@ export function ProductEditor({
             </Field>
           </div>
         ) : null}
-        {publishBlockedByEditors && !isPublished ? (
-          <p className="text-sm text-amber-700 md:col-span-2">
-            Save product details and descriptions before publishing.
-          </p>
-        ) : null}
-
-        {publishBlockedByRequiredFields && !isPublished ? (
-          <p className="text-sm text-amber-700 md:col-span-2">{tr(S.publicationFieldsRequired)}</p>
-        ) : null}
-
-        {publishBlockedByAudience && !isPublished ? (
-          <p className="text-sm text-amber-700 md:col-span-2">{tr(S.audienceRequired)}</p>
-        ) : null}
-
-        {publishBlockedByGallery && !isPublished ? (
-          <p className="text-sm text-amber-700 md:col-span-2">
-            {resolvedGalleryState.incomplete ? tr(S.imagesNotReady) : tr(S.imageRequired)}
-          </p>
-        ) : null}
-
         <div className="flex flex-wrap gap-2 md:col-span-2">
           <button
             type="submit"
             disabled={actionsDisabled}
             className="border border-border bg-card px-4 py-2.5 text-sm font-medium hover:border-primary disabled:opacity-60"
           >
-            {isPublished ? "Save changes" : "Save draft"}
+            {tr(t("Save draft", "Zapisz szkic", "Entwurf speichern", "Lưu bản nháp"))}
           </button>
-          {!isPublished ? (
-            <button
-              type="button"
-              disabled={
-                actionsDisabled ||
-                publishBlockedByEditors ||
-                publishBlockedByRequiredFields ||
-                publishBlockedByAudience ||
-                publishBlockedByGallery
-              }
-              onClick={() => void submitPublication()}
-              className="bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-            >
-              {tr(S.publish)}
-            </button>
-          ) : null}
         </div>
       </form>
     </div>
@@ -871,15 +723,4 @@ async function refreshSavedProduct(
   if (productId) {
     await queryClient.invalidateQueries({ queryKey: ["my-product", productId] });
   }
-}
-
-async function refreshCompletedProduct(
-  queryClient: ReturnType<typeof useQueryClient>,
-  productId: string,
-) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ["my-products"] }),
-    queryClient.invalidateQueries({ queryKey: ["my-product", productId] }),
-    queryClient.invalidateQueries({ queryKey: ["my-product-summary"] }),
-  ]);
 }

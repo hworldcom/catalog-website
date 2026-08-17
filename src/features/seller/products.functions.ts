@@ -16,7 +16,6 @@ import {
   parseSellerProductListRequest,
 } from "./seller-product-list.types";
 import { parseSellerProductSave } from "./seller-product-write.types";
-import { SellerProductPublicationError } from "./seller-product-publication.types";
 import { invalidProductModerationStatusRequest } from "./product-moderation-status.types";
 
 export const listMyProducts = createServerFn({ method: "GET" })
@@ -132,10 +131,11 @@ export const saveMyProduct = createServerFn({ method: "POST" })
       ? await getCurrentSellerId({ supabase, userId })
       : await requireCurrentSellerId({ supabase, userId });
     if (!sellerId) throw new Error("Product not found");
+    let durableStatus: "draft" | "published" | "archived" = "draft";
     if (data.id) {
       const ownedProduct = await supabase
         .from("products")
-        .select("id")
+        .select("id,status")
         .eq("id", data.id)
         .eq("seller_id", sellerId)
         .maybeSingle();
@@ -147,6 +147,7 @@ export const saveMyProduct = createServerFn({ method: "POST" })
           "The product was not found.",
         );
       }
+      durableStatus = ownedProduct.data.status;
     }
 
     const productFields = {
@@ -162,88 +163,20 @@ export const saveMyProduct = createServerFn({ method: "POST" })
         ? { cover_image_url: data.cover_image_url || null }
         : {}),
       trending: data.trending,
-      status: data.publish ? ("published" as const) : ("draft" as const),
+      status: durableStatus,
     };
 
     const { createProductDraftTitlePersistenceService } =
       await import("@/features/product-draft-title/server/product-draft-title.runtime");
-    let saved: ProductDraftTitleSnapshot;
-    try {
-      saved = await (
-        await createProductDraftTitlePersistenceService()
-      ).saveSellerProduct({
-        productDraftId: data.id,
-        expectedModerationRevision: data.expectedModerationRevision,
-        sellerId,
-        title: data.title,
-        productFields,
-      });
-    } catch (error) {
-      if (data.publish && error instanceof ProductDraftTitleError) {
-        if (error.code === "product_draft_title_required") {
-          throw new SellerProductPublicationError(
-            409,
-            "product_publication_title_required",
-            "A product title is required before publication.",
-          );
-        }
-        if (error.code === "product_draft_title_invalid") {
-          throw new SellerProductPublicationError(
-            400,
-            "product_publication_title_invalid",
-            "The product title must contain at most 50 characters.",
-          );
-        }
-        if (
-          error.code === "product_audience_invalid" ||
-          error.code === "product_audience_moderation_required"
-        ) {
-          throw error;
-        }
-        if (error.code === "product_publication_audience_required") {
-          throw new SellerProductPublicationError(
-            409,
-            "product_publication_audience_required",
-            "Select at least one audience before publication.",
-          );
-        }
-        if (
-          error.code === "product_category_required" ||
-          error.code === "product_publication_category_required"
-        ) {
-          throw new SellerProductPublicationError(
-            409,
-            "product_publication_category_required",
-            "A product category is required before publication.",
-          );
-        }
-        if (error.code === "product_category_not_supported") {
-          throw new SellerProductPublicationError(
-            400,
-            "product_publication_invalid",
-            "The selected product category is not supported.",
-          );
-        }
-        if (
-          error.code === "product_code_company_unconfigured" ||
-          error.code === "product_code_category_unconfigured"
-        ) {
-          throw new SellerProductPublicationError(
-            500,
-            "product_publication_configuration_invalid",
-            "Product publication is temporarily misconfigured.",
-          );
-        }
-        if (error.code === "product_code_allocation_failed") {
-          throw new SellerProductPublicationError(
-            503,
-            "product_publication_unavailable",
-            "Product publication is temporarily unavailable.",
-          );
-        }
-      }
-      throw error;
-    }
+    const saved: ProductDraftTitleSnapshot = await (
+      await createProductDraftTitlePersistenceService()
+    ).saveSellerProduct({
+      productDraftId: data.id,
+      expectedModerationRevision: data.expectedModerationRevision,
+      sellerId,
+      title: data.title,
+      productFields,
+    });
 
     return {
       id: saved.productDraftId,

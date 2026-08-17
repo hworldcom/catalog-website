@@ -24,7 +24,7 @@ describe("ProductDescriptionGenerationService", () => {
       coverGatewayWith(),
     );
 
-    const result = await service.generate(productDraftId, sellerId);
+    const result = await service.generate(productDraftId, sellerId, 4);
 
     expect(provider.generate).toHaveBeenCalledOnce();
     expect(repository.finalize).toHaveBeenCalledWith(
@@ -53,7 +53,7 @@ describe("ProductDescriptionGenerationService", () => {
       repository,
       provider,
       coverGatewayWith(),
-    ).generate(productDraftId, sellerId);
+    ).generate(productDraftId, sellerId, 4);
 
     expect(provider.generate).toHaveBeenCalledWith(
       expect.objectContaining({ category: null, titleProposalRequested: true }),
@@ -76,7 +76,7 @@ describe("ProductDescriptionGenerationService", () => {
       repository,
       provider,
       coverGatewayWith(),
-    ).generate(productDraftId, sellerId);
+    ).generate(productDraftId, sellerId, 4);
 
     expect(repository.finalize).toHaveBeenCalledWith(
       expect.objectContaining({ output: expect.objectContaining({ titleProposal: null }) }),
@@ -92,6 +92,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGatewayWith()).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_no_writable_targets",
@@ -109,6 +110,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGatewayWith()).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_category_missing",
@@ -127,6 +129,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGatewayWith()).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_provider_timeout",
@@ -151,6 +154,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGatewayWith()).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_attempt_superseded",
@@ -171,6 +175,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGatewayWith()).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_output_invalid",
@@ -190,6 +195,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGateway).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_cover_missing",
@@ -210,6 +216,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGateway).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_cover_unsupported",
@@ -234,6 +241,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGateway).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_cover_unavailable",
@@ -262,6 +270,7 @@ describe("ProductDescriptionGenerationService", () => {
       new ProductDescriptionGenerationService(repository, provider, coverGatewayWith()).generate(
         productDraftId,
         sellerId,
+        4,
       ),
     ).rejects.toMatchObject({
       code: "product_description_generation_image_not_usable",

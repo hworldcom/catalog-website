@@ -37,7 +37,6 @@ export const sellerProductSaveSchema = sellerProductFieldsSchema
   .extend({
     id: sellerProductIdSchema.optional(),
     expectedModerationRevision: z.number().int().positive().optional(),
-    publish: z.boolean().default(false),
   })
   .superRefine((value, context) => {
     if (value.id && value.expectedModerationRevision === undefined) {

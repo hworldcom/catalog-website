@@ -138,6 +138,24 @@ describe("ProductDraftDescriptionEditor", () => {
     expect(screen.getByRole("textbox", { name: /Polish/i })).toHaveValue("Server Polish");
     expect(screen.getAllByText("Facts revision: 2").length).toBeGreaterThan(0);
   });
+
+  it("preserves unsaved descriptions when the parent replaces its client adapter", async () => {
+    const initialClient = createClient();
+    const replacementClient = createClient();
+    const view = render(
+      <ProductDraftDescriptionEditor productDraftId={productDraftId} client={initialClient} />,
+    );
+
+    const english = await screen.findByRole("textbox", { name: /English/i });
+    await userEvent.type(english, "Unsaved description");
+    view.rerender(
+      <ProductDraftDescriptionEditor productDraftId={productDraftId} client={replacementClient} />,
+    );
+
+    expect(english).toHaveValue("Unsaved description");
+    expect(initialClient.get).toHaveBeenCalledOnce();
+    expect(replacementClient.get).not.toHaveBeenCalled();
+  });
 });
 
 function createClient(

@@ -1,50 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import {
+  productModerationSnapshotSchema,
+  type ProductModerationSnapshot,
+} from "@/features/seller/product-moderation-snapshot.types";
 import type { Database, Json } from "@/lib/supabase/types";
-
-const descriptionSchema = z
-  .object({
-    language: z.enum(["pl", "en", "de", "vi"]),
-    descriptionText: z.string(),
-    source: z.enum(["human", "model"]),
-    factsRevision: z.number().int().positive().nullable(),
-    provider: z.string().nullable(),
-    model: z.string().nullable(),
-    pipelineVersion: z.string().nullable(),
-    generatedAt: z.string().nullable(),
-    updatedAt: z.string().nullable().optional(),
-  })
-  .strict();
-
-const snapshotSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    productId: z.string().uuid(),
-    sellerId: z.string().uuid(),
-    productCode: z.string().nullable(),
-    productCodeInput: z.unknown().nullable(),
-    title: z.string(),
-    titleSource: z.enum(["human", "model"]).nullable(),
-    categoryId: z.string().uuid().nullable(),
-    audiences: z.array(z.enum(["women", "men", "kids"])),
-    descriptions: z.array(descriptionSchema),
-    facts: z
-      .object({
-        factsRevision: z.number().int().positive(),
-        facts: z.unknown(),
-      })
-      .strict()
-      .nullable(),
-    minimumOrder: z.number().int().nullable(),
-    packSize: z.string().nullable(),
-    price: z.number().nullable(),
-    currency: z.string(),
-    stock: z.enum(["in_stock", "low_stock", "out_of_stock", "made_to_order"]),
-    imageIds: z.array(z.string().uuid()),
-    coverImageId: z.string().uuid().nullable(),
-  })
-  .strict();
 
 const editStateRowSchema = z.object({
   product_id: z.string().uuid(),
@@ -53,7 +14,7 @@ const editStateRowSchema = z.object({
   revision: z.number().int().positive(),
   editable: z.boolean(),
   working_copy: z.boolean(),
-  snapshot_json: snapshotSchema,
+  snapshot_json: productModerationSnapshotSchema,
 });
 
 export type ProductModerationEditState = {
@@ -63,7 +24,7 @@ export type ProductModerationEditState = {
   revision: number;
   editable: boolean;
   workingCopy: boolean;
-  snapshot: z.infer<typeof snapshotSchema>;
+  snapshot: ProductModerationSnapshot;
 };
 
 export async function readProductModerationEditState(

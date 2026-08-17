@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 \ir helpers/approved_seller.inc
 
-SELECT plan(21);
+SELECT plan(25);
 
 INSERT INTO public.sellers (id, slug, name, company_code)
 VALUES (
@@ -177,6 +177,39 @@ SET status = 'published',
     active_moderation_submission_id = NULL
 WHERE id = (SELECT product_draft_id FROM qa_product);
 SET LOCAL session_replication_role = origin;
+SELECT set_config('bazoria.product_moderation_begin_edit_ids', '', true);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.read_product_moderation_edit_state(
+      (SELECT product_draft_id FROM qa_product),
+      '40d3a000-0000-4000-8000-000000000001'
+    )
+  ),
+  0,
+  'the published edit-state read is passive before Begin edit'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.product_moderation_working_copies
+    WHERE product_id = (SELECT product_draft_id FROM qa_product)
+  ),
+  0,
+  'the published edit-state read does not initialize a working copy'
+);
+SELECT throws_ok(
+  $$
+    SELECT * FROM public.ensure_product_moderation_working_copy(
+      (SELECT product_draft_id FROM qa_product),
+      '40d3a000-0000-4000-8000-000000000001'
+    )
+  $$,
+  '55000',
+  'product_moderation_product_not_editable',
+  'the generic initializer cannot bypass deliberate Begin edit'
+);
 
 CREATE TEMP TABLE published_begin AS
 SELECT * FROM public.begin_product_moderation_editing(
@@ -267,6 +300,17 @@ SET status = 'archived'
 WHERE id = (SELECT product_draft_id FROM qa_product);
 SET LOCAL session_replication_role = origin;
 
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.read_product_moderation_edit_state(
+      (SELECT product_draft_id FROM qa_product),
+      '40d3a000-0000-4000-8000-000000000001'
+    )
+  ),
+  0,
+  'the archived edit-state read stays passive until Restore'
+);
 SELECT throws_ok(
   $$
     SELECT * FROM public.ensure_product_moderation_working_copy(

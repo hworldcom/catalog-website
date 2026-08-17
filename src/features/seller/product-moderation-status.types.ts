@@ -2,7 +2,7 @@ import type {
   ProductDraftImageDeliveryErrorCode,
   ProductDraftImageDeliveryStatus,
 } from "@/features/admin/server/product-draft-image-delivery.types";
-import type { Json } from "@/lib/supabase/types";
+import type { ProductModerationSnapshot } from "./product-moderation-snapshot.types";
 
 export type ProductPublicState = "draft" | "published" | "archived";
 export type ProductModerationReviewStatus =
@@ -79,7 +79,7 @@ export type ProductModerationSubmittedImage = {
 export type ProductModerationSubmittedRevision = {
   submissionId: string;
   snapshotSchemaVersion: 1;
-  snapshot: Json;
+  snapshot: ProductModerationSnapshot;
   images: ProductModerationSubmittedImage[];
 };
 

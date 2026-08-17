@@ -225,7 +225,7 @@ SELECT is(
   'a completed run cannot be claimed again'
 );
 
-SELECT count(*) FROM public.ensure_product_moderation_working_copy(
+SELECT count(*) FROM public.begin_product_moderation_editing(
   (SELECT product_draft_id FROM qa_product),
   '40c2a000-0000-4000-8000-000000000001'
 );

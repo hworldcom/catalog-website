@@ -20,5 +20,6 @@ export const generateMyProductDraftDescriptions = createServerFn({ method: "POST
     return generateProductDraftDescriptionsForCurrentSeller(
       context as AuthenticatedContext,
       data.productDraftId,
+      data.expectedModerationRevision,
     );
   });

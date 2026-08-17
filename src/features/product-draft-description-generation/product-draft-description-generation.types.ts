@@ -49,6 +49,7 @@ export const productDescriptionGenerationWithoutTitleOutputSchema = z
 const generationInputSchema = z
   .object({
     productDraftId: z.string().uuid(),
+    expectedModerationRevision: z.number().int().positive(),
   })
   .strict();
 

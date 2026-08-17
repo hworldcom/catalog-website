@@ -182,10 +182,12 @@ export const ProductDraftDescriptionEditor = forwardRef<
   const snapshotRef = useRef(snapshot);
   const formRef = useRef(form);
   const touchedRef = useRef(touched);
+  const clientRef = useRef(client);
 
   snapshotRef.current = snapshot;
   formRef.current = form;
   touchedRef.current = touched;
+  clientRef.current = client;
 
   const applySnapshot = useCallback(
     (next: ProductDraftDescriptionSnapshot, preserveDirty: boolean) => {
@@ -217,7 +219,7 @@ export const ProductDraftDescriptionEditor = forwardRef<
 
   const refresh = useCallback(async () => {
     try {
-      const next = await client.get(productDraftId);
+      const next = await clientRef.current.get(productDraftId);
       setLoadError(null);
       applySnapshot(next, true);
       onReadStateChange?.({ loading: false, available: true });
@@ -227,7 +229,7 @@ export const ProductDraftDescriptionEditor = forwardRef<
       onReadStateChange?.({ loading: false, available: false });
       throw error;
     }
-  }, [applySnapshot, client, onReadStateChange, productDraftId]);
+  }, [applySnapshot, onReadStateChange, productDraftId]);
 
   useImperativeHandle(
     ref,
@@ -253,7 +255,7 @@ export const ProductDraftDescriptionEditor = forwardRef<
     setSaved(false);
     onReadStateChange?.({ loading: true, available: false });
 
-    void client
+    void clientRef.current
       .get(productDraftId)
       .then((next) => {
         if (cancelled) return;
@@ -272,7 +274,7 @@ export const ProductDraftDescriptionEditor = forwardRef<
     return () => {
       cancelled = true;
     };
-  }, [applySnapshot, client, loadRequest, onReadStateChange, productDraftId]);
+  }, [applySnapshot, loadRequest, onReadStateChange, productDraftId]);
 
   const patch = useMemo(
     () => buildDescriptionPatch(snapshot, form, touched),
@@ -309,7 +311,7 @@ export const ProductDraftDescriptionEditor = forwardRef<
     setSaveError(null);
     setSaved(false);
     try {
-      const nextSnapshot = await client.update(
+      const nextSnapshot = await clientRef.current.update(
         productDraftId,
         normalizedPatch,
         snapshot.moderationRevision,
@@ -321,7 +323,7 @@ export const ProductDraftDescriptionEditor = forwardRef<
       setSaveError(descriptionErrorMessage(error));
       if (descriptionErrorCode(error) === "product_draft_description_not_editable") {
         try {
-          applySnapshot(await client.get(productDraftId), false);
+          applySnapshot(await clientRef.current.get(productDraftId), false);
         } catch {
           // Keep the stable update error if the canonical refresh also fails.
         }

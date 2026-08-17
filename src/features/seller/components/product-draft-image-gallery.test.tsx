@@ -226,6 +226,27 @@ describe("ProductDraftImageGallery", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it("uses native activation for the visually hidden add-pictures input", () => {
+    const view = render(
+      <ProductDraftImageGallery
+        initialGallery={gallery([])}
+        productTitle="Cotton shirt"
+        refresh={vi.fn(async () => gallery([]))}
+        productDraftId={uuid(1)}
+        imageSourceMode="seller_upload"
+        productStatus="draft"
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Add pictures" });
+    const input = view.container.querySelector<HTMLInputElement>('input[type="file"][multiple]')!;
+
+    expect(trigger.tagName).toBe("LABEL");
+    expect(trigger).toHaveAttribute("for", input.id);
+    expect(input).toHaveClass("sr-only");
+    expect(input).not.toHaveClass("hidden");
+  });
+
   it("uses the cleanup-only operation for a failed upload cleanup", async () => {
     const cleanupImage = {
       ...availableImage(firstImageId, 0, false),

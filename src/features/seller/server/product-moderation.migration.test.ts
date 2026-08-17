@@ -26,6 +26,10 @@ const sellerActionsMigrationPath = resolve(
   process.cwd(),
   "supabase/migrations/20260816140000_product_moderation_seller_actions.sql",
 );
+const editorModesMigrationPath = resolve(
+  process.cwd(),
+  "supabase/migrations/20260816150000_product_moderation_editor_modes.sql",
+);
 
 describe("initial product moderation migration", () => {
   it("creates immutable normalized submissions and product pointers", async () => {
@@ -175,5 +179,25 @@ describe("initial product moderation migration", () => {
     expect(migration).toMatch(
       /REVOKE ALL ON FUNCTION public\.read_product_moderation_action_identity\(/,
     );
+  });
+
+  it("makes private edit-state reads passive and gates working-copy initialization", async () => {
+    const migration = await readFile(editorModesMigrationPath, "utf8");
+    const passiveRead = migration.slice(
+      migration.indexOf("CREATE OR REPLACE FUNCTION public.read_product_moderation_edit_state"),
+      migration.indexOf(
+        "REVOKE ALL ON FUNCTION",
+        migration.indexOf("CREATE OR REPLACE FUNCTION public.read_product_moderation_edit_state"),
+      ),
+    );
+
+    expect(migration).toContain(
+      "CREATE OR REPLACE FUNCTION public.read_product_moderation_edit_state",
+    );
+    expect(migration).toContain("LANGUAGE plpgsql\nSTABLE");
+    expect(passiveRead).not.toContain("ensure_product_moderation_working_copy(");
+    expect(migration).toContain("bazoria.product_moderation_begin_edit_ids");
+    expect(migration).toContain("bazoria.product_moderation_restore_ids");
+    expect(migration).toContain("RAISE EXCEPTION 'product_moderation_product_not_editable'");
   });
 });

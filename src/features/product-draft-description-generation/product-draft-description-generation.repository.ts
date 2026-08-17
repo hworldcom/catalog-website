@@ -41,6 +41,7 @@ export type ProductDescriptionGenerationClaimResult =
       result:
         | "not_found"
         | "not_editable"
+        | "input_changed"
         | "category_missing"
         | "cover_missing"
         | "cover_not_ready"
@@ -65,6 +66,7 @@ export interface ProductDescriptionGenerationRepository {
   claim(
     productDraftId: string,
     expectedSellerId: string,
+    expectedModerationRevision: number,
   ): Promise<ProductDescriptionGenerationClaimResult>;
 
   finalize(input: {

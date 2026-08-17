@@ -35,7 +35,7 @@ describe("ProductModerationStatusService", () => {
       submittedRevision: {
         submissionId: uuid(2),
         snapshotSchemaVersion: 1,
-        snapshot: { title: "Submitted title" },
+        snapshot: expect.objectContaining({ title: "Submitted title" }),
         images: [
           { productDraftImageId: uuid(101), position: 0, deliveryStatus: "available" },
           { productDraftImageId: uuid(102), position: 1, deliveryStatus: "missing" },
@@ -99,6 +99,15 @@ describe("ProductModerationStatusService", () => {
         uuid(900),
       ),
     ).rejects.toMatchObject({ code: "product_moderation_status_unavailable", statusCode: 500 });
+
+    const inconsistentImages = detailRecord({
+      submitted_snapshot_json: submittedSnapshot({ imageIds: [uuid(102), uuid(101)] }),
+    });
+    await expect(
+      new ProductModerationStatusService(memoryRepository(inconsistentImages), {
+        resolve: vi.fn(),
+      }).get(uuid(1), uuid(900)),
+    ).rejects.toMatchObject({ code: "product_moderation_status_unavailable", statusCode: 500 });
   });
 });
 
@@ -138,12 +147,39 @@ function detailRecord(
     can_archive: true,
     can_restore: false,
     submitted_snapshot_schema_version: 1,
-    submitted_snapshot_json: { title: "Submitted title" },
+    submitted_snapshot_json: submittedSnapshot(),
     submitted_images: [
       { productDraftImageId: uuid(101), position: 0, isCover: true },
       { productDraftImageId: uuid(102), position: 1, isCover: false },
     ],
     ...overrides,
+  };
+}
+
+function submittedSnapshot(overrides: Partial<ReturnType<typeof baseSubmittedSnapshot>> = {}) {
+  return { ...baseSubmittedSnapshot(), ...overrides };
+}
+
+function baseSubmittedSnapshot() {
+  return {
+    schemaVersion: 1 as const,
+    productId: uuid(1),
+    sellerId: uuid(900),
+    productCode: "SEL-F-TSH-0001",
+    productCodeInput: null,
+    title: "Submitted title",
+    titleSource: "human" as const,
+    categoryId: null,
+    audiences: ["women" as const],
+    descriptions: [],
+    facts: null,
+    minimumOrder: null,
+    packSize: null,
+    price: null,
+    currency: "EUR",
+    stock: "in_stock" as const,
+    imageIds: [uuid(101), uuid(102)],
+    coverImageId: uuid(101),
   };
 }
 

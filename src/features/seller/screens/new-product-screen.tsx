@@ -44,12 +44,6 @@ export function NewProductScreen({ onSaved }: { onSaved: (id: string) => void })
       </Card>
       <ProductEditor
         initial={null}
-        galleryState={{
-          activeImageCount: 0,
-          hasDurableImages: false,
-          hasAvailableCover: false,
-          incomplete: false,
-        }}
         onSaved={(id) => {
           setSavedProductId(id);
           onSaved(id);

@@ -44,9 +44,10 @@ export class ProductDescriptionGenerationService {
   async generate(
     productDraftId: string,
     expectedSellerId: string,
+    expectedModerationRevision: number,
   ): Promise<Omit<GenerationResult, "result">> {
     const operationDeadline = Date.now() + PRODUCT_DESCRIPTION_OPERATION_TIMEOUT_MS;
-    const claim = await this.claim(productDraftId, expectedSellerId);
+    const claim = await this.claim(productDraftId, expectedSellerId, expectedModerationRevision);
     const providerResult = await this.generateWithFailureFinalization(
       productDraftId,
       expectedSellerId,
@@ -98,10 +99,15 @@ export class ProductDescriptionGenerationService {
   private async claim(
     productDraftId: string,
     expectedSellerId: string,
+    expectedModerationRevision: number,
   ): Promise<ProductDescriptionGenerationClaim> {
     let claim: Awaited<ReturnType<ProductDescriptionGenerationRepository["claim"]>>;
     try {
-      claim = await this.repository.claim(productDraftId, expectedSellerId);
+      claim = await this.repository.claim(
+        productDraftId,
+        expectedSellerId,
+        expectedModerationRevision,
+      );
     } catch (error) {
       throw unavailable(error);
     }
@@ -109,6 +115,13 @@ export class ProductDescriptionGenerationService {
     if (claim.result === "claimed") return claim;
     if (claim.result === "not_found") throw productDraftNotFound();
     if (claim.result === "not_editable") throw productDraftNotEditable();
+    if (claim.result === "input_changed") {
+      throw generationError(
+        409,
+        "product_description_generation_input_changed",
+        "The ProductDraft changed before description generation started.",
+      );
+    }
     if (claim.result === "category_missing") {
       throw generationError(
         409,

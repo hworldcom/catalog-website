@@ -59,6 +59,7 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
   async claim(
     productDraftId: string,
     expectedSellerId: string,
+    expectedModerationRevision: number,
   ): Promise<ProductDescriptionGenerationClaimResult> {
     const editState = await readProductModerationEditState(
       this.database,
@@ -67,6 +68,7 @@ export class SupabaseProductDraftDescriptionGenerationRepository implements Prod
     );
     if (!editState) return { result: "not_found" };
     if (!editState.editable) return { result: "not_editable" };
+    if (editState.revision !== expectedModerationRevision) return { result: "input_changed" };
     const response = editState.workingCopy
       ? await this.database.rpc(
           "claim_product_moderation_working_description_generation" as never,

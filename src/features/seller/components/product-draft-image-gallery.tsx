@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
@@ -12,8 +12,10 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { createBrowserRandomUuid } from "@/lib/browser-random-uuid";
 import { t, tr } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase/client";
+import type { ProductModerationMutationCoordinator } from "../product-moderation-mutation-coordinator";
 
 import type {
   SellerProductDraftGallery,
@@ -166,6 +168,8 @@ export type ProductDraftImageGalleryProps = {
   moderationEditable?: boolean;
   disabled?: boolean;
   onGalleryChange?(gallery: SellerProductDraftGallery): void;
+  onMutationStateChange?(state: { active: boolean; failed: boolean }): void;
+  mutationCoordinator?: ProductModerationMutationCoordinator;
 };
 
 export function ProductDraftImageGallery({
@@ -178,6 +182,8 @@ export function ProductDraftImageGallery({
   moderationEditable,
   disabled = false,
   onGalleryChange,
+  onMutationStateChange,
+  mutationCoordinator,
 }: ProductDraftImageGalleryProps) {
   const [gallery, setGallery] = useState(initialGallery);
   const galleryRef = useRef(initialGallery);
@@ -315,6 +321,8 @@ export function ProductDraftImageGallery({
               gallery={gallery}
               title={title}
               disabled={disabled}
+              mutationCoordinator={mutationCoordinator}
+              onMutationStateChange={onMutationStateChange}
               refresh={async () => {
                 const nextGallery = await refresh();
                 if (nextGallery.status !== "available") {
@@ -423,6 +431,8 @@ function EditableGallery({
   onLoad,
   onError,
   onOpen,
+  mutationCoordinator,
+  onMutationStateChange,
 }: {
   productDraftId: string;
   gallery: SellerProductDraftGallery;
@@ -433,16 +443,20 @@ function EditableGallery({
   onLoad(imageId: string): void;
   onError(imageId: string): void;
   onOpen(imageId: string, trigger: HTMLButtonElement): void;
+  mutationCoordinator?: ProductModerationMutationCoordinator;
+  onMutationStateChange?(state: { active: boolean; failed: boolean }): void;
 }) {
   const prepare = useServerFn(prepareMyProductDraftImageUploads);
   const finalize = useServerFn(finalizeMyProductDraftImageUploads);
   const updateGallery = useServerFn(updateMyProductDraftImageGallery);
   const removeImage = useServerFn(removeMyProductDraftImage);
   const retryCleanup = useServerFn(retryMyProductDraftImageCleanup);
+  const addInputId = useId();
   const addInputRef = useRef<HTMLInputElement>(null);
   const retryInputRef = useRef<HTMLInputElement>(null);
   const retryImageRef = useRef<SellerProductDraftGalleryImage | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mutationFailed, setMutationFailed] = useState(false);
   const [uploads, setUploads] = useState<BrowserUpload[]>([]);
 
   const sellerImages = [...gallery.images].sort(
@@ -451,8 +465,19 @@ function EditableGallery({
   const availableImages = sellerImages.filter((image) => image.durableStatus === "available");
   const activeCount = sellerImages.filter((image) => image.durableStatus !== "deleting").length;
   const galleryIncomplete = sellerImages.some((image) => image.durableStatus !== "available");
-  const controlsDisabled = disabled || busy || gallery.status !== "available";
+  const controlsDisabled =
+    disabled || busy || mutationCoordinator?.busy || gallery.status !== "available";
   const orderingDisabled = controlsDisabled || galleryIncomplete;
+  const addPicturesDisabled = controlsDisabled || activeCount >= PRODUCT_DRAFT_IMAGE_MAX_COUNT;
+
+  useEffect(() => {
+    onMutationStateChange?.({ active: busy, failed: mutationFailed });
+  }, [busy, mutationFailed, onMutationStateChange]);
+
+  useEffect(
+    () => () => onMutationStateChange?.({ active: false, failed: false }),
+    [onMutationStateChange],
+  );
 
   async function handleNewSelection(fileList: FileList | null) {
     const files = fileList ? [...fileList] : [];
@@ -467,7 +492,9 @@ function EditableGallery({
       toast.error(tr(S.invalidFile));
       return;
     }
-    await uploadFiles(validated.map((file) => ({ ...file, clientUploadId: crypto.randomUUID() })));
+    await uploadFiles(
+      validated.map((file) => ({ ...file, clientUploadId: createBrowserRandomUuid() })),
+    );
   }
 
   async function handleRetrySelection(fileList: FileList | null) {
@@ -491,6 +518,7 @@ function EditableGallery({
 
   async function uploadFiles(files: ValidatedUpload[]) {
     setBusy(true);
+    setMutationFailed(false);
     setUploads(
       files.map((entry) => ({
         clientUploadId: entry.clientUploadId,
@@ -499,66 +527,75 @@ function EditableGallery({
       })),
     );
     try {
-      const prepared = await prepare({
-        data: {
-          productDraftId,
-          expectedModerationRevision: gallery.moderationRevision,
-          expectedGalleryRevision: gallery.galleryRevision,
-          files: files.map((entry) => ({
-            clientUploadId: entry.clientUploadId,
-            originalFilename: entry.file.name,
-            contentType: entry.contentType,
-            sizeBytes: entry.file.size,
-          })),
-        },
-      });
-      const fileByClientId = new Map(files.map((entry) => [entry.clientUploadId, entry]));
-      const pending = prepared.images.filter((image) => image.durableStatus === "pending");
-      const completedClientIds = prepared.images
-        .filter((image) => image.durableStatus === "available")
-        .map((image) => image.clientUploadId);
-      setUploadStates(completedClientIds, "completed");
-      setUploadStates(
-        pending.map((image) => image.clientUploadId),
-        "uploading",
-      );
-
-      await runWithConcurrency(pending, BROWSER_UPLOAD_CONCURRENCY, async (image) => {
-        const entry = fileByClientId.get(image.clientUploadId);
-        if (!entry || !image.uploadPath || !image.uploadToken) return;
-        const response = await supabase.storage
-          .from(PRODUCT_DRAFT_IMAGE_BUCKET)
-          .uploadToSignedUrl(image.uploadPath, image.uploadToken, entry.file, {
-            contentType: entry.contentType,
-            upsert: false,
-          });
-        if (response.error) {
-          setUploadStates([image.clientUploadId], "failed");
-        }
-      });
-
-      setUploadStates(
-        pending.map((image) => image.clientUploadId),
-        "finalizing",
-      );
-      const finalized = await finalize({
-        data: {
-          productDraftId,
-          expectedModerationRevision: prepared.moderationRevision,
-          imageIds: prepared.images.map((image) => image.imageId),
-        },
-      });
-      const preparedByImageId = new Map(prepared.images.map((image) => [image.imageId, image]));
-      for (const image of finalized.images) {
-        const clientUploadId = preparedByImageId.get(image.imageId)?.clientUploadId;
-        if (!clientUploadId) continue;
+      const upload = async (expectedModerationRevision: number) => {
+        const prepared = await prepare({
+          data: {
+            productDraftId,
+            expectedModerationRevision,
+            expectedGalleryRevision: gallery.galleryRevision,
+            files: files.map((entry) => ({
+              clientUploadId: entry.clientUploadId,
+              originalFilename: entry.file.name,
+              contentType: entry.contentType,
+              sizeBytes: entry.file.size,
+            })),
+          },
+        });
+        const fileByClientId = new Map(files.map((entry) => [entry.clientUploadId, entry]));
+        const pending = prepared.images.filter((image) => image.durableStatus === "pending");
+        const completedClientIds = prepared.images
+          .filter((image) => image.durableStatus === "available")
+          .map((image) => image.clientUploadId);
+        setUploadStates(completedClientIds, "completed");
         setUploadStates(
-          [clientUploadId],
-          image.durableStatus === "available" ? "completed" : "failed",
+          pending.map((image) => image.clientUploadId),
+          "uploading",
         );
+
+        await runWithConcurrency(pending, BROWSER_UPLOAD_CONCURRENCY, async (image) => {
+          const entry = fileByClientId.get(image.clientUploadId);
+          if (!entry || !image.uploadPath || !image.uploadToken) return;
+          const response = await supabase.storage
+            .from(PRODUCT_DRAFT_IMAGE_BUCKET)
+            .uploadToSignedUrl(image.uploadPath, image.uploadToken, entry.file, {
+              contentType: entry.contentType,
+              upsert: false,
+            });
+          if (response.error) {
+            setUploadStates([image.clientUploadId], "failed");
+          }
+        });
+
+        setUploadStates(
+          pending.map((image) => image.clientUploadId),
+          "finalizing",
+        );
+        const finalized = await finalize({
+          data: {
+            productDraftId,
+            expectedModerationRevision: prepared.moderationRevision,
+            imageIds: prepared.images.map((image) => image.imageId),
+          },
+        });
+        const preparedByImageId = new Map(prepared.images.map((image) => [image.imageId, image]));
+        for (const image of finalized.images) {
+          const clientUploadId = preparedByImageId.get(image.imageId)?.clientUploadId;
+          if (!clientUploadId) continue;
+          setUploadStates(
+            [clientUploadId],
+            image.durableStatus === "available" ? "completed" : "failed",
+          );
+        }
+        await refresh();
+        return finalized;
+      };
+      if (mutationCoordinator) {
+        await mutationCoordinator.run(upload, (result) => result.moderationRevision);
+      } else {
+        await upload(gallery.moderationRevision);
       }
-      await refresh();
     } catch (error) {
+      setMutationFailed(true);
       setUploads((current) =>
         current.map((entry) =>
           entry.state === "completed" ? entry : { ...entry, state: "failed" },
@@ -578,12 +615,20 @@ function EditableGallery({
     );
   }
 
-  async function mutate(operation: () => Promise<unknown>) {
+  async function mutate(
+    operation: (expectedModerationRevision: number) => Promise<{ moderationRevision: number }>,
+  ) {
     setBusy(true);
+    setMutationFailed(false);
     try {
-      await operation();
+      if (mutationCoordinator) {
+        await mutationCoordinator.run(operation, (result) => result.moderationRevision);
+      } else {
+        await operation(gallery.moderationRevision);
+      }
       await refresh();
     } catch (error) {
+      setMutationFailed(true);
       await handleMutationError(error, refresh);
     } finally {
       setBusy(false);
@@ -591,11 +636,11 @@ function EditableGallery({
   }
 
   function updateOrder(nextImages: SellerProductDraftGalleryImage[], coverImageId: string) {
-    return mutate(() =>
+    return mutate((expectedModerationRevision) =>
       updateGallery({
         data: {
           productDraftId,
-          expectedModerationRevision: gallery.moderationRevision,
+          expectedModerationRevision,
           expectedGalleryRevision: gallery.galleryRevision,
           orderedAvailableImageIds: nextImages.map((image) => image.imageId),
           coverImageId,
@@ -621,12 +666,12 @@ function EditableGallery({
 
   function remove(image: SellerProductDraftGalleryImage) {
     if (!window.confirm(tr(S.removeConfirmation))) return;
-    void mutate(() =>
+    void mutate((expectedModerationRevision) =>
       removeImage({
         data: {
           productDraftId,
           imageId: image.imageId,
-          expectedModerationRevision: gallery.moderationRevision,
+          expectedModerationRevision,
           expectedGalleryRevision: gallery.galleryRevision,
         },
       }),
@@ -635,11 +680,11 @@ function EditableGallery({
 
   function recover(image: SellerProductDraftGalleryImage) {
     if (image.recoveryAction === "retry_finalize") {
-      void mutate(() =>
+      void mutate((expectedModerationRevision) =>
         finalize({
           data: {
             productDraftId,
-            expectedModerationRevision: gallery.moderationRevision,
+            expectedModerationRevision,
             imageIds: [image.imageId],
           },
         }),
@@ -652,12 +697,12 @@ function EditableGallery({
       return;
     }
     if (image.recoveryAction === "retry_cleanup" && image.durableStatus === "deleting") {
-      void mutate(() =>
+      void mutate((expectedModerationRevision) =>
         removeImage({
           data: {
             productDraftId,
             imageId: image.imageId,
-            expectedModerationRevision: gallery.moderationRevision,
+            expectedModerationRevision,
             expectedGalleryRevision: gallery.galleryRevision,
           },
         }),
@@ -665,12 +710,12 @@ function EditableGallery({
       return;
     }
     if (image.recoveryAction === "retry_cleanup") {
-      void mutate(() =>
+      void mutate((expectedModerationRevision) =>
         retryCleanup({
           data: {
             productDraftId,
             imageId: image.imageId,
-            expectedModerationRevision: gallery.moderationRevision,
+            expectedModerationRevision,
           },
         }),
       );
@@ -683,27 +728,40 @@ function EditableGallery({
         <span className="text-sm text-muted-foreground">
           {activeCount} of {PRODUCT_DRAFT_IMAGE_MAX_COUNT} {tr(S.pictures)}
         </span>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={controlsDisabled || activeCount >= PRODUCT_DRAFT_IMAGE_MAX_COUNT}
-          onClick={() => addInputRef.current?.click()}
-        >
-          {tr(S.addPictures)}
+        <Button asChild variant="outline">
+          <label
+            htmlFor={addInputId}
+            role="button"
+            tabIndex={addPicturesDisabled ? -1 : 0}
+            aria-disabled={addPicturesDisabled}
+            className={
+              addPicturesDisabled ? "pointer-events-none cursor-not-allowed opacity-50" : ""
+            }
+            onKeyDown={(event) => {
+              if (addPicturesDisabled || (event.key !== "Enter" && event.key !== " ")) return;
+              event.preventDefault();
+              addInputRef.current?.click();
+            }}
+          >
+            {tr(S.addPictures)}
+          </label>
         </Button>
         <input
+          id={addInputId}
           ref={addInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
           multiple
-          className="hidden"
+          disabled={addPicturesDisabled}
+          tabIndex={-1}
+          className="sr-only"
           onChange={(event) => void handleNewSelection(event.target.files)}
         />
         <input
           ref={retryInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          className="hidden"
+          className="sr-only"
           onChange={(event) => void handleRetrySelection(event.target.files)}
         />
       </div>

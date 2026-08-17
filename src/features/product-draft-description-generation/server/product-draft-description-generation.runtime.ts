@@ -24,6 +24,7 @@ type AuthenticatedContext = {
 export async function generateProductDraftDescriptionsForCurrentSeller(
   context: AuthenticatedContext,
   productDraftId: string,
+  expectedModerationRevision: number,
 ) {
   let sellerId: string | null;
   try {
@@ -53,5 +54,5 @@ export async function generateProductDraftDescriptionsForCurrentSeller(
     new OpenAIProductDescriptionGenerationProvider(config),
     new SupabaseProductDescriptionCoverImageGateway(coverImageConfig),
   );
-  return service.generate(productDraftId, sellerId);
+  return service.generate(productDraftId, sellerId, expectedModerationRevision);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { t, tr, type T } from "@/lib/i18n";
+import type { ProductModerationMutationCoordinator } from "@/features/seller/product-moderation-mutation-coordinator";
 
 import { getProductDraftFacts, updateProductDraftFacts } from "../product-draft-facts.functions";
 import {
@@ -163,29 +164,38 @@ export function ProductDraftFactsEditor({
   refreshRequest = 0,
   onStateChange,
   onSaved,
+  mutationCoordinator,
 }: {
   productDraftId: string;
   disabled?: boolean;
   refreshRequest?: number;
   onStateChange?: (state: ProductDraftFactsEditorState) => void;
   onSaved?: (snapshot: ProductDraftFactsSnapshot) => void;
+  mutationCoordinator?: ProductModerationMutationCoordinator;
 }) {
   const getFacts = useServerFn(getProductDraftFacts);
   const updateFacts = useServerFn(updateProductDraftFacts);
   const client = useMemo<ProductDraftFactsEditorClient>(
     () => ({
       get: (id) => getFacts({ data: { productDraftId: id } }),
-      update: (id, patch, expectedModerationRevision) =>
-        updateFacts({ data: { productDraftId: id, patch, expectedModerationRevision } }),
+      update: (id, patch, expectedModerationRevision) => {
+        const update = (expectedRevision: number) =>
+          updateFacts({
+            data: { productDraftId: id, patch, expectedModerationRevision: expectedRevision },
+          });
+        return mutationCoordinator
+          ? mutationCoordinator.run(update, (result) => result.moderationRevision)
+          : update(expectedModerationRevision);
+      },
     }),
-    [getFacts, updateFacts],
+    [getFacts, mutationCoordinator, updateFacts],
   );
 
   return (
     <ProductDraftFactsEditorView
       productDraftId={productDraftId}
       client={client}
-      disabled={disabled}
+      disabled={disabled || mutationCoordinator?.busy}
       refreshRequest={refreshRequest}
       onStateChange={onStateChange}
       onSaved={onSaved}
@@ -217,6 +227,8 @@ export function ProductDraftFactsEditorView({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadRequest, setLoadRequest] = useState(0);
+  const clientRef = useRef(client);
+  clientRef.current = client;
 
   useEffect(() => {
     let cancelled = false;
@@ -228,7 +240,7 @@ export function ProductDraftFactsEditorView({
     setSaveError(null);
     setSaveSuccess(false);
 
-    void client
+    void clientRef.current
       .get(productDraftId)
       .then((nextSnapshot) => {
         if (cancelled) return;
@@ -244,7 +256,7 @@ export function ProductDraftFactsEditorView({
     return () => {
       cancelled = true;
     };
-  }, [client, loadRequest, productDraftId, refreshRequest]);
+  }, [loadRequest, productDraftId, refreshRequest]);
 
   function replaceSnapshot(nextSnapshot: ProductDraftFactsSnapshot) {
     setSnapshot(nextSnapshot);
@@ -279,7 +291,11 @@ export function ProductDraftFactsEditorView({
     setSaveError(null);
     setSaveSuccess(false);
     try {
-      const nextSnapshot = await client.update(productDraftId, patch, snapshot.moderationRevision);
+      const nextSnapshot = await clientRef.current.update(
+        productDraftId,
+        patch,
+        snapshot.moderationRevision,
+      );
       replaceSnapshot(nextSnapshot);
       onSaved?.(nextSnapshot);
       setSaveSuccess(true);
@@ -287,7 +303,7 @@ export function ProductDraftFactsEditorView({
       setSaveError(productDraftFactsErrorMessage(error));
       if (productDraftFactsErrorCode(error) === "product_draft_facts_not_editable") {
         try {
-          replaceSnapshot(await client.get(productDraftId));
+          replaceSnapshot(await clientRef.current.get(productDraftId));
         } catch {
           // Preserve the stable update error if the refresh also fails.
         }

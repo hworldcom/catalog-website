@@ -1,5 +1,6 @@
 import type { ProductDraftImageDeliveryEngine } from "@/features/admin/server/product-draft-image-delivery.service";
 import type { ProductDraftImageDeliveryResult } from "@/features/admin/server/product-draft-image-delivery.types";
+import { productModerationSnapshotSchema } from "../product-moderation-snapshot.types";
 
 import {
   productModerationStatusNotFound,
@@ -87,11 +88,23 @@ export class ProductModerationStatusService {
     ) {
       throw new ProductModerationStatusMappingError("The submitted revision is incomplete.");
     }
+    const snapshot = productModerationSnapshotSchema.safeParse(record.submitted_snapshot_json);
+    if (
+      !snapshot.success ||
+      snapshot.data.productId !== record.id ||
+      !snapshotMatchesImages(
+        snapshot.data.imageIds,
+        snapshot.data.coverImageId,
+        record.submitted_images,
+      )
+    ) {
+      throw new ProductModerationStatusMappingError("The submitted revision snapshot is invalid.");
+    }
 
     return {
       submissionId,
       snapshotSchemaVersion: 1 as const,
-      snapshot: record.submitted_snapshot_json,
+      snapshot: snapshot.data,
       images: await this.deliverImages(record.id, record.submitted_images),
     };
   }
@@ -128,6 +141,22 @@ export class ProductModerationStatusService {
       }));
     }
   }
+}
+
+function snapshotMatchesImages(
+  snapshotImageIds: string[],
+  snapshotCoverImageId: string | null,
+  submittedImages: ProductModerationSubmittedImageRecord[],
+): boolean {
+  const orderedImages = [...submittedImages].sort((left, right) => left.position - right.position);
+  if (
+    snapshotImageIds.length !== orderedImages.length ||
+    snapshotImageIds.some((imageId, index) => imageId !== orderedImages[index]?.productDraftImageId)
+  ) {
+    return false;
+  }
+  const submittedCover = orderedImages.find((image) => image.isCover)?.productDraftImageId ?? null;
+  return snapshotCoverImageId === submittedCover;
 }
 
 function combineImages(

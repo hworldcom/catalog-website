@@ -12,8 +12,12 @@ describe("product description generation types", () => {
     expect(
       parseGenerateMyProductDraftDescriptionsInput({
         productDraftId: "00000000-0000-4000-8000-000000000001",
+        expectedModerationRevision: 4,
       }),
-    ).toEqual({ productDraftId: "00000000-0000-4000-8000-000000000001" });
+    ).toEqual({
+      productDraftId: "00000000-0000-4000-8000-000000000001",
+      expectedModerationRevision: 4,
+    });
 
     expect(() =>
       parseGenerateMyProductDraftDescriptionsInput({

@@ -266,7 +266,7 @@ SET status = 'published',
 WHERE product.id = (SELECT product_draft_id FROM qa_product);
 SET LOCAL session_replication_role = origin;
 
-SELECT count(*) FROM public.ensure_product_moderation_working_copy(
+SELECT count(*) FROM public.begin_product_moderation_editing(
   (SELECT product_draft_id FROM qa_product),
   '40c10000-0000-4000-8000-000000000001'
 );
