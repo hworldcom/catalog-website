@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { SellerProfileMediaPreview } from "@/features/seller/seller-profile-moderation.types";
+
 const mocks = vi.hoisted(() => ({
   getProfile: vi.fn(),
   listCategories: vi.fn(),
@@ -175,6 +177,26 @@ describe("seller company-code screens", () => {
     expect(screen.getByRole("button", { name: "Upload cover image" })).toBeInTheDocument();
   });
 
+  it("uses orange profile-action styling for logo and cover replacements", async () => {
+    mocks.getProfile.mockResolvedValue(
+      snapshotResult({
+        logo: mediaPreview("00000000-0000-4000-8000-000000000021"),
+        cover: mediaPreview("00000000-0000-4000-8000-000000000022"),
+      }),
+    );
+
+    renderScreen(<StorefrontScreen />);
+
+    for (const name of ["Replace logo", "Replace cover image"]) {
+      expect(await screen.findByRole("button", { name })).toHaveClass(
+        "bg-orange-600",
+        "px-4",
+        "py-2.5",
+        "text-sm",
+      );
+    }
+  });
+
   it("keeps a pending profile read-only and exposes only withdrawal", async () => {
     mocks.getProfile.mockResolvedValue(
       snapshotResult({
@@ -250,8 +272,30 @@ describe("seller company-code screens", () => {
 
     expect(await screen.findByText("Approved public profile")).toBeInTheDocument();
     expect(screen.getByText("Approved, storefront disabled")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Enable storefront" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enable storefront" })).toHaveClass("bg-emerald-600");
     expect(screen.getByRole("textbox", { name: "Business name" })).toHaveValue("QA Seller");
+  });
+
+  it("uses destructive styling for the storefront disable action", async () => {
+    const base = snapshotResult();
+    mocks.getProfile.mockResolvedValue({
+      ...base,
+      storefrontEnabled: true,
+      approvalState: "approved_storefront_enabled",
+      actions: {
+        canEdit: true,
+        canSubmit: true,
+        canWithdraw: false,
+        canEnableStorefront: false,
+        canDisableStorefront: true,
+      },
+    });
+
+    renderScreen(<StorefrontScreen />);
+
+    expect(await screen.findByRole("button", { name: "Disable storefront" })).toHaveClass(
+      "bg-destructive",
+    );
   });
 
   it("reuses a request identifier after an unknown submission outcome", async () => {
@@ -399,13 +443,8 @@ function snapshotResult(
       canEnableStorefront: boolean;
       canDisableStorefront: boolean;
     };
-    logo: {
-      assetId: string;
-      durableStatus: "available";
-      deliveryStatus: "available";
-      deliveryErrorCode: null;
-      url: string;
-    } | null;
+    logo: SellerProfileMediaPreview | null;
+    cover: SellerProfileMediaPreview | null;
   }> = {},
 ) {
   return {
@@ -427,7 +466,7 @@ function snapshotResult(
       about: null,
       establishedYear: null,
       logo: overrides.logo ?? null,
-      cover: null,
+      cover: overrides.cover ?? null,
     },
     latestSubmission: overrides.latestSubmission ?? null,
     actions: overrides.actions ?? {
@@ -437,6 +476,16 @@ function snapshotResult(
       canEnableStorefront: false,
       canDisableStorefront: false,
     },
+  };
+}
+
+function mediaPreview(assetId: string): SellerProfileMediaPreview {
+  return {
+    assetId,
+    durableStatus: "pending",
+    deliveryStatus: "pending",
+    deliveryErrorCode: null,
+    url: null,
   };
 }
 

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { LanguageSwitcher, t, tr } from "@/lib/i18n";
+import { useAdministratorNavigationContext } from "../administrator-navigation.context";
 
 const S = {
   classifierImports: t(
@@ -11,6 +12,12 @@ const S = {
     "Nhập từ bộ phân loại",
   ),
   productDrafts: t("ProductDrafts", "Szkice produktów", "Produktentwürfe", "Bản nháp sản phẩm"),
+  moderationRequests: t(
+    "Moderation requests",
+    "Prośby o moderację",
+    "Moderationsanfragen",
+    "Yêu cầu kiểm duyệt",
+  ),
   delegatedUpload: t(
     "Upload for seller",
     "Prześlij dla sprzedawcy",
@@ -27,6 +34,7 @@ const S = {
 };
 
 export function ClassifierImportShell({ children }: { children: ReactNode }) {
+  const { prototypeAdministrator } = useAdministratorNavigationContext();
   return (
     <div className="min-h-screen bg-muted/30 text-foreground">
       <header className="border-b border-border bg-background">
@@ -49,6 +57,15 @@ export function ClassifierImportShell({ children }: { children: ReactNode }) {
             >
               {tr(S.productDrafts)}
             </Link>
+            {prototypeAdministrator ? (
+              <Link
+                to="/admin/moderation"
+                search={{ reviewStatus: "pending", limit: 25 }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {tr(S.moderationRequests)}
+              </Link>
+            ) : null}
             <Link to="/seller" className="text-muted-foreground hover:text-foreground">
               {tr(S.sellerDashboard)}
             </Link>

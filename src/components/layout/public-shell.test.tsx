@@ -42,7 +42,7 @@ vi.mock("@/lib/i18n", () => ({
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
     auth: {
-      getUser: () => new Promise(() => undefined),
+      getUser: async () => ({ data: { user: null } }),
       onAuthStateChange: () => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       }),
@@ -71,6 +71,18 @@ describe("PublicShell marketplace navigation", () => {
     );
 
     expect(screen.queryByTestId("marketplace-navigation")).not.toBeInTheDocument();
+  });
+
+  it("renders the signed-out navigation action as a prominent orange button", async () => {
+    render(
+      <PublicShell marketplaceAudience="women">
+        <p>Marketplace content</p>
+      </PublicShell>,
+    );
+
+    const signIn = await screen.findByRole("link", { name: "Sign in" });
+    expect(signIn).toHaveAttribute("href", "/auth");
+    expect(signIn).toHaveClass("bg-orange-600", "border-orange-600", "text-white");
   });
 
   it("resets the logo and Home destinations to All while preserving language", () => {

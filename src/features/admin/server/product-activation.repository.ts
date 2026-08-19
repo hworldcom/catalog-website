@@ -68,6 +68,12 @@ export interface ProductActivationRepository {
     requestId: string;
     actorUserId: string;
   }): Promise<ProductActivationRecoveryResult>;
+  retryAdministratorPostSwitchCleanup(input: {
+    runId: string;
+    expectedDispatchGeneration: number;
+    requestId: string;
+    administratorUserId: string;
+  }): Promise<ProductActivationRecoveryResult>;
   claimRun(
     payload: ProductActivationDispatchPayload,
     claimTimeoutSeconds: number,
@@ -384,6 +390,26 @@ export class SupabaseProductActivationRepository implements ProductActivationRep
           p_expected_dispatch_generation: input.expectedDispatchGeneration,
           p_request_id: input.requestId,
           p_actor_user_id: input.actorUserId,
+        },
+        recoveryRowSchema,
+      ),
+    );
+  }
+
+  async retryAdministratorPostSwitchCleanup(input: {
+    runId: string;
+    expectedDispatchGeneration: number;
+    requestId: string;
+    administratorUserId: string;
+  }): Promise<ProductActivationRecoveryResult> {
+    return mapRecoveryRow(
+      await this.runSingleRow(
+        "retry_administrator_product_activation_post_switch_cleanup",
+        {
+          p_run_id: input.runId,
+          p_expected_dispatch_generation: input.expectedDispatchGeneration,
+          p_request_id: input.requestId,
+          p_administrator_user_id: input.administratorUserId,
         },
         recoveryRowSchema,
       ),

@@ -9,6 +9,7 @@ import {
   retryProductActivationCleanup,
   retryProductActivationDispatch,
   retryProductActivationRun,
+  retryAdministratorProductActivationPostSwitchCleanup,
 } from "./product-activation.service";
 import type {
   ProductActivationDispatchResult,
@@ -238,6 +239,37 @@ describe("product activation service", () => {
       dispatchGeneration: 2,
     });
   });
+
+  it("uses the administrator-only post-switch cleanup operation", async () => {
+    const repository = repositoryFixture({
+      retryAdministratorPostSwitchCleanup: vi.fn(async () =>
+        recovery({ phase: "post_switch_cleanup" }),
+      ),
+    });
+    const dispatcher = {
+      dispatch: vi.fn(async () => ({ ...dispatched(), dispatchGeneration: 2 })),
+    };
+
+    await retryAdministratorProductActivationPostSwitchCleanup({
+      authorization,
+      repository,
+      dispatcher,
+      runId: uuid(4),
+      expectedDispatchGeneration: 1,
+      requestId: uuid(8),
+    });
+
+    expect(repository.retryAdministratorPostSwitchCleanup).toHaveBeenCalledWith({
+      runId: uuid(4),
+      expectedDispatchGeneration: 1,
+      requestId: uuid(8),
+      administratorUserId: authorization.userId,
+    });
+    expect(dispatcher.dispatch).toHaveBeenCalledWith({
+      runId: uuid(4),
+      dispatchGeneration: 2,
+    });
+  });
 });
 
 function repositoryFixture(
@@ -264,6 +296,9 @@ function repositoryFixture(
     retryCleanup: vi.fn<ProductActivationRepository["retryCleanup"]>(async () =>
       recovery({ phase: "post_switch_cleanup" }),
     ),
+    retryAdministratorPostSwitchCleanup: vi.fn<
+      ProductActivationRepository["retryAdministratorPostSwitchCleanup"]
+    >(async () => recovery({ phase: "post_switch_cleanup" })),
     claimRun: vi.fn<ProductActivationRepository["claimRun"]>(async () => ({
       result: "not_found",
     })),

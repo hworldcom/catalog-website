@@ -25,6 +25,11 @@ Current status:
   classifier source context, and private signed previews;
 - the unified ProductDraft review includes shared title and structured-facts
   editors, with published and archived records rendered read-only; and
+- an allowlisted moderation queue is available at `/admin/moderation`, with
+  protected seller and product detail routes under
+  `/admin/moderation/{submissionType}/{submissionId}` for immutable comparison,
+  replay-safe decisions, backend-authorized activation recovery, and private
+  image delivery; and
 - every raw classifier-import administrator endpoint validates the Supabase
   bearer token and the server-only prototype-administrator allowlist before
   constructing its service-role runtime.
@@ -44,6 +49,16 @@ Boundaries:
   execution.
 - Cross-seller prototype administrator operations require membership in
   `BAZORIA_PROTOTYPE_ADMIN_USER_IDS`.
+- The authenticated navigation context only controls visibility of the
+  moderation link. Every moderation read independently enforces administrator
+  authorization on the server.
+- Moderation action failures cross the server boundary as stable codes. An
+  outcome-unknown write retains its exact request identifier and normalized
+  payload in component memory until the administrator retries it or completes
+  an authoritative discard-and-refresh.
+- Seller and administrator product moderation views share the generic read-only
+  refresh coordinator. Polling and credential refresh only read durable state;
+  they never initiate activation work.
 - ProductDraft index and review reads remain disabled until
   `BAZORIA_ADMIN_PRODUCT_DRAFTS_ENABLED=true` and the durable private-image
   cutover is complete.

@@ -365,7 +365,11 @@ export function StorefrontScreen() {
           {snapshot.actions.canEnableStorefront || snapshot.actions.canDisableStorefront ? (
             <button
               type="button"
-              className="w-fit border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60"
+              className={`w-fit border px-3 py-2 text-sm font-medium text-white disabled:opacity-60 ${
+                snapshot.actions.canEnableStorefront
+                  ? "border-emerald-600 bg-emerald-600 hover:bg-emerald-700"
+                  : "border-destructive bg-destructive hover:bg-destructive/90"
+              }`}
               disabled={busyAction !== null}
               onClick={() => void updateStorefront(snapshot.actions.canEnableStorefront)}
             >

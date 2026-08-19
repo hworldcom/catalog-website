@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
 
+import { useAdministratorNavigationContext } from "@/features/admin/administrator-navigation.context";
 import { t, tr } from "@/lib/i18n";
 
 export function SideNav({ sellerSlug }: { sellerSlug: string }) {
+  const { prototypeAdministrator } = useAdministratorNavigationContext();
   const link =
     "block border border-transparent px-3 py-2 text-sm text-muted-foreground hover:border-border hover:text-foreground";
   const active = "border-border bg-card text-foreground";
@@ -44,6 +46,23 @@ export function SideNav({ sellerSlug }: { sellerSlug: string }) {
       <Link to="/seller/leads" className={link} activeProps={{ className: `${link} ${active}` }}>
         Leads
       </Link>
+      {prototypeAdministrator ? (
+        <Link
+          to="/admin/moderation"
+          search={{ reviewStatus: "pending", limit: 25 }}
+          className={link}
+          activeProps={{ className: `${link} ${active}` }}
+        >
+          {tr(
+            t(
+              "Moderation requests",
+              "Prośby o moderację",
+              "Moderationsanfragen",
+              "Yêu cầu kiểm duyệt",
+            ),
+          )}
+        </Link>
+      ) : null}
       <a href={`/s/${sellerSlug}`} target="_blank" rel="noreferrer" className={link}>
         View public storefront ↗
       </a>

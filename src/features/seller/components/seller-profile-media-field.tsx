@@ -130,7 +130,11 @@ export function SellerProfileMediaField({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-60"
+          className={
+            assetId
+              ? "border border-orange-600 bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+              : "border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-60"
+          }
           disabled={disabled || busy}
           onClick={() => inputRef.current?.click()}
         >

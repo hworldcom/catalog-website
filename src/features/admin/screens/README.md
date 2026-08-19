@@ -29,3 +29,24 @@ The ProductDraft index at `/admin/product-drafts` provides:
 The unified `/admin/product-drafts/{productDraftId}` review destination belongs
 to ticket `0026e2`. Ticket `0026d` owns the index and its navigation contract,
 not the destination screen.
+
+The read-only moderation queue at `/admin/moderation` provides:
+
+- mixed seller and product submission cards for allowlisted administrators;
+- deterministic submission, review, activation, seller, and page-size filters;
+- stable forward-cursor pagination and complete detail return links;
+- bounded private previews with row-local placeholders; and
+- deliberate refresh without polling or moderation side effects.
+
+The moderation detail route at
+`/admin/moderation/{submissionType}/{submissionId}` provides:
+
+- immutable proposed-versus-approved seller and product comparisons;
+- current taxonomy labels with immutable category-identifier fallback;
+- private seller media and product galleries with row-local placeholders;
+- confirmation and bounded-reason dialogs for administrator decisions;
+- exact in-memory request replay after an outcome-unknown write;
+- backend-authorized dispatch, activation, and public-image cleanup retries;
+- read-only active-state polling plus signed-image expiry and failure refresh;
+  and
+- complete validated return navigation to the moderation queue.

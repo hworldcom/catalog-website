@@ -218,6 +218,8 @@ function repositoryFixture(
     retryActivation: vi.fn<ProductActivationRepository["retryActivation"]>(),
     requestAbandonment: vi.fn<ProductActivationRepository["requestAbandonment"]>(),
     retryCleanup: vi.fn<ProductActivationRepository["retryCleanup"]>(),
+    retryAdministratorPostSwitchCleanup:
+      vi.fn<ProductActivationRepository["retryAdministratorPostSwitchCleanup"]>(),
     claimRun: vi.fn<ProductActivationRepository["claimRun"]>(async () => ({
       result: "not_found",
     })),

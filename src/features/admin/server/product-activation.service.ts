@@ -133,6 +133,30 @@ export async function retryProductActivationCleanup(input: {
   };
 }
 
+export async function retryAdministratorProductActivationPostSwitchCleanup(input: {
+  authorization: PrototypeAdministratorRequestContext;
+  repository: ProductActivationRepository;
+  dispatcher: ProductActivationDispatcher;
+  runId: string;
+  expectedDispatchGeneration: number;
+  requestId: string;
+}): Promise<{
+  recovery: ProductActivationRecoveryResult;
+  dispatch: ProductActivationDispatchResult | null;
+}> {
+  assertAdministrator(input.authorization);
+  const recovery = await input.repository.retryAdministratorPostSwitchCleanup({
+    runId: input.runId,
+    expectedDispatchGeneration: input.expectedDispatchGeneration,
+    requestId: input.requestId,
+    administratorUserId: input.authorization.userId,
+  });
+  return {
+    recovery,
+    dispatch: await dispatchRecoveryWhenRequired(input.dispatcher, recovery),
+  };
+}
+
 async function dispatchWhenRequired(
   dispatcher: ProductActivationDispatcher,
   decision: ProductModerationDecisionResult,

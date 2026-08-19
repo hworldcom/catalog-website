@@ -214,6 +214,45 @@ describe("SupabaseProductActivationRepository", () => {
       p_administrator_user_id: uuid(7),
     });
   });
+
+  it("maps administrator post-switch cleanup through its service-role operation", async () => {
+    const rpc = vi.fn(async () => ({
+      data: [
+        {
+          result: "recorded",
+          run_id: uuid(5),
+          product_id: uuid(2),
+          seller_id: uuid(3),
+          phase: "post_switch_cleanup",
+          status: "pending",
+          dispatch_generation: 4,
+          dispatch_status: "pending",
+          dispatch_required: true,
+        },
+      ],
+      error: null,
+    }));
+    const repository = new SupabaseProductActivationRepository({ rpc });
+
+    await expect(
+      repository.retryAdministratorPostSwitchCleanup({
+        runId: uuid(5),
+        expectedDispatchGeneration: 3,
+        requestId: uuid(6),
+        administratorUserId: uuid(7),
+      }),
+    ).resolves.toMatchObject({
+      phase: "post_switch_cleanup",
+      dispatchGeneration: 4,
+      dispatchRequired: true,
+    });
+    expect(rpc).toHaveBeenCalledWith("retry_administrator_product_activation_post_switch_cleanup", {
+      p_run_id: uuid(5),
+      p_expected_dispatch_generation: 3,
+      p_request_id: uuid(6),
+      p_administrator_user_id: uuid(7),
+    });
+  });
 });
 
 function uuid(value: number): string {

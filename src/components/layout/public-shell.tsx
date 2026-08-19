@@ -87,7 +87,7 @@ function TopNav({ marketplaceAudience }: { marketplaceAudience?: PublicAudience 
           ) : signedIn === false ? (
             <Link
               to="/auth"
-              className="border border-border px-3 py-1.5 text-foreground hover:border-primary"
+              className="border border-orange-600 bg-orange-600 px-3 py-1.5 font-medium text-white hover:border-orange-700 hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
             >
               {tr(S.signIn)}
             </Link>

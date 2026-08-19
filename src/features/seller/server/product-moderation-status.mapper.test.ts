@@ -1,10 +1,31 @@
 import { describe, expect, it } from "vitest";
 
 import type { ProductActivationDisplayState } from "../product-moderation-status.types";
-import { mapProductModerationStatus } from "./product-moderation-status.mapper";
+import {
+  mapProductActivationStatus,
+  mapProductModerationStatus,
+} from "./product-moderation-status.mapper";
 import type { ProductModerationStatusRecord } from "./product-moderation-status.repository";
 
 describe("mapProductModerationStatus", () => {
+  it("exposes the shared activation-only mapping for administrator reads", () => {
+    expect(
+      mapProductActivationStatus({
+        activation_run_id: uuid(3),
+        activation_phase: "post_switch_cleanup",
+        activation_status: "cleanup_required",
+        activation_dispatch_status: "dispatched",
+        activation_dispatch_generation: 4,
+        activation_dispatch_error_code: null,
+        activation_error_code: "product_publication_cleanup_failed",
+      }),
+    ).toMatchObject({
+      runId: uuid(3),
+      displayState: "public_cleanup_required",
+      dispatchGeneration: 4,
+    });
+  });
+
   it.each([
     ["activation", "pending", "pending", "waiting_for_dispatch"],
     ["activation", "pending", "failed", "dispatch_failed"],

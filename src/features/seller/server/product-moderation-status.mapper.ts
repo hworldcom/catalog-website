@@ -6,6 +6,17 @@ import type {
 } from "../product-moderation-status.types";
 import type { ProductModerationStatusRecord } from "./product-moderation-status.repository";
 
+export type ProductActivationStatusRecord = Pick<
+  ProductModerationStatusRecord,
+  | "activation_run_id"
+  | "activation_phase"
+  | "activation_status"
+  | "activation_dispatch_status"
+  | "activation_dispatch_generation"
+  | "activation_dispatch_error_code"
+  | "activation_error_code"
+>;
+
 export class ProductModerationStatusMappingError extends Error {
   constructor(message: string) {
     super(message);
@@ -17,7 +28,7 @@ export function mapProductModerationStatus(
   record: ProductModerationStatusRecord,
 ): ProductModerationStatusCommon {
   const review = mapReview(record);
-  const activation = mapActivation(record);
+  const activation = mapProductActivationStatus(record);
 
   if (review?.status === "approved" && !activation) {
     throw invalidState("An approved review has no matching activation run.");
@@ -78,8 +89,8 @@ function mapReview(record: ProductModerationStatusRecord): ProductModerationRevi
   };
 }
 
-function mapActivation(
-  record: ProductModerationStatusRecord,
+export function mapProductActivationStatus(
+  record: ProductActivationStatusRecord,
 ): ProductActivationStatusSnapshot | null {
   if (record.activation_run_id === null) {
     if (
@@ -115,7 +126,7 @@ function mapActivation(
 }
 
 function activationDisplayState(
-  record: ProductModerationStatusRecord,
+  record: ProductActivationStatusRecord,
 ): ProductActivationDisplayState {
   if (record.activation_status === "completed") return "completed";
   if (record.activation_status === "abandoned") return "abandoned";
