@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { readOnlyModerationImageCredentialIdentity } from "@/features/moderation/read-only-moderation-refresh";
 import { t, tr, useLang, type Lang } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 import type {
   AdministratorProductModerationDetail,
@@ -75,6 +76,12 @@ const S = {
   establishedYear: t("Established", "Rok założenia", "Gegründet", "Năm thành lập"),
   logo: t("Logo", "Logo", "Logo", "Logo"),
   cover: t("Cover", "Okładka", "Titelbild", "Ảnh bìa"),
+  mediaLoading: t(
+    "Loading media",
+    "Ładowanie mediów",
+    "Medium wird geladen",
+    "Đang tải phương tiện",
+  ),
   mediaPending: t("Media pending", "Media oczekują", "Medium ausstehend", "Phương tiện đang chờ"),
   mediaFailed: t("Media failed", "Błąd mediów", "Medium fehlgeschlagen", "Phương tiện lỗi"),
   mediaMissing: t("Media missing", "Brak mediów", "Medium fehlt", "Thiếu phương tiện"),
@@ -146,6 +153,10 @@ export function AdministratorSellerReviewDetails({
   detail: AdministratorSellerModerationDetail;
 }) {
   const [failedAssets, setFailedAssets] = useState<Set<string>>(new Set());
+  const handleAssetError = useCallback(
+    (assetId: string) => setFailedAssets((current) => new Set(current).add(assetId)),
+    [],
+  );
   const historical = isHistorical(
     detail.currentApprovedReference,
     { submissionId: detail.request.submissionId, revision: detail.request.revision },
@@ -161,7 +172,7 @@ export function AdministratorSellerReviewDetails({
           snapshot={detail.proposed.snapshot}
           assets={detail.proposed.assets}
           failedAssets={failedAssets}
-          onAssetError={(assetId) => setFailedAssets((current) => new Set(current).add(assetId))}
+          onAssetError={handleAssetError}
         />
         {detail.comparisonBaseline ? (
           <SellerSnapshotCard
@@ -169,7 +180,7 @@ export function AdministratorSellerReviewDetails({
             snapshot={detail.comparisonBaseline.snapshot}
             assets={detail.comparisonBaseline.assets}
             failedAssets={failedAssets}
-            onAssetError={(assetId) => setFailedAssets((current) => new Set(current).add(assetId))}
+            onAssetError={handleAssetError}
           />
         ) : (
           <NoBaselineCard />
@@ -472,20 +483,63 @@ function SellerAsset({
   failed: boolean;
   onError(assetId: string): void;
 }) {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const assetId = asset?.assetId ?? null;
+  const deliveryUrl = asset?.deliveryStatus === "available" ? asset.url : null;
+
+  useEffect(() => {
+    let currentObjectUrl: string | null = null;
+    const controller = new AbortController();
+    setObjectUrl(null);
+    if (!assetId || !deliveryUrl || failed) return () => controller.abort();
+
+    void (async () => {
+      try {
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        if (!token) throw new Error("authentication_required");
+        const response = await fetch(deliveryUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("seller_profile_image_not_found");
+        currentObjectUrl = URL.createObjectURL(await response.blob());
+        setObjectUrl(currentObjectUrl);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        onError(assetId);
+      }
+    })();
+
+    return () => {
+      controller.abort();
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    };
+  }, [assetId, deliveryUrl, failed, onError]);
+
   return (
     <div>
       <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </div>
-      {asset?.deliveryStatus === "available" && asset.url && !failed ? (
+      {asset?.deliveryStatus === "available" && objectUrl && !failed ? (
         <img
-          src={asset.url}
+          src={objectUrl}
           alt={label}
           className="aspect-video w-full border border-border object-cover"
           onError={() => onError(asset.assetId)}
         />
       ) : (
-        <ImagePlaceholder status={failed ? "unavailable" : (asset?.deliveryStatus ?? "missing")} />
+        <ImagePlaceholder
+          status={
+            failed
+              ? "unavailable"
+              : asset?.deliveryStatus === "available"
+                ? "loading"
+                : (asset?.deliveryStatus ?? "missing")
+          }
+        />
       )}
     </div>
   );
@@ -493,13 +547,15 @@ function SellerAsset({
 
 function ImagePlaceholder({ status }: { status: string }) {
   const label =
-    status === "pending"
-      ? S.imagePending
-      : status === "failed"
-        ? S.imageFailed
-        : status === "missing"
-          ? S.imageMissing
-          : S.imageUnavailable;
+    status === "loading"
+      ? S.mediaLoading
+      : status === "pending"
+        ? S.imagePending
+        : status === "failed"
+          ? S.imageFailed
+          : status === "missing"
+            ? S.imageMissing
+            : S.imageUnavailable;
   return (
     <div className="flex aspect-video items-center justify-center bg-muted p-3 text-center text-xs text-muted-foreground">
       {tr(label)}
