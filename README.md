@@ -110,6 +110,42 @@ npm run worker:classifier-import
 The classifier's optional multimodal worker is a separate classifier process;
 see the cross-repository start guide.
 
+## Deployed Product Activation Worker
+
+User Acceptance Testing and production dispatch product activation through a
+private, standalone worker service. It starts independently from Bazoria Web
+and exposes only `GET /health` and the authenticated internal Cloud Tasks
+endpoint:
+
+```bash
+npm run worker:product-activation
+```
+
+The worker uses the publication image-count, concurrency, item-timeout,
+worker-deadline, and claim-timeout settings plus the server-side Supabase
+credentials, task audience, task-caller service account, and Cloud Run `PORT`.
+It does not need queue creation credentials and does not serve browser routes.
+Local development continues to use the in-process product activation
+dispatcher; the standalone command exists for the private deployed service and
+deployment smoke tests.
+
+## Deployed Product Activation Dispatch Reconciliation
+
+User Acceptance Testing and production run one bounded server-only pass to
+recover activation runs committed before their deterministic Cloud Task was
+confirmed:
+
+```bash
+npm run reconcile:product-activation-dispatches
+```
+
+The command requires cloud dispatch mode, the same Cloud Tasks and server-side
+Supabase configuration as the website dispatcher, and the reconciliation batch
+size and deadline settings from `.env.example`. It dispatches sequentially,
+never executes activation work itself, and exits nonzero if selected work
+remains pending or a dispatch failed. It is intended for the scheduled Cloud
+Run Job owned by deployment ticket `0038`; browser reads never run it.
+
 ## UAT Database Migrations
 
 Applying migrations to hosted UAT is a controlled engineering operation, not a

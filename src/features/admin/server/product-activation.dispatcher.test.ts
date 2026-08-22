@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ProductActivationConfig } from "./product-activation.config";
+import type { LocalProductActivationConfig } from "./product-activation.config";
 import {
   LocalProductActivationDispatcher,
   type LocalProductActivationLog,
@@ -246,8 +246,9 @@ function repositoryFixture(
   };
 }
 
-function config(): ProductActivationConfig {
+function config(): LocalProductActivationConfig {
   return {
+    deploymentEnvironment: "local",
     dispatchMode: "local",
     maximumImageCount: 20,
     itemConcurrency: 3,

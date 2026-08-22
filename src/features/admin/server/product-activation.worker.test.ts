@@ -123,27 +123,30 @@ describe("ProductActivationWorker", () => {
     expect(storage.read).not.toHaveBeenCalled();
   });
 
-  it("verifies and deletes cleanup-owned public objects before completing cleanup", async () => {
-    const repository = repositoryFixture({
-      claimRun: vi.fn(async () => cleanupClaimed()),
-      finalizeCleanup: vi.fn(async () => "completed"),
-    });
-    const storage = storageFixture({ read: vi.fn(async () => object([1, 2, 3])) });
-    const worker = new ProductActivationWorker(repository, storage, config());
+  it.each(["pre_switch_cleanup", "post_switch_cleanup"] as const)(
+    "verifies and deletes %s-owned public objects before completing cleanup",
+    async (phase) => {
+      const repository = repositoryFixture({
+        claimRun: vi.fn(async () => cleanupClaimed(phase)),
+        finalizeCleanup: vi.fn(async () => "completed"),
+      });
+      const storage = storageFixture({ read: vi.fn(async () => object([1, 2, 3])) });
+      const worker = new ProductActivationWorker(repository, storage, config());
 
-    await expect(worker.run(payload)).resolves.toMatchObject({ status: "completed", ...payload });
-    expect(storage.deletePublicObject).toHaveBeenCalledWith(
-      "products/cleanup.jpg",
-      expect.any(AbortSignal),
-    );
-    expect(repository.recordCleanupItemResult).toHaveBeenCalledWith(
-      expect.objectContaining({
-        destinationKey: "products/cleanup.jpg",
-        result: "completed",
-        errorCode: null,
-      }),
-    );
-  });
+      await expect(worker.run(payload)).resolves.toMatchObject({ status: "completed", ...payload });
+      expect(storage.deletePublicObject).toHaveBeenCalledWith(
+        "products/cleanup.jpg",
+        expect.any(AbortSignal),
+      );
+      expect(repository.recordCleanupItemResult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          destinationKey: "products/cleanup.jpg",
+          result: "completed",
+          errorCode: null,
+        }),
+      );
+    },
+  );
 
   it("preserves a mismatched cleanup object and records a durable conflict", async () => {
     const repository = repositoryFixture({
@@ -259,10 +262,12 @@ function claimed(itemOverrides: Partial<ProductActivationItem> = {}): ClaimedPro
   };
 }
 
-function cleanupClaimed(): ClaimedProductActivationCleanup {
+function cleanupClaimed(
+  phase: ClaimedProductActivationCleanup["phase"] = "post_switch_cleanup",
+): ClaimedProductActivationCleanup {
   return {
     result: "claimed",
-    phase: "post_switch_cleanup",
+    phase,
     ...payload,
     submissionId: uuid(2),
     productId: uuid(3),
@@ -291,6 +296,7 @@ function object(bytes: number[]): ProductPublicationObject {
 
 function config(): ProductActivationConfig {
   return {
+    deploymentEnvironment: "local",
     dispatchMode: "local",
     maximumImageCount: 20,
     itemConcurrency: 3,

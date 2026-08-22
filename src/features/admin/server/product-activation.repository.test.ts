@@ -136,6 +136,21 @@ describe("SupabaseProductActivationRepository", () => {
     });
   });
 
+  it("maps bounded pending cloud dispatch rows without using the local recovery query", async () => {
+    const rpc = vi.fn(async () => ({
+      data: [{ run_id: uuid(5), dispatch_generation: 4 }],
+      error: null,
+    }));
+    const repository = new SupabaseProductActivationRepository({ rpc });
+
+    await expect(repository.listPendingDispatches(100)).resolves.toEqual([
+      { runId: uuid(5), dispatchGeneration: 4 },
+    ]);
+    expect(rpc).toHaveBeenCalledWith("list_pending_product_activation_dispatches", {
+      p_limit: 100,
+    });
+  });
+
   it("falls through an activation-stale result to a cleanup claim", async () => {
     const rpc = vi
       .fn()

@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 
-import type { ProductActivationConfig } from "./product-activation.config";
 import type { ProductActivationRepository } from "./product-activation.repository";
 import {
   ProductActivationClaimLostError,
@@ -23,11 +22,19 @@ type ItemFailure = {
   error: ProductActivationWorkerError;
 };
 
+export type ProductActivationExecutionConfig = {
+  maximumImageCount: number;
+  itemConcurrency: number;
+  itemTimeoutMs: number;
+  workerDeadlineMs: number;
+  claimTimeoutSeconds: number;
+};
+
 export class ProductActivationWorker {
   constructor(
     private readonly repository: ProductActivationRepository,
     private readonly storage: ProductPublicationStorage,
-    private readonly config: ProductActivationConfig,
+    private readonly config: ProductActivationExecutionConfig,
   ) {}
 
   async run(payload: ProductActivationDispatchPayload): Promise<ProductActivationWorkerResult> {

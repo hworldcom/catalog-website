@@ -2,10 +2,12 @@ import { z } from "zod";
 
 export const productModerationDecisionSchema = z.enum(["approve", "request_changes", "reject"]);
 
-export const productActivationDispatchPayloadSchema = z.object({
-  runId: z.string().uuid(),
-  dispatchGeneration: z.number().int().positive(),
-});
+export const productActivationDispatchPayloadSchema = z
+  .object({
+    runId: z.string().uuid(),
+    dispatchGeneration: z.number().int().positive(),
+  })
+  .strict();
 
 export const productModerationDecisionResultSchema = z.object({
   result: z.enum(["decided", "replay"]),

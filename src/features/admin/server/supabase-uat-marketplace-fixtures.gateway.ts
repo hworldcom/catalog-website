@@ -64,6 +64,7 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
       this.publicationRepository,
       this.publicationStorage,
       {
+        deploymentEnvironment: "local",
         dispatchMode: "local",
         maximumImageCount: 20,
         itemConcurrency: 3,

@@ -1,4 +1,4 @@
-import type { ProductActivationConfig } from "./product-activation.config";
+import type { LocalProductActivationConfig } from "./product-activation.config";
 import type { ProductActivationRepository } from "./product-activation.repository";
 import type {
   ProductActivationDispatchPayload,
@@ -48,7 +48,7 @@ export class LocalProductActivationDispatcher implements ProductActivationDispat
   constructor(
     private readonly repository: ProductActivationRepository,
     private readonly createWorker: WorkerFactory,
-    private readonly config: ProductActivationConfig,
+    private readonly config: LocalProductActivationConfig,
     private readonly schedule: Schedule = queueMicrotask,
     private readonly log: Log = writeLog,
     private readonly scheduleInterval: ScheduleInterval = scheduleRecoveryInterval,

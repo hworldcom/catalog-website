@@ -10,6 +10,7 @@ import type { ProductPublicationItem, ProductPublicationRun } from "./product-pu
 import { ProductPublicationWorker } from "./product-publication.worker";
 
 const config: ProductPublicationConfig = {
+  deploymentEnvironment: "local",
   dispatchMode: "local",
   maximumImageCount: 20,
   itemConcurrency: 3,

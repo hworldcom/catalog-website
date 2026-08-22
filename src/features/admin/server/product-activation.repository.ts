@@ -139,6 +139,7 @@ export interface ProductActivationRepository {
     claimTimeoutSeconds: number,
     limit: number,
   ): Promise<ProductActivationDispatchPayload[]>;
+  listPendingDispatches(limit: number): Promise<ProductActivationDispatchPayload[]>;
 }
 
 const decisionRowSchema = z.object({
@@ -606,6 +607,24 @@ export class SupabaseProductActivationRepository implements ProductActivationRep
     if (!rows.success) {
       console.error("[Product activation] Database response was invalid.", {
         operation: "list_recoverable_product_activation_dispatches",
+      });
+      throw productActivationError("product_moderation_activation_unavailable");
+    }
+    return rows.data.map((row) => ({
+      runId: row.run_id,
+      dispatchGeneration: row.dispatch_generation,
+    }));
+  }
+
+  async listPendingDispatches(limit: number): Promise<ProductActivationDispatchPayload[]> {
+    const response = await this.administrator.rpc("list_pending_product_activation_dispatches", {
+      p_limit: limit,
+    });
+    if (response.error) throw productActivationDatabaseError(response.error);
+    const rows = z.array(recoverableDispatchRowSchema).safeParse(response.data);
+    if (!rows.success) {
+      console.error("[Product activation] Database response was invalid.", {
+        operation: "list_pending_product_activation_dispatches",
       });
       throw productActivationError("product_moderation_activation_unavailable");
     }

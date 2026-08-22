@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { ProductActivationExecutionConfig } from "./product-activation.worker";
+
 const positiveInteger = z.coerce.number().int().positive();
 const absoluteHttpUrl = z
   .string()
@@ -16,11 +18,22 @@ const absoluteHttpUrl = z
     }
     return url.toString().replace(/\/+$/, "");
   });
+const secureUrl = z
+  .string()
+  .trim()
+  .url()
+  .transform((value, context) => {
+    const url = new URL(value);
+    if (url.protocol !== "https:") {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "must use https" });
+      return z.NEVER;
+    }
+    return url.toString();
+  });
 
 const schema = z
   .object({
     BAZORIA_DEPLOYMENT_ENVIRONMENT: z.enum(["local", "uat", "production"]),
-    BAZORIA_PRODUCT_PUBLICATION_DISPATCH_MODE: z.enum(["local", "cloud_tasks"]),
     BAZORIA_PRODUCT_PUBLICATION_MAXIMUM_IMAGE_COUNT: positiveInteger.default(20),
     BAZORIA_PRODUCT_PUBLICATION_ITEM_CONCURRENCY: positiveInteger.default(3),
     BAZORIA_PRODUCT_PUBLICATION_ITEM_TIMEOUT_SECONDS: positiveInteger.default(30),
@@ -28,18 +41,11 @@ const schema = z
     BAZORIA_PRODUCT_PUBLICATION_CLAIM_TIMEOUT_SECONDS: positiveInteger.default(360),
     SUPABASE_URL: absoluteHttpUrl,
     SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1),
+    BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: secureUrl,
+    BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT: z.string().trim().email(),
+    PORT: z.coerce.number().int().min(1).max(65_535).default(8_080),
   })
   .superRefine((settings, context) => {
-    const expectedDispatchMode =
-      settings.BAZORIA_DEPLOYMENT_ENVIRONMENT === "local" ? "local" : "cloud_tasks";
-    if (settings.BAZORIA_PRODUCT_PUBLICATION_DISPATCH_MODE !== expectedDispatchMode) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["BAZORIA_PRODUCT_PUBLICATION_DISPATCH_MODE"],
-        message: `must be ${expectedDispatchMode} for ${settings.BAZORIA_DEPLOYMENT_ENVIRONMENT}`,
-      });
-    }
-
     const boundedWorkSeconds =
       Math.ceil(
         settings.BAZORIA_PRODUCT_PUBLICATION_MAXIMUM_IMAGE_COUNT /
@@ -65,21 +71,18 @@ const schema = z
     }
   });
 
-export type ProductPublicationConfig = {
+export type ProductActivationWorkerConfig = ProductActivationExecutionConfig & {
   deploymentEnvironment: "local" | "uat" | "production";
-  dispatchMode: "local" | "cloud_tasks";
-  maximumImageCount: number;
-  itemConcurrency: number;
-  itemTimeoutMs: number;
-  workerDeadlineMs: number;
-  claimTimeoutSeconds: number;
   supabaseUrl: string;
   serviceRoleKey: string;
+  taskAudience: string;
+  taskServiceAccount: string;
+  port: number;
 };
 
-export function readProductPublicationConfig(
+export function readProductActivationWorkerConfig(
   environment: Record<string, string | undefined> = process.env,
-): ProductPublicationConfig {
+): ProductActivationWorkerConfig {
   const result = schema.safeParse(environment);
   if (!result.success) {
     const details = result.error.issues
@@ -90,13 +93,15 @@ export function readProductPublicationConfig(
 
   return {
     deploymentEnvironment: result.data.BAZORIA_DEPLOYMENT_ENVIRONMENT,
-    dispatchMode: result.data.BAZORIA_PRODUCT_PUBLICATION_DISPATCH_MODE,
     maximumImageCount: result.data.BAZORIA_PRODUCT_PUBLICATION_MAXIMUM_IMAGE_COUNT,
     itemConcurrency: result.data.BAZORIA_PRODUCT_PUBLICATION_ITEM_CONCURRENCY,
-    itemTimeoutMs: result.data.BAZORIA_PRODUCT_PUBLICATION_ITEM_TIMEOUT_SECONDS * 1000,
-    workerDeadlineMs: result.data.BAZORIA_PRODUCT_PUBLICATION_WORKER_DEADLINE_SECONDS * 1000,
+    itemTimeoutMs: result.data.BAZORIA_PRODUCT_PUBLICATION_ITEM_TIMEOUT_SECONDS * 1_000,
+    workerDeadlineMs: result.data.BAZORIA_PRODUCT_PUBLICATION_WORKER_DEADLINE_SECONDS * 1_000,
     claimTimeoutSeconds: result.data.BAZORIA_PRODUCT_PUBLICATION_CLAIM_TIMEOUT_SECONDS,
     supabaseUrl: result.data.SUPABASE_URL,
     serviceRoleKey: result.data.SUPABASE_SERVICE_ROLE_KEY,
+    taskAudience: result.data.BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE,
+    taskServiceAccount: result.data.BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT,
+    port: result.data.PORT,
   };
 }

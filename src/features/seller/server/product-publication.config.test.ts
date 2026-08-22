@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { readProductPublicationConfig } from "./product-publication.config";
 
 const validEnvironment = {
+  BAZORIA_DEPLOYMENT_ENVIRONMENT: "local",
   BAZORIA_PRODUCT_PUBLICATION_DISPATCH_MODE: "local",
-  NODE_ENV: "development",
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "sb_secret_test",
 };
@@ -12,6 +12,7 @@ const validEnvironment = {
 describe("readProductPublicationConfig", () => {
   it("uses the bounded prototype defaults", () => {
     expect(readProductPublicationConfig(validEnvironment)).toEqual({
+      deploymentEnvironment: "local",
       dispatchMode: "local",
       maximumImageCount: 20,
       itemConcurrency: 3,
@@ -23,13 +24,19 @@ describe("readProductPublicationConfig", () => {
     });
   });
 
-  it("rejects local dispatch in production", () => {
+  it("rejects local dispatch in a deployed Bazoria environment", () => {
     expect(() =>
       readProductPublicationConfig({
         ...validEnvironment,
-        NODE_ENV: "production",
+        BAZORIA_DEPLOYMENT_ENVIRONMENT: "uat",
       }),
-    ).toThrow(/product_publication_configuration_invalid.*not allowed in production/);
+    ).toThrow(/product_publication_configuration_invalid.*must be cloud_tasks for uat/);
+  });
+
+  it("does not use NODE_ENV as the Bazoria environment identity", () => {
+    expect(
+      readProductPublicationConfig({ ...validEnvironment, NODE_ENV: "production" }),
+    ).toMatchObject({ deploymentEnvironment: "local", dispatchMode: "local" });
   });
 
   it("rejects a worker deadline that cannot contain the bounded image work", () => {
