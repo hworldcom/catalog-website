@@ -360,7 +360,11 @@ export function StorefrontScreen() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <StatusPanel title={tr(storefrontCopy.approvalTitle)}>
-          <StatusBadge>{approvalStateLabel(snapshot)}</StatusBadge>
+          <StatusBadge
+            tone={snapshot.approvalState === "not_approved" ? "notApproved" : "approved"}
+          >
+            {approvalStateLabel(snapshot)}
+          </StatusBadge>
           <p className="text-sm text-muted-foreground">{approvalStateHelp(snapshot)}</p>
           {snapshot.actions.canEnableStorefront || snapshot.actions.canDisableStorefront ? (
             <button
@@ -388,7 +392,11 @@ export function StorefrontScreen() {
           {snapshot.latestSubmission ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge>{submissionStatusLabel(snapshot.latestSubmission.status)}</StatusBadge>
+                <StatusBadge
+                  tone={snapshot.latestSubmission.status === "pending" ? "pending" : "neutral"}
+                >
+                  {submissionStatusLabel(snapshot.latestSubmission.status)}
+                </StatusBadge>
                 <span className="text-xs text-muted-foreground">
                   {tr(
                     snapshot.latestSubmission.kind === "initial"
@@ -428,7 +436,7 @@ export function StorefrontScreen() {
               {snapshot.actions.canWithdraw ? (
                 <button
                   type="button"
-                  className="w-fit border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60"
+                  className="w-fit border border-orange-600 bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
                   disabled={busyAction !== null}
                   onClick={() => void withdrawLatestSubmission()}
                 >
@@ -589,7 +597,7 @@ export function StorefrontScreen() {
             <button
               type="submit"
               disabled={editorDisabled}
-              className="bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              className="border border-orange-600 bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
             >
               {busyAction === "save" ? tr(storefrontCopy.saving) : tr(storefrontCopy.saveDraft)}
             </button>
@@ -624,11 +632,22 @@ function StatusPanel({ title, children }: { title: string; children: ReactNode }
   );
 }
 
-function StatusBadge({ children }: { children: ReactNode }) {
+function StatusBadge({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "notApproved" | "approved" | "pending";
+}) {
+  const toneClass = {
+    neutral: "border-border bg-background",
+    notApproved: "border-primary/30 bg-primary/10 text-foreground",
+    approved: "border-emerald-600 bg-emerald-600 text-white",
+    pending: "border-primary/30 bg-primary/10 text-foreground",
+  }[tone];
+
   return (
-    <span className="w-fit border border-border bg-background px-2 py-1 text-xs font-medium">
-      {children}
-    </span>
+    <span className={`w-fit border px-2 py-1 text-xs font-medium ${toneClass}`}>{children}</span>
   );
 }
 

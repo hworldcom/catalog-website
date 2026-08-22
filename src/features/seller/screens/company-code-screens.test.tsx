@@ -171,6 +171,11 @@ describe("seller company-code screens", () => {
     renderScreen(<StorefrontScreen />);
 
     await screen.findByRole("textbox", { name: "Business name" });
+    expect(screen.getByText("Not approved")).toHaveClass(
+      "border-primary/30",
+      "bg-primary/10",
+      "text-foreground",
+    );
     expect(screen.getByRole("textbox", { name: "Business category" })).toBeDisabled();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload logo" })).toBeInTheDocument();
@@ -195,6 +200,10 @@ describe("seller company-code screens", () => {
         "text-sm",
       );
     }
+    expect(screen.getByRole("button", { name: "Save profile draft" })).toHaveClass(
+      "bg-orange-600",
+      "text-white",
+    );
   });
 
   it("keeps a pending profile read-only and exposes only withdrawal", async () => {
@@ -218,7 +227,15 @@ describe("seller company-code screens", () => {
     expect(
       screen.queryByRole("button", { name: "Submit profile for review" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Withdraw submission" })).toBeInTheDocument();
+    expect(screen.getByText("Pending review")).toHaveClass(
+      "border-primary/30",
+      "bg-primary/10",
+      "text-foreground",
+    );
+    expect(screen.getByRole("button", { name: "Withdraw submission" })).toHaveClass(
+      "bg-orange-600",
+      "text-white",
+    );
   });
 
   it.each([
@@ -271,7 +288,7 @@ describe("seller company-code screens", () => {
     renderScreen(<StorefrontScreen />);
 
     expect(await screen.findByText("Approved public profile")).toBeInTheDocument();
-    expect(screen.getByText("Approved, storefront disabled")).toBeInTheDocument();
+    expect(screen.getByText("Approved, storefront disabled")).toHaveClass("bg-emerald-600");
     expect(screen.getByRole("button", { name: "Enable storefront" })).toHaveClass("bg-emerald-600");
     expect(screen.getByRole("textbox", { name: "Business name" })).toHaveValue("QA Seller");
   });
