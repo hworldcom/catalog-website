@@ -89,15 +89,3 @@ export function readClassifierImportConfig(
     classifierOrganizationId: result.data.BAZORIA_DEFAULT_CLASSIFIER_ORGANIZATION_ID,
   };
 }
-
-export function readDefaultClassifierSellerId(
-  environment: Record<string, string | undefined> = process.env,
-): string {
-  const result = uuid.safeParse(environment.BAZORIA_DEFAULT_SELLER_ID);
-  if (!result.success) {
-    throw new Error(
-      `Invalid classifier import configuration: BAZORIA_DEFAULT_SELLER_ID: ${result.error.issues[0]?.message ?? "invalid"}`,
-    );
-  }
-  return result.data;
-}

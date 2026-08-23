@@ -79,16 +79,16 @@ describe("product moderation status refresh", () => {
     },
   );
 
-  it("refreshes pending review on focus without interval polling", async () => {
+  it("polls pending review and still refreshes it on focus", async () => {
     const current = status({ reviewStatus: "pending" });
     const readStatus = vi.fn().mockResolvedValue(current);
     render(<Harness initialStatus={current} readStatus={readStatus} />);
 
-    await act(() => vi.advanceTimersByTimeAsync(PRODUCT_MODERATION_POLL_INTERVAL_MS * 2));
-    expect(readStatus).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(PRODUCT_MODERATION_POLL_INTERVAL_MS));
+    expect(readStatus).toHaveBeenCalledTimes(1);
     window.dispatchEvent(new Event("focus"));
     await act(() => vi.advanceTimersByTimeAsync(50));
-    expect(readStatus).toHaveBeenCalledTimes(1);
+    expect(readStatus).toHaveBeenCalledTimes(2);
   });
 
   it("pauses while hidden and coalesces visibility and focus on return", async () => {
@@ -123,13 +123,13 @@ describe("product moderation status refresh", () => {
   it("refreshes an available credential fifteen seconds before expiry", async () => {
     vi.setSystemTime(new Date("2026-08-16T12:00:00.000Z"));
     const expiresAt = new Date(
-      Date.now() + PRODUCT_MODERATION_IMAGE_REFRESH_MARGIN_MS + 5_000,
+      Date.now() + PRODUCT_MODERATION_IMAGE_REFRESH_MARGIN_MS + 1_000,
     ).toISOString();
     const current = status({ reviewStatus: "pending", expiresAt });
     const readStatus = vi.fn().mockResolvedValue(current);
     render(<Harness initialStatus={current} readStatus={readStatus} />);
 
-    await act(() => vi.advanceTimersByTimeAsync(4_999));
+    await act(() => vi.advanceTimersByTimeAsync(999));
     expect(readStatus).not.toHaveBeenCalled();
     await act(() => vi.advanceTimersByTimeAsync(1));
     expect(readStatus).toHaveBeenCalledTimes(1);
@@ -182,6 +182,7 @@ describe("product moderation status refresh", () => {
 describe("shouldPollProductModerationStatus", () => {
   it("uses an allowlist rather than treating unknown stopped states as active", () => {
     expect(shouldPollProductModerationStatus(status({ activationState: "publishing" }))).toBe(true);
+    expect(shouldPollProductModerationStatus(status({ reviewStatus: "pending" }))).toBe(true);
     expect(shouldPollProductModerationStatus(status({ activationState: "completed" }))).toBe(false);
     expect(shouldPollProductModerationStatus(status())).toBe(false);
   });
@@ -245,6 +246,7 @@ function status(
   return {
     productId,
     publicState: "draft",
+    marketplaceVisibility: "not_published",
     actionRevision: 1,
     hasWorkingCopy: false,
     review: reviewStatus

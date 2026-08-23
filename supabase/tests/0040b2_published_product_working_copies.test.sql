@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 \ir helpers/approved_seller.inc
 
-SELECT plan(14);
+SELECT plan(18);
 
 INSERT INTO public.sellers (id, slug, name, company_code)
 VALUES (
@@ -45,8 +45,14 @@ SET facts_json = '{
     "uncertainFields": [],
     "fieldSources": {"colors": "human", "materialComposition": "human"}
   }'::jsonb,
-  facts_revision = 1
+  facts_revision = 2
 WHERE facts.product_draft_id = (SELECT product_draft_id FROM qa_product);
+
+INSERT INTO public.product_draft_descriptions (
+  product_draft_id, language, description_text, source, facts_revision
+)
+SELECT product_draft_id, 'en', 'Blue cotton shirt', 'human', 1
+FROM qa_product;
 
 INSERT INTO public.product_draft_images (
   id, product_draft_id, source_position, status, destination_key,
@@ -77,6 +83,22 @@ SELECT * FROM public.submit_initial_product_moderation(
     WHERE id = (SELECT product_draft_id FROM qa_product)),
   '40b20000-0000-4000-8000-000000000301',
   '40b20000-0000-4000-8000-000000000401'
+);
+
+SELECT is(
+  (SELECT (snapshot_json #>> '{facts,factsRevision}')::integer
+    FROM qa_initial_submission),
+  2,
+  'initial submission freezes the current facts revision'
+);
+
+SELECT is(
+  (SELECT (description ->> 'factsRevision')::integer
+    FROM qa_initial_submission,
+    LATERAL jsonb_array_elements(snapshot_json -> 'descriptions') AS description
+    WHERE description ->> 'language' = 'en'),
+  1,
+  'initial submission preserves an older description facts revision for review'
 );
 
 UPDATE public.product_moderation_submissions AS submission
@@ -191,6 +213,22 @@ SELECT is(
   (SELECT snapshot_json ->> 'title' FROM qa_update_submission),
   'Private revised shirt',
   'the immutable update submission contains the complete private proposal'
+);
+
+SELECT is(
+  (SELECT (snapshot_json #>> '{facts,factsRevision}')::integer
+    FROM qa_update_submission),
+  3,
+  'update submission freezes the newer working-copy facts revision'
+);
+
+SELECT is(
+  (SELECT (description ->> 'factsRevision')::integer
+    FROM qa_update_submission,
+    LATERAL jsonb_array_elements(snapshot_json -> 'descriptions') AS description
+    WHERE description ->> 'language' = 'en'),
+  1,
+  'update submission preserves an older description facts revision for review'
 );
 
 SELECT is(

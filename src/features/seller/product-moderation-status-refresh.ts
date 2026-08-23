@@ -32,6 +32,7 @@ export function useProductModerationStatusRefresh({
     readDetail: readStatus,
     onDetail: onStatus,
     describe: describeProductModerationStatus,
+    pollPendingReview: true,
   });
   return {
     failedCredentialIdentities: refresh.failedCredentialIdentities,
@@ -43,7 +44,7 @@ export function useProductModerationStatusRefresh({
 }
 
 export function shouldPollProductModerationStatus(status: ProductModerationStatusDetail): boolean {
-  return shouldPollReadOnlyModeration(describeProductModerationStatus(status));
+  return shouldPollReadOnlyModeration(describeProductModerationStatus(status), true);
 }
 
 export function productModerationImageCredentialIdentity(

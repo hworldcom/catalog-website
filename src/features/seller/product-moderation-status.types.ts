@@ -5,6 +5,8 @@ import type {
 import type { ProductModerationSnapshot } from "./product-moderation-snapshot.types";
 
 export type ProductPublicState = "draft" | "published" | "archived";
+export type ProductMarketplaceVisibility =
+  "not_published" | "visible" | "storefront_disabled" | "seller_approval_required";
 export type ProductModerationReviewStatus =
   "pending" | "changes_requested" | "approved" | "rejected" | "withdrawn";
 export type ProductModerationSubmissionKind = "initial_publication" | "update";
@@ -58,6 +60,7 @@ export type ProductModerationActions = {
 export type ProductModerationStatusCommon = {
   productId: string;
   publicState: ProductPublicState;
+  marketplaceVisibility: ProductMarketplaceVisibility;
   actionRevision: number;
   hasWorkingCopy: boolean;
   review: ProductModerationReview | null;

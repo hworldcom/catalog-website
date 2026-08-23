@@ -123,6 +123,7 @@ function detailRecord(
   return {
     id: uuid(1),
     status: "draft",
+    marketplace_visibility: "not_published",
     moderation_revision: 3,
     has_working_copy: false,
     review_submission_id: uuid(2),

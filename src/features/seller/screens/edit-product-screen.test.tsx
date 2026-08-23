@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   archive: vi.fn(),
   restore: vi.fn(),
   listCategories: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastWarning: vi.fn(),
+  toastError: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -27,7 +30,13 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
 }));
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({
+  toast: {
+    success: mocks.toastSuccess,
+    warning: mocks.toastWarning,
+    error: mocks.toastError,
+  },
+}));
 
 vi.mock("@/features/seller/products.functions", () => ({
   getMyProductModerationStatus: mocks.getStatus,
@@ -86,7 +95,9 @@ vi.mock(
 
 vi.mock("../components/product-moderation-status-view", () => ({
   ProductModerationAxes: () => <div data-testid="moderation-axes">Moderation axes</div>,
-  ProductModerationFeedback: ({ reason }: { reason: string }) => <div>{reason}</div>,
+  ProductModerationOutcomeNotice: ({ status }: { status: ProductModerationStatusDetail }) => (
+    <div>{status.review?.sellerVisibleReason}</div>
+  ),
   ProductModerationSubmittedRevisionView: () => (
     <div data-testid="submitted-revision">Submitted revision</div>
   ),
@@ -184,6 +195,20 @@ describe("EditProductScreen moderation modes", () => {
     expect(screen.getByTestId("submitted-revision")).toBeVisible();
   });
 
+  it("shows stale-description guidance when transport retains only the server message", async () => {
+    mocks.getStatus.mockResolvedValue(status({ canEdit: true, canSubmit: true }));
+    mocks.submit.mockRejectedValue(
+      new Error("Regenerate, edit, or clear descriptions based on older product facts."),
+    );
+
+    renderScreen();
+    await userEvent.click(await screen.findByRole("button", { name: "Submit for review" }));
+
+    expect(
+      await screen.findByText("Update, regenerate, or clear descriptions based on older facts."),
+    ).toBeVisible();
+  });
+
   it("shows feedback above the retained private editor for requested changes", async () => {
     mocks.getStatus.mockResolvedValue(
       status({
@@ -199,6 +224,37 @@ describe("EditProductScreen moderation modes", () => {
     expect(await screen.findByText("Add material details.")).toBeVisible();
     expect(screen.getByTestId("submitted-revision")).toBeVisible();
     expect(await screen.findByTestId("private-product-editor")).toBeVisible();
+  });
+
+  it("notifies an open seller page when a reviewed product becomes public", async () => {
+    const pending = status({ review: review("pending"), canWithdraw: true });
+    const published = status({ publicState: "published", review: review("approved") });
+    mocks.getStatus.mockResolvedValueOnce(pending).mockResolvedValueOnce(published);
+
+    renderScreen();
+    await userEvent.click(await screen.findByRole("button", { name: "Refresh status" }));
+
+    await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledWith("Product published."));
+  });
+
+  it("warns when publication completes under a disabled storefront", async () => {
+    const pending = status({ review: review("pending"), canWithdraw: true });
+    const published = status({
+      publicState: "published",
+      marketplaceVisibility: "storefront_disabled",
+      review: review("approved"),
+    });
+    mocks.getStatus.mockResolvedValueOnce(pending).mockResolvedValueOnce(published);
+
+    renderScreen();
+    await userEvent.click(await screen.findByRole("button", { name: "Refresh status" }));
+
+    await waitFor(() =>
+      expect(mocks.toastWarning).toHaveBeenCalledWith(
+        "Product publication completed. Enable your storefront to show it in the marketplace.",
+      ),
+    );
+    expect(mocks.toastSuccess).not.toHaveBeenCalledWith("Product published.");
   });
 
   it("restores an archived working copy only after the authoritative reread", async () => {
@@ -308,6 +364,7 @@ function renderScreen() {
 function status(
   options: {
     publicState?: "draft" | "published" | "archived";
+    marketplaceVisibility?: ProductModerationStatusDetail["marketplaceVisibility"];
     actionRevision?: number;
     hasWorkingCopy?: boolean;
     review?: ProductModerationStatusDetail["review"];
@@ -324,6 +381,9 @@ function status(
   return {
     productId,
     publicState: options.publicState ?? "draft",
+    marketplaceVisibility:
+      options.marketplaceVisibility ??
+      (options.publicState === "published" ? "visible" : "not_published"),
     actionRevision: options.actionRevision ?? 3,
     hasWorkingCopy: options.hasWorkingCopy ?? false,
     review: options.review ?? null,

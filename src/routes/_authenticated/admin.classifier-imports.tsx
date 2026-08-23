@@ -1,22 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { ClassifierImportInboxScreen } from "@/features/admin/screens/classifier-import-inbox-screen";
+import { legacyClassifierImportsRedirect } from "@/features/admin/classifier-import-legacy-navigation";
 
 export const Route = createFileRoute("/_authenticated/admin/classifier-imports")({
-  head: () => ({ meta: [{ title: "Classifier imports · Bazoria" }] }),
-  component: ClassifierImportsRoute,
+  beforeLoad: ({ search }) => {
+    throw redirect(legacyClassifierImportsRedirect(search.lang));
+  },
 });
-
-function ClassifierImportsRoute() {
-  const navigate = useNavigate();
-  return (
-    <ClassifierImportInboxScreen
-      onOpenImport={(importId) =>
-        void navigate({
-          to: "/admin/classifier-imports/$importId",
-          params: { importId },
-        })
-      }
-    />
-  );
-}

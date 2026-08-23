@@ -4,23 +4,6 @@ import type {
   ClassifierImportRun,
 } from "./classifier-import.types";
 
-export type CreateImportRunInput = {
-  classifierOrganizationId: string;
-  classifierBatchId: string;
-  sellerId: string;
-  requestedByUserId: string | null;
-};
-
-export type CreateImportRunResult = {
-  run: ClassifierImportRun;
-  created: boolean;
-};
-
-export type EligibleDestinationSeller = {
-  id: string;
-  name: string;
-};
-
 export type PreparedImportGroup =
   | { result: "prepared"; productDraftId: string }
   | {
@@ -32,14 +15,8 @@ export type RetryImportResult = "requeued" | "noop" | "not_found" | "not_allowed
 export type ReconcileImportResult = "requeued" | "not_found" | "not_allowed";
 
 export interface ClassifierImportRepository {
-  getRunBySource(
-    classifierOrganizationId: string,
-    classifierBatchId: string,
-  ): Promise<ClassifierImportRun | null>;
-  createOrGetRun(input: CreateImportRunInput): Promise<CreateImportRunResult>;
   getRun(importId: string): Promise<ClassifierImportRun | null>;
   getSellerName(sellerId: string): Promise<string | null>;
-  getEligibleSeller(sellerId: string): Promise<EligibleDestinationSeller | null>;
   listGroupOutcomes(importId: string): Promise<ClassifierImportGroupOutcome[]>;
   retryImport(importId: string, includeNonRetryable: boolean): Promise<RetryImportResult>;
   reconcileImport(importId: string): Promise<ReconcileImportResult>;

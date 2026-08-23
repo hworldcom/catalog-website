@@ -12,6 +12,7 @@ import { listAdminProductDrafts } from "../admin-product-draft-index.functions";
 import { buildAdminProductDraftReviewHref } from "../admin-product-draft-index.navigation";
 import {
   ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_LIMIT,
+  ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_STATUS,
   type AdminProductDraftIndexItem,
   type AdminProductDraftIndexPage,
   type AdminProductDraftIndexRequest,
@@ -108,7 +109,8 @@ const S = {
     "Klassifikator-Stapel",
     "Lô phân loại",
   ),
-  review: t("Review draft", "Przejrzyj szkic", "Entwurf prüfen", "Xem bản nháp"),
+  reviewDraft: t("Review draft", "Przejrzyj szkic", "Entwurf prüfen", "Xem bản nháp"),
+  reviewProduct: t("Review product", "Przejrzyj produkt", "Produkt prüfen", "Xem sản phẩm"),
   noCategory: t("Not assigned", "Nie przypisano", "Nicht zugewiesen", "Chưa gán"),
   noFacts: t("Not available", "Niedostępne", "Nicht verfügbar", "Không khả dụng"),
   sellerIdShort: t("Seller ID", "ID sprzedawcy", "Verkäufer-ID", "Mã nhà bán"),
@@ -372,7 +374,7 @@ export function AdminProductDraftIndexScreenView({
                     onRequestChange({
                       limit: ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_LIMIT,
                       cursor: null,
-                      status: null,
+                      status: ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_STATUS,
                       sellerId: null,
                     })
                   }
@@ -544,7 +546,7 @@ function ProductDraftCard({
             </dl>
             <Button asChild className="mt-auto self-start">
               <a href={buildAdminProductDraftReviewHref(item.productDraftId, request, lang)}>
-                {tr(S.review)}
+                {tr(item.status === "draft" ? S.reviewDraft : S.reviewProduct)}
               </a>
             </Button>
           </CardContent>

@@ -2,15 +2,19 @@ import { z } from "zod";
 
 import {
   ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_LIMIT,
-  ADMIN_PRODUCT_DRAFT_STATUSES,
+  ADMIN_PRODUCT_DRAFT_INDEX_ALL_STATUS,
+  ADMIN_PRODUCT_DRAFT_INDEX_STATUS_FILTERS,
   invalidAdminProductDraftIndexRequest,
+  type AdminProductDraftStatusFilter,
 } from "./admin-product-draft-index.types";
 import { decodeAdminProductDraftIndexCursor } from "./admin-product-draft-index.cursor";
+import { publicAudienceSchema, type PublicAudience } from "@/features/marketplace/public-audience";
 
 export type AdminProductDraftReviewSearch = {
   lang?: string;
+  audience?: PublicAudience;
   returnLimit?: number;
-  returnStatus?: (typeof ADMIN_PRODUCT_DRAFT_STATUSES)[number];
+  returnStatus?: AdminProductDraftStatusFilter;
   returnSellerId?: string;
   returnCursor?: string;
 };
@@ -18,8 +22,9 @@ export type AdminProductDraftReviewSearch = {
 const searchSchema = z
   .object({
     lang: z.string().optional(),
+    audience: publicAudienceSchema.optional(),
     returnLimit: z.coerce.number().int().min(1).max(100).optional(),
-    returnStatus: z.enum(ADMIN_PRODUCT_DRAFT_STATUSES).optional(),
+    returnStatus: z.enum(ADMIN_PRODUCT_DRAFT_INDEX_STATUS_FILTERS).optional(),
     returnSellerId: z.string().uuid().optional(),
     returnCursor: z.string().min(1).optional(),
   })
@@ -41,7 +46,10 @@ export function parseAdminProductDraftReviewSearch(input: unknown): AdminProduct
   if (search.returnCursor) {
     decodeAdminProductDraftIndexCursor(search.returnCursor, {
       limit: search.returnLimit!,
-      status: search.returnStatus ?? null,
+      status:
+        search.returnStatus === ADMIN_PRODUCT_DRAFT_INDEX_ALL_STATUS
+          ? null
+          : (search.returnStatus ?? null),
       sellerId: search.returnSellerId ?? null,
     });
   }
@@ -60,5 +68,6 @@ export function buildAdminProductDraftBackHref(
   if (search.returnCursor) query.set("cursor", search.returnCursor);
   const lang = currentLang ?? search.lang;
   if (lang) query.set("lang", lang);
+  if (search.audience) query.set("audience", search.audience);
   return `/admin/product-drafts?${query}`;
 }

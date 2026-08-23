@@ -36,10 +36,17 @@ export function mapProductModerationStatus(
   if (review?.status !== "approved" && activation) {
     throw invalidState("A non-approved review has an activation run.");
   }
+  if (record.status === "published" && record.marketplace_visibility === "not_published") {
+    throw invalidState("A published product has a non-published marketplace visibility.");
+  }
+  if (record.status !== "published" && record.marketplace_visibility !== "not_published") {
+    throw invalidState("A non-published product has a marketplace-visible state.");
+  }
 
   return {
     productId: record.id,
     publicState: record.status,
+    marketplaceVisibility: record.marketplace_visibility,
     actionRevision: record.moderation_revision,
     hasWorkingCopy: record.has_working_copy,
     review,

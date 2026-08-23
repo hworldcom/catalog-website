@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t, tr, type Lang, type T } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 import { listAdministratorModerationRequests } from "../administrator-moderation.functions";
 import {
@@ -173,6 +174,12 @@ const S = {
     "Podgląd oczekuje",
     "Vorschau ausstehend",
     "Bản xem trước đang chờ",
+  ),
+  previewLoading: t(
+    "Loading preview",
+    "Wczytywanie podglądu",
+    "Vorschau wird geladen",
+    "Đang tải bản xem trước",
   ),
   previewFailed: t(
     "Preview failed",
@@ -789,11 +796,52 @@ function ModerationPreview({
   failed: boolean;
   onError(): void;
 }) {
-  if (item.preview.deliveryStatus === "available" && item.preview.url && !failed) {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+  const deliveryUrl = item.preview.deliveryStatus === "available" ? item.preview.url : null;
+  const requiresAuthenticatedFetch =
+    item.preview.kind === "seller_logo" || item.preview.kind === "seller_cover";
+
+  useEffect(() => {
+    let currentObjectUrl: string | null = null;
+    const controller = new AbortController();
+    setObjectUrl(null);
+    if (!requiresAuthenticatedFetch || !deliveryUrl || failed) {
+      return () => controller.abort();
+    }
+
+    void (async () => {
+      try {
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        if (!token) throw new Error("authentication_required");
+        const response = await fetch(deliveryUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("seller_profile_image_not_found");
+        currentObjectUrl = URL.createObjectURL(await response.blob());
+        setObjectUrl(currentObjectUrl);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        onErrorRef.current();
+      }
+    })();
+
+    return () => {
+      controller.abort();
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    };
+  }, [deliveryUrl, failed, requiresAuthenticatedFetch]);
+
+  const imageUrl = requiresAuthenticatedFetch ? objectUrl : deliveryUrl;
+  if (item.preview.deliveryStatus === "available" && imageUrl && !failed) {
     return (
       <div className="aspect-square bg-muted sm:aspect-auto">
         <img
-          src={item.preview.url}
+          src={imageUrl}
           alt={`${title} preview`}
           className="h-full w-full object-cover"
           onError={onError}
@@ -801,15 +849,22 @@ function ModerationPreview({
       </div>
     );
   }
-  const state = failed ? "unavailable" : item.preview.deliveryStatus;
+  const state =
+    !failed && requiresAuthenticatedFetch && deliveryUrl
+      ? "loading"
+      : failed
+        ? "unavailable"
+        : item.preview.deliveryStatus;
   const label =
-    state === "pending"
-      ? S.previewPending
-      : state === "failed"
-        ? S.previewFailed
-        : state === "missing"
-          ? S.previewMissing
-          : S.previewUnavailable;
+    state === "loading"
+      ? S.previewLoading
+      : state === "pending"
+        ? S.previewPending
+        : state === "failed"
+          ? S.previewFailed
+          : state === "missing"
+            ? S.previewMissing
+            : S.previewUnavailable;
   return (
     <div className="flex aspect-square items-center justify-center bg-muted p-4 text-center text-sm text-muted-foreground sm:aspect-auto">
       {tr(label)}

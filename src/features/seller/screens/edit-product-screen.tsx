@@ -24,6 +24,7 @@ import {
   submitMyProductForModeration,
   withdrawMyProductModerationSubmission,
 } from "@/features/seller/product-moderation.functions";
+import { productModerationErrorCode } from "@/features/seller/product-moderation.types";
 import {
   useProductModerationMutationCoordinator,
   type ProductModerationMutationCoordinator,
@@ -48,9 +49,8 @@ import {
 } from "../components/product-editor";
 import {
   ProductModerationAxes,
-  ProductModerationFeedback,
+  ProductModerationOutcomeNotice,
   ProductModerationSubmittedRevisionView,
-  PublishedProductLink,
 } from "../components/product-moderation-status-view";
 
 const cleanProductState: ProductEditorCoordinationState = {
@@ -147,6 +147,7 @@ function ProductModerationProductPage({
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [staleEditor, setStaleEditor] = useState(false);
+  const statusRef = useRef(status);
   const queryClient = useQueryClient();
   const beginEditing = useServerFn(beginMyProductEditing);
   const submit = useServerFn(submitMyProductForModeration);
@@ -172,6 +173,7 @@ function ProductModerationProductPage({
   coordinationRef.current = coordination;
   coordinatorRef.current = coordinator;
   staleEditorRef.current = staleEditor;
+  statusRef.current = status;
   const categories = useQuery({
     queryKey: ["product-categories"],
     queryFn: () => listCategories(),
@@ -181,6 +183,7 @@ function ProductModerationProductPage({
 
   const applyReadStatus = useCallback(
     (next: ProductModerationStatusDetail) => {
+      const previous = statusRef.current;
       const currentCoordination = coordinationRef.current;
       const currentCoordinator = coordinatorRef.current;
       if (
@@ -190,6 +193,8 @@ function ProductModerationProductPage({
         staleEditorRef.current = true;
         setStaleEditor(true);
       }
+      notifyProductModerationTransition(previous, next);
+      statusRef.current = next;
       setStatus(next);
       queryClient.setQueryData(["my-product-moderation", productId], next);
       if (
@@ -210,10 +215,6 @@ function ProductModerationProductPage({
   });
 
   const privateEditorVisible = staleEditor || privateEditorEligible(status);
-  const feedback =
-    status.review?.status === "changes_requested" || status.review?.status === "rejected"
-      ? status.review.sellerVisibleReason
-      : null;
   const categoryName = categoryLabel(status, categories.data?.categories ?? []);
   const submitBlocked =
     coordination.dirty ||
@@ -224,6 +225,7 @@ function ProductModerationProductPage({
     staleEditor;
 
   function replaceStatus(next: ProductModerationStatusDetail) {
+    statusRef.current = next;
     setStatus(next);
     coordinator.replaceRevision(next.actionRevision);
     queryClient.setQueryData(["my-product-moderation", productId], next);
@@ -423,8 +425,7 @@ function ProductModerationProductPage({
       </div>
 
       <ProductModerationAxes status={status} />
-      {status.publicState === "published" ? <PublishedProductLink productId={productId} /> : null}
-      {feedback ? <ProductModerationFeedback reason={feedback} /> : null}
+      <ProductModerationOutcomeNotice status={status} />
       {statusRefresh.readWarning ? (
         <Card className="border-amber-300">
           <CardContent className="pt-6 text-sm">
@@ -908,7 +909,140 @@ function archiveConfirmation(status: ProductModerationStatusDetail) {
   );
 }
 
+function notifyProductModerationTransition(
+  previous: ProductModerationStatusDetail,
+  next: ProductModerationStatusDetail,
+) {
+  if (previous.publicState !== "published" && next.publicState === "published") {
+    notifyPublicationVisibility(next, false);
+    return;
+  }
+
+  if (
+    previous.activation?.displayState !== "completed" &&
+    next.activation?.displayState === "completed" &&
+    next.review?.kind === "update"
+  ) {
+    notifyPublicationVisibility(next, true);
+    return;
+  }
+
+  const previousReview = previous.review?.status ?? null;
+  const nextReview = next.review?.status ?? null;
+  if (previousReview !== nextReview) {
+    if (nextReview === "approved") {
+      toast.success(
+        tr(
+          t(
+            "Product approved. Publication is starting.",
+            "Produkt zatwierdzony. Rozpoczyna się publikacja.",
+            "Produkt genehmigt. Die Veröffentlichung beginnt.",
+            "Sản phẩm đã duyệt. Đang bắt đầu xuất bản.",
+          ),
+        ),
+      );
+      return;
+    }
+    if (nextReview === "changes_requested") {
+      toast.warning(
+        tr(
+          t(
+            "The administrator requested product changes.",
+            "Administrator poprosił o zmiany produktu.",
+            "Der Administrator hat Produktänderungen angefordert.",
+            "Quản trị viên yêu cầu thay đổi sản phẩm.",
+          ),
+        ),
+      );
+      return;
+    }
+    if (nextReview === "rejected") {
+      toast.error(
+        tr(
+          t(
+            "The product was rejected.",
+            "Produkt został odrzucony.",
+            "Das Produkt wurde abgelehnt.",
+            "Sản phẩm đã bị từ chối.",
+          ),
+        ),
+      );
+      return;
+    }
+  }
+
+  const previousActivation = previous.activation?.displayState ?? null;
+  const nextActivation = next.activation?.displayState ?? null;
+  if (
+    previousActivation !== nextActivation &&
+    (nextActivation === "dispatch_failed" ||
+      nextActivation === "activation_failed" ||
+      nextActivation === "abandonment_cleanup_required")
+  ) {
+    toast.error(
+      tr(
+        t(
+          "Product publication failed.",
+          "Publikacja produktu nie powiodła się.",
+          "Die Produktveröffentlichung ist fehlgeschlagen.",
+          "Xuất bản sản phẩm thất bại.",
+        ),
+      ),
+    );
+  }
+}
+
+function notifyPublicationVisibility(status: ProductModerationStatusDetail, isUpdate: boolean) {
+  if (status.marketplaceVisibility === "visible") {
+    toast.success(
+      tr(
+        isUpdate
+          ? t(
+              "Product update published.",
+              "Aktualizacja produktu została opublikowana.",
+              "Produktupdate veröffentlicht.",
+              "Bản cập nhật sản phẩm đã được xuất bản.",
+            )
+          : t(
+              "Product published.",
+              "Produkt został opublikowany.",
+              "Produkt veröffentlicht.",
+              "Sản phẩm đã được xuất bản.",
+            ),
+      ),
+    );
+    return;
+  }
+
+  if (status.marketplaceVisibility === "storefront_disabled") {
+    toast.warning(
+      tr(
+        t(
+          "Product publication completed. Enable your storefront to show it in the marketplace.",
+          "Publikacja produktu zakończona. Włącz sklep, aby pokazać produkt na rynku.",
+          "Die Produktveröffentlichung ist abgeschlossen. Aktivieren Sie Ihren Shop, damit das Produkt auf dem Marktplatz erscheint.",
+          "Đã hoàn tất xuất bản sản phẩm. Hãy bật gian hàng để hiển thị sản phẩm trên marketplace.",
+        ),
+      ),
+    );
+    return;
+  }
+
+  toast.warning(
+    tr(
+      t(
+        "Product publication completed, but seller approval is required before it can appear in the marketplace.",
+        "Publikacja produktu zakończona, ale zanim pojawi się on na rynku, wymagane jest zatwierdzenie sprzedawcy.",
+        "Die Produktveröffentlichung ist abgeschlossen, aber vor der Anzeige auf dem Marktplatz ist eine Verkäufergenehmigung erforderlich.",
+        "Đã hoàn tất xuất bản sản phẩm, nhưng cần duyệt người bán trước khi sản phẩm xuất hiện trên marketplace.",
+      ),
+    ),
+  );
+}
+
 function moderationErrorCode(error: unknown): string | null {
+  const productCode = productModerationErrorCode(error);
+  if (productCode) return productCode;
   if (
     typeof error === "object" &&
     error !== null &&
@@ -916,7 +1050,9 @@ function moderationErrorCode(error: unknown): string | null {
     typeof error.code === "string"
   )
     return error.code;
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    return moderationErrorCode(error.cause) ?? error.message;
+  }
   return null;
 }
 

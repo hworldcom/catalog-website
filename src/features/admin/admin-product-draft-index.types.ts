@@ -10,8 +10,16 @@ import type {
 export const ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_LIMIT = 25;
 export const ADMIN_PRODUCT_DRAFT_INDEX_MAX_LIMIT = 100;
 export const ADMIN_PRODUCT_DRAFT_STATUSES = ["draft", "published", "archived"] as const;
+export const ADMIN_PRODUCT_DRAFT_INDEX_ALL_STATUS = "all" as const;
+export const ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_STATUS = "draft" as const;
+export const ADMIN_PRODUCT_DRAFT_INDEX_STATUS_FILTERS = [
+  ...ADMIN_PRODUCT_DRAFT_STATUSES,
+  ADMIN_PRODUCT_DRAFT_INDEX_ALL_STATUS,
+] as const;
 
 export type AdminProductDraftStatus = Database["public"]["Enums"]["product_status"];
+export type AdminProductDraftStatusFilter =
+  (typeof ADMIN_PRODUCT_DRAFT_INDEX_STATUS_FILTERS)[number];
 
 export type AdminProductDraftIndexRequest = {
   limit: number;

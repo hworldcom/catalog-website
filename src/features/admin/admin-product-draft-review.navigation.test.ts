@@ -35,6 +35,34 @@ describe("administrator ProductDraft review navigation", () => {
     );
   });
 
+  it("accepts inherited audience state and reconstructs an explicit all-status view", () => {
+    const cursor = encodeAdminProductDraftIndexCursor({
+      createdAt: "2026-07-24T12:00:00.000Z",
+      productDraftId: uuid(9),
+      limit: 25,
+      status: null,
+      sellerId: null,
+    });
+    const search = parseAdminProductDraftReviewSearch({
+      lang: "EN",
+      audience: "all",
+      returnLimit: "25",
+      returnStatus: "all",
+      returnCursor: cursor,
+    });
+
+    expect(search).toEqual({
+      lang: "EN",
+      audience: "all",
+      returnLimit: 25,
+      returnStatus: "all",
+      returnCursor: cursor,
+    });
+    expect(buildAdminProductDraftBackHref(search)).toBe(
+      `/admin/product-drafts?limit=25&status=all&cursor=${cursor}&lang=EN&audience=all`,
+    );
+  });
+
   it("rejects unsupported values, incomplete context, and cursor/filter mismatches", () => {
     const cursor = encodeAdminProductDraftIndexCursor({
       createdAt: "2026-07-24T12:00:00.000Z",

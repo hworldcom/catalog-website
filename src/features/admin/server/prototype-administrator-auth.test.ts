@@ -6,7 +6,9 @@ import { authenticatePrototypeAdministratorRequest } from "./prototype-administr
 
 const administratorId = "00000000-0000-0000-0000-000000000001";
 const otherUserId = "00000000-0000-0000-0000-000000000002";
-const request = new Request("http://example.test/v1/admin/classifier-batches");
+const request = new Request(
+  "http://example.test/v1/admin/classifier-imports/00000000-0000-0000-0000-000000000001",
+);
 
 function authenticated(userId: string): AuthenticatedSupabaseRequest {
   return {

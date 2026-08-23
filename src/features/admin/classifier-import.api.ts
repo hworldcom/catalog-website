@@ -5,42 +5,6 @@ export type ClassifierImportStatus =
 
 export type ClassifierImportGroupStatus = "pending" | "processing" | "complete" | "failed";
 
-export type ClassifierImportDestination = {
-  destinationSeller: {
-    id: string;
-    name: string;
-  };
-  source: "prototype_default";
-};
-
-export type ClassifierBatchInboxItem = {
-  batchId: string;
-  organizationId: string;
-  pipelineVersion: string;
-  createdAt: string;
-  finalizedAt: string | null;
-  originalFileCount: number;
-  processedFileCount: number;
-  groupCount: number;
-  imports: {
-    importId: string;
-    destinationSeller: {
-      id: string;
-      name: string | null;
-    };
-    status: ClassifierImportStatus;
-    operationKind: "import" | "reconcile";
-    errorCode: string | null;
-    createdAt: string;
-    updatedAt: string;
-  }[];
-};
-
-export type ClassifierBatchInboxPage = {
-  items: ClassifierBatchInboxItem[];
-  nextCursor: string | null;
-};
-
 export type ClassifierImportSnapshot = {
   importId: string;
   classifierBatchId: string;
@@ -69,17 +33,6 @@ export type ClassifierImportSnapshot = {
   }[];
 };
 
-export type StartClassifierImportResponse = {
-  importId: string;
-  classifierBatchId: string;
-  destinationSeller: {
-    id: string;
-    name: string | null;
-  };
-  status: ClassifierImportStatus;
-  dispatchStatus: "accepted" | "already_terminal" | "not_required";
-};
-
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type AccessTokenProvider = () => Promise<string | null>;
 
@@ -102,30 +55,6 @@ export function createClassifierImportClient(
   getAccessToken: AccessTokenProvider = getSupabaseAccessToken,
 ) {
   return {
-    listBatches(
-      options: { limit?: number; cursor?: string; signal?: AbortSignal } = {},
-    ): Promise<ClassifierBatchInboxPage> {
-      const search = new URLSearchParams({ limit: String(options.limit ?? 20) });
-      if (options.cursor) search.set("cursor", options.cursor);
-      return request(fetcher, getAccessToken, `/v1/admin/classifier-batches?${search}`, {
-        signal: options.signal,
-      });
-    },
-
-    getDestination(signal?: AbortSignal): Promise<ClassifierImportDestination> {
-      return request(fetcher, getAccessToken, "/v1/admin/classifier-import-destination", {
-        signal,
-      });
-    },
-
-    start(classifierBatchId: string): Promise<StartClassifierImportResponse> {
-      return request(fetcher, getAccessToken, "/v1/admin/classifier-imports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ classifierBatchId }),
-      });
-    },
-
     getStatus(importId: string, signal?: AbortSignal): Promise<ClassifierImportSnapshot> {
       return request(fetcher, getAccessToken, importPath(importId), { signal });
     },

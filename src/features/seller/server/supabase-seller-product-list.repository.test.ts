@@ -128,6 +128,7 @@ function productRow() {
     pack_size: null,
     stock: "in_stock",
     status: "draft",
+    marketplace_visibility: "not_published",
     moderation_revision: 3,
     has_working_copy: false,
     review_submission_id: null,

@@ -561,7 +561,7 @@ SELECT is(
     )
   ),
   'recorded',
-  'the legacy-attachment workflow is approved'
+  'the workflow-free source conflict workflow is approved'
 );
 
 INSERT INTO public.classifier_import_runs (
@@ -586,8 +586,8 @@ SELECT is(
       '29e10000-0000-0000-0000-000000000101'
     )
   ),
-  'existing',
-  'a same-seller legacy source import is attached once'
+  'ownership_conflict',
+  'a same-seller workflow-free source import is not adopted'
 );
 
 SELECT is(
@@ -597,8 +597,8 @@ SELECT is(
     WHERE classifier_batch_id =
       '29e10000-0000-0000-0000-000000000034'
   ),
-  '29e10000-0000-0000-0000-000000000014'::uuid,
-  'legacy attachment stores the immutable workflow binding'
+  NULL::uuid,
+  'a rejected workflow-free source import remains unchanged'
 );
 
 SELECT is(

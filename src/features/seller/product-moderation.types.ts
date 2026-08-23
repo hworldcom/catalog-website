@@ -79,64 +79,85 @@ export class ProductModerationError extends Error {
   }
 }
 
+const productModerationErrorDetails: Record<
+  ProductModerationErrorCode,
+  { status: 400 | 404 | 409 | 503; message: string }
+> = {
+  product_moderation_edit_invalid: {
+    status: 400,
+    message: "The product edit request is invalid.",
+  },
+  product_moderation_submission_invalid: {
+    status: 400,
+    message: "The product submission is invalid.",
+  },
+  product_moderation_seller_approval_required: {
+    status: 409,
+    message: "The seller must be approved before submitting products.",
+  },
+  product_moderation_product_not_editable: {
+    status: 409,
+    message: "This product cannot be edited from its current state.",
+  },
+  product_moderation_submission_conflict: {
+    status: 409,
+    message: "This product already has an active submission.",
+  },
+  product_moderation_submission_stale: {
+    status: 409,
+    message: "This product submission is no longer current.",
+  },
+  product_moderation_images_not_ready: {
+    status: 409,
+    message: "All product images and the selected cover must be ready.",
+  },
+  product_moderation_audience_required: {
+    status: 409,
+    message: "Select at least one product audience.",
+  },
+  product_moderation_description_outdated: {
+    status: 409,
+    message: "Regenerate, edit, or clear descriptions based on older product facts.",
+  },
+  product_moderation_working_revision_conflict: {
+    status: 409,
+    message: "The product changed. Refresh it before continuing.",
+  },
+  product_moderation_activation_active: {
+    status: 409,
+    message: "Product activation is already in progress.",
+  },
+  product_moderation_not_found: {
+    status: 404,
+    message: "The product was not found.",
+  },
+  product_moderation_unavailable: {
+    status: 503,
+    message: "Product moderation is temporarily unavailable.",
+  },
+};
+
 export function productModerationError(code: ProductModerationErrorCode): ProductModerationError {
-  const details: Record<
-    ProductModerationErrorCode,
-    { status: 400 | 404 | 409 | 503; message: string }
-  > = {
-    product_moderation_edit_invalid: {
-      status: 400,
-      message: "The product edit request is invalid.",
-    },
-    product_moderation_submission_invalid: {
-      status: 400,
-      message: "The product submission is invalid.",
-    },
-    product_moderation_seller_approval_required: {
-      status: 409,
-      message: "The seller must be approved before submitting products.",
-    },
-    product_moderation_product_not_editable: {
-      status: 409,
-      message: "This product cannot be edited from its current state.",
-    },
-    product_moderation_submission_conflict: {
-      status: 409,
-      message: "This product already has an active submission.",
-    },
-    product_moderation_submission_stale: {
-      status: 409,
-      message: "This product submission is no longer current.",
-    },
-    product_moderation_images_not_ready: {
-      status: 409,
-      message: "All product images and the selected cover must be ready.",
-    },
-    product_moderation_audience_required: {
-      status: 409,
-      message: "Select at least one product audience.",
-    },
-    product_moderation_description_outdated: {
-      status: 409,
-      message: "Regenerate, edit, or clear descriptions based on older product facts.",
-    },
-    product_moderation_working_revision_conflict: {
-      status: 409,
-      message: "The product changed. Refresh it before continuing.",
-    },
-    product_moderation_activation_active: {
-      status: 409,
-      message: "Product activation is already in progress.",
-    },
-    product_moderation_not_found: {
-      status: 404,
-      message: "The product was not found.",
-    },
-    product_moderation_unavailable: {
-      status: 503,
-      message: "Product moderation is temporarily unavailable.",
-    },
-  };
-  const detail = details[code];
+  const detail = productModerationErrorDetails[code];
   return new ProductModerationError(detail.status, code, detail.message);
+}
+
+export function productModerationErrorCode(error: unknown): ProductModerationErrorCode | null {
+  if (!error || typeof error !== "object") return null;
+
+  if ("code" in error && isProductModerationErrorCode(error.code)) return error.code;
+
+  const message = "message" in error && typeof error.message === "string" ? error.message : null;
+  if (message) {
+    if (isProductModerationErrorCode(message)) return message;
+    for (const code of Object.keys(productModerationErrorDetails) as ProductModerationErrorCode[]) {
+      if (productModerationErrorDetails[code].message === message) return code;
+    }
+  }
+
+  return "cause" in error ? productModerationErrorCode(error.cause) : null;
+}
+
+function isProductModerationErrorCode(value: unknown): value is ProductModerationErrorCode {
+  return typeof value === "string" && value in productModerationErrorDetails;
 }

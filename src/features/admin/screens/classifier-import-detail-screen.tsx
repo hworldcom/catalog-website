@@ -23,10 +23,10 @@ const defaultClient = createClassifierImportClient();
 const S = {
   title: t("Import details", "Szczegóły importu", "Importdetails", "Chi tiết nhập"),
   newImport: t(
-    "Back to approved batches",
-    "Wróć do zatwierdzonych partii",
-    "Zurück zu genehmigten Stapeln",
-    "Quay lại các lô đã duyệt",
+    "Upload for seller",
+    "Prześlij dla sprzedawcy",
+    "Für Verkäufer hochladen",
+    "Tải lên cho nhà bán",
   ),
   loading: t(
     "Loading import status…",
@@ -292,7 +292,7 @@ export function ClassifierImportDetailScreen({
             <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{importId}</p>
           </div>
           <Button asChild variant="outline">
-            <Link to="/admin/classifier-imports">{tr(S.newImport)}</Link>
+            <Link to="/admin/classifier-uploads/new">{tr(S.newImport)}</Link>
           </Button>
         </div>
 

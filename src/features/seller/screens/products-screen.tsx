@@ -15,7 +15,10 @@ import type {
   SellerProductListRequest,
   SellerProductPreview,
 } from "@/features/seller/seller-product-list.types";
-import type { ProductActivationDisplayState } from "@/features/seller/product-moderation-status.types";
+import type {
+  ProductActivationDisplayState,
+  ProductMarketplaceVisibility,
+} from "@/features/seller/product-moderation-status.types";
 import { t, tr } from "@/lib/i18n";
 
 const S = {
@@ -48,7 +51,8 @@ const S = {
   preview: t("Preview", "Podgląd", "Vorschau", "Xem trước"),
   title: t("Title", "Tytuł", "Titel", "Tiêu đề"),
   status: t("Status", "Status", "Status", "Trạng thái"),
-  publicStatus: t("Public", "Publiczny", "Öffentlich", "Công khai"),
+  productStatus: t("Product", "Produkt", "Produkt", "Sản phẩm"),
+  marketplaceStatus: t("Marketplace", "Rynek", "Marktplatz", "Marketplace"),
   reviewStatus: t("Review", "Weryfikacja", "Prüfung", "Kiểm duyệt"),
   activationStatus: t("Activation", "Aktywacja", "Aktivierung", "Kích hoạt"),
   price: t("Price", "Cena", "Preis", "Giá"),
@@ -477,9 +481,14 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
                       <td className="p-3">
                         <div className="flex min-w-44 flex-col gap-1 text-xs">
                           <StatusAxis
-                            label={tr(S.publicStatus)}
+                            label={tr(S.productStatus)}
                             value={localizedPublicState(product.publicState)}
                             className={publicStateClass(product.publicState)}
+                          />
+                          <StatusAxis
+                            label={tr(S.marketplaceStatus)}
+                            value={localizedMarketplaceVisibility(product.marketplaceVisibility)}
+                            className={marketplaceVisibilityClass(product.marketplaceVisibility)}
                           />
                           <StatusAxis label={tr(S.reviewStatus)} value={reviewState(product)} />
                           <StatusAxis
@@ -735,6 +744,33 @@ function localizedPublicState(status: SellerProductListItem["publicState"]): str
 function publicStateClass(status: SellerProductListItem["publicState"]): string {
   if (status === "published") return "text-emerald-400";
   if (status === "draft") return "text-amber-400";
+  return "text-muted-foreground";
+}
+
+function localizedMarketplaceVisibility(status: ProductMarketplaceVisibility): string {
+  if (status === "visible") {
+    return tr(t("Visible", "Widoczny", "Sichtbar", "Đang hiển thị"));
+  }
+  if (status === "storefront_disabled") {
+    return tr(t("Storefront disabled", "Sklep wyłączony", "Shop deaktiviert", "Gian hàng bị tắt"));
+  }
+  if (status === "seller_approval_required") {
+    return tr(
+      t(
+        "Seller approval required",
+        "Wymagane zatwierdzenie sprzedawcy",
+        "Verkäufergenehmigung erforderlich",
+        "Cần duyệt người bán",
+      ),
+    );
+  }
+  return tr(t("Not visible", "Niewidoczny", "Nicht sichtbar", "Chưa hiển thị"));
+}
+
+function marketplaceVisibilityClass(status: ProductMarketplaceVisibility): string {
+  if (status === "visible") return "text-emerald-400";
+  if (status === "storefront_disabled") return "text-amber-400";
+  if (status === "seller_approval_required") return "text-destructive";
   return "text-muted-foreground";
 }
 

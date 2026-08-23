@@ -4,8 +4,6 @@ import type { Database } from "@/lib/supabase/types";
 
 import type {
   ClassifierImportRepository,
-  CreateImportRunInput,
-  CreateImportRunResult,
   PreparedImportGroup,
   ReconcileImportResult,
   RetryImportResult,
@@ -25,52 +23,6 @@ function throwDatabaseError(error: { message: string }): never {
 export class SupabaseClassifierImportRepository implements ClassifierImportRepository {
   constructor(private readonly database: AdminClient) {}
 
-  async getRunBySource(
-    classifierOrganizationId: string,
-    classifierBatchId: string,
-  ): Promise<ClassifierImportRun | null> {
-    const result = await this.database
-      .from("classifier_import_runs")
-      .select("*")
-      .eq("classifier_organization_id", classifierOrganizationId)
-      .eq("classifier_batch_id", classifierBatchId)
-      .maybeSingle();
-    if (result.error) throwDatabaseError(result.error);
-    return result.data;
-  }
-
-  async createOrGetRun(input: CreateImportRunInput): Promise<CreateImportRunResult> {
-    const inserted = await this.database
-      .from("classifier_import_runs")
-      .insert({
-        classifier_organization_id: input.classifierOrganizationId,
-        classifier_batch_id: input.classifierBatchId,
-        seller_id: input.sellerId,
-        requested_by_user_id: input.requestedByUserId,
-      })
-      .select("*")
-      .maybeSingle();
-
-    if (!inserted.error && inserted.data) {
-      return { run: inserted.data, created: true };
-    }
-    if (inserted.error && inserted.error.code !== "23505") {
-      throwDatabaseError(inserted.error);
-    }
-
-    const existing = await this.database
-      .from("classifier_import_runs")
-      .select("*")
-      .eq("classifier_organization_id", input.classifierOrganizationId)
-      .eq("classifier_batch_id", input.classifierBatchId)
-      .maybeSingle();
-    if (existing.error) throwDatabaseError(existing.error);
-    if (!existing.data) {
-      throw new Error("Concurrent classifier import was not visible after uniqueness conflict.");
-    }
-    return { run: existing.data, created: false };
-  }
-
   async getRun(importId: string): Promise<ClassifierImportRun | null> {
     const result = await this.database
       .from("classifier_import_runs")
@@ -89,41 +41,6 @@ export class SupabaseClassifierImportRepository implements ClassifierImportRepos
       .maybeSingle();
     if (result.error) throwDatabaseError(result.error);
     return result.data?.name ?? null;
-  }
-
-  async getEligibleSeller(sellerId: string) {
-    const result = await this.database
-      .from("sellers")
-      .select("id,name")
-      .eq("id", sellerId)
-      .eq("published", true)
-      .maybeSingle();
-    if (result.error) throwDatabaseError(result.error);
-    if (!result.data || result.data.name.trim().length === 0) return null;
-    return result.data;
-  }
-
-  async listRunsForBatches(
-    classifierOrganizationId: string,
-    classifierBatchIds: string[],
-  ): Promise<ClassifierImportRun[]> {
-    if (classifierBatchIds.length === 0) return [];
-    const result = await this.database
-      .from("classifier_import_runs")
-      .select("*")
-      .eq("classifier_organization_id", classifierOrganizationId)
-      .in("classifier_batch_id", classifierBatchIds)
-      .order("created_at")
-      .order("id");
-    if (result.error) throwDatabaseError(result.error);
-    return result.data ?? [];
-  }
-
-  async getSellerNames(sellerIds: string[]): Promise<Map<string, string>> {
-    if (sellerIds.length === 0) return new Map();
-    const result = await this.database.from("sellers").select("id,name").in("id", sellerIds);
-    if (result.error) throwDatabaseError(result.error);
-    return new Map((result.data ?? []).map((seller) => [seller.id, seller.name]));
   }
 
   async listGroupOutcomes(importId: string): Promise<ClassifierImportGroupOutcome[]> {
@@ -207,17 +124,13 @@ export class SupabaseClassifierImportRepository implements ClassifierImportRepos
   }
 
   async isRunSellerEligible(run: ClassifierImportRun): Promise<boolean> {
-    if (!run.seller_classifier_workflow_id) {
-      return (await this.getEligibleSeller(run.seller_id)) !== null;
-    }
+    let query = this.database.from("sellers").select("id,name").eq("id", run.seller_id);
+    if (!run.seller_classifier_workflow_id) query = query.eq("published", true);
 
-    const result = await this.database
-      .from("sellers")
-      .select("id")
-      .eq("id", run.seller_id)
-      .maybeSingle();
+    const result = await query.maybeSingle();
     if (result.error) throwDatabaseError(result.error);
-    return result.data !== null;
+    if (!result.data) return false;
+    return run.seller_classifier_workflow_id !== null || result.data.name.trim().length > 0;
   }
 
   async prepareGroup(

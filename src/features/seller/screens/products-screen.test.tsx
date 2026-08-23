@@ -94,7 +94,9 @@ describe("ProductsScreen", () => {
     );
     expect(screen.getByText("Product code")).toBeVisible();
     expect(screen.getByText("SEL-F-TSH-ABCDEFGH")).toBeVisible();
-    expect(screen.getByText("Public:")).toBeVisible();
+    expect(screen.getByText("Product:")).toBeVisible();
+    expect(screen.getByText("Marketplace:")).toBeVisible();
+    expect(screen.getByText("Not visible")).toBeVisible();
     expect(screen.getByText("Review:")).toBeVisible();
     expect(screen.getByText("Activation:")).toBeVisible();
     expect(screen.getByText("Not submitted")).toBeVisible();
@@ -107,6 +109,17 @@ describe("ProductsScreen", () => {
       limit: 25,
       cursor: "next-page",
     });
+  });
+
+  it("distinguishes a published product from a disabled storefront", async () => {
+    const result = page({ status: "published" });
+    result.products[0].marketplaceVisibility = "storefront_disabled";
+    mocks.list.mockResolvedValue(result);
+
+    renderScreen();
+
+    expect(await screen.findByText("Published")).toBeVisible();
+    expect(screen.getByText("Storefront disabled")).toBeVisible();
   });
 
   it("refreshes a failed private URL once and then renders a placeholder", async () => {
@@ -267,6 +280,7 @@ function page({
         pack_size: null,
         stock: "in_stock",
         publicState: status,
+        marketplaceVisibility: status === "published" ? "visible" : "not_published",
         actionRevision: 3,
         hasWorkingCopy: false,
         review: null,

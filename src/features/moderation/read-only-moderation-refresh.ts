@@ -35,6 +35,7 @@ type ReadOnlyModerationRefreshOptions<TDetail> = {
   readDetail(): Promise<TDetail>;
   onDetail(detail: TDetail): void;
   describe(detail: TDetail): ReadOnlyModerationDescriptor;
+  pollPendingReview?: boolean;
 };
 
 export function useReadOnlyModerationRefresh<TDetail>({
@@ -42,6 +43,7 @@ export function useReadOnlyModerationRefresh<TDetail>({
   readDetail,
   onDetail,
   describe,
+  pollPendingReview = false,
 }: ReadOnlyModerationRefreshOptions<TDetail>) {
   const detailRef = useRef(detail);
   const readDetailRef = useRef(readDetail);
@@ -155,14 +157,14 @@ export function useReadOnlyModerationRefresh<TDetail>({
 
   useEffect(() => {
     const descriptor = describe(detail);
-    if (!visible || !shouldPollReadOnlyModeration(descriptor)) return;
+    if (!visible || !shouldPollReadOnlyModeration(descriptor, pollPendingReview)) return;
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         void requestDetail().catch(() => undefined);
       }
     }, READ_ONLY_MODERATION_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [describe, detail, requestDetail, visible]);
+  }, [describe, detail, pollPendingReview, requestDetail, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -210,10 +212,14 @@ export function useReadOnlyModerationRefresh<TDetail>({
   };
 }
 
-export function shouldPollReadOnlyModeration(descriptor: ReadOnlyModerationDescriptor): boolean {
+export function shouldPollReadOnlyModeration(
+  descriptor: ReadOnlyModerationDescriptor,
+  pollPendingReview = false,
+): boolean {
   return Boolean(
-    descriptor.activationDisplayState &&
-    pollableActivationStates.has(descriptor.activationDisplayState),
+    (pollPendingReview && descriptor.reviewStatus === "pending") ||
+    (descriptor.activationDisplayState &&
+      pollableActivationStates.has(descriptor.activationDisplayState)),
   );
 }
 

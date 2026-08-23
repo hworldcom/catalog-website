@@ -1,36 +1,16 @@
 import type { ClassifierImportConfig } from "./classifier-import.config";
-import type { ClassifierImportDestinationResolver } from "./classifier-import-destination.service";
 import type {
   ClassifierImportDispatcher,
   ClassifierImportDispatchResult,
 } from "./classifier-import.dispatcher";
 import type { ClassifierImportRepository } from "./classifier-import.repository";
 import type {
-  ApprovedGroupsSnapshot,
   ClassifierImportGroupOutcome,
   ClassifierImportRun,
   ClassifierImportStatusSnapshot,
   GroupImagePreparationService,
 } from "./classifier-import.types";
-import { ClassifierImportApiError, ClassifierImportError } from "./classifier-import.types";
-
-export interface ClassifierImportPreflightReader {
-  getApprovedGroups(batchId: string): Promise<ApprovedGroupsSnapshot>;
-}
-
-export type StartClassifierImportResult = {
-  httpStatus: 200 | 202;
-  body: {
-    importId: string;
-    classifierBatchId: string;
-    destinationSeller: {
-      id: string;
-      name: string | null;
-    };
-    status: ClassifierImportRun["status"];
-    dispatchStatus: ClassifierImportDispatchResult | "not_required";
-  };
-};
+import { ClassifierImportApiError } from "./classifier-import.types";
 
 export type ClassifierImportActionResult = {
   httpStatus: 200 | 202;
@@ -42,113 +22,9 @@ export class ClassifierImportCoordinator {
     private readonly repository: ClassifierImportRepository,
     private readonly imagePreparation: GroupImagePreparationService,
     private readonly config: ClassifierImportConfig,
-    private readonly preflight: ClassifierImportPreflightReader,
-    private readonly destination: ClassifierImportDestinationResolver,
     private readonly dispatcher: ClassifierImportDispatcher,
     private readonly now: () => number = Date.now,
   ) {}
-
-  async start(
-    classifierBatchId: string,
-    requestedByUserId: string | null = null,
-  ): Promise<StartClassifierImportResult> {
-    const existing = await this.repository.getRunBySource(
-      this.config.classifierOrganizationId,
-      classifierBatchId,
-    );
-    if (existing) return await this.startResult(existing);
-
-    const destination = await this.destination.resolveDestination();
-    await this.preflightNewImport(classifierBatchId);
-
-    const result = await this.repository.createOrGetRun({
-      classifierOrganizationId: this.config.classifierOrganizationId,
-      classifierBatchId,
-      sellerId: destination.id,
-      requestedByUserId,
-    });
-    return await this.startResult(
-      result.run,
-      result.run.seller_id === destination.id ? destination.name : undefined,
-    );
-  }
-
-  private async startResult(
-    run: ClassifierImportRun,
-    resolvedSellerName?: string,
-  ): Promise<StartClassifierImportResult> {
-    if (run.status === "failed" || run.status === "completed_with_errors") {
-      throw new ClassifierImportApiError(
-        409,
-        "classifier_import_retry_required",
-        "The import requires an explicit retry.",
-        { importId: run.id },
-      );
-    }
-
-    const dispatchStatus =
-      run.status === "pending" ? await this.acceptDispatch(run.id) : "not_required";
-
-    return {
-      httpStatus: run.status === "completed" ? 200 : 202,
-      body: {
-        importId: run.id,
-        classifierBatchId: run.classifier_batch_id,
-        destinationSeller: {
-          id: run.seller_id,
-          name: resolvedSellerName ?? (await this.repository.getSellerName(run.seller_id)),
-        },
-        status: run.status,
-        dispatchStatus,
-      },
-    };
-  }
-
-  private async preflightNewImport(classifierBatchId: string): Promise<void> {
-    let snapshot: ApprovedGroupsSnapshot;
-    try {
-      snapshot = await this.preflight.getApprovedGroups(classifierBatchId);
-    } catch (error) {
-      if (!(error instanceof ClassifierImportError)) throw error;
-      if (error.code === "classifier_batch_not_found") {
-        throw new ClassifierImportApiError(
-          404,
-          "classifier_batch_not_found",
-          "The classifier batch was not found.",
-        );
-      }
-      if (error.code === "classifier_batch_not_approved") {
-        throw new ClassifierImportApiError(
-          409,
-          "classifier_batch_not_approved",
-          "The classifier batch is not approved.",
-        );
-      }
-      if (
-        error.code === "approved_groups_request_failed" ||
-        error.code === "approved_groups_export_disabled"
-      ) {
-        throw new ClassifierImportApiError(
-          503,
-          "classifier_import_preflight_unavailable",
-          "Classifier import preflight is temporarily unavailable.",
-        );
-      }
-      throw new ClassifierImportApiError(
-        502,
-        "classifier_import_preflight_response_invalid",
-        "The classifier returned an invalid preflight response.",
-      );
-    }
-
-    if (snapshot.organizationId !== this.config.classifierOrganizationId) {
-      throw new ClassifierImportApiError(
-        502,
-        "classifier_import_preflight_response_invalid",
-        "The classifier returned an invalid preflight response.",
-      );
-    }
-  }
 
   async getStatus(importId: string): Promise<ClassifierImportStatusSnapshot> {
     const run = await this.requireRun(importId);

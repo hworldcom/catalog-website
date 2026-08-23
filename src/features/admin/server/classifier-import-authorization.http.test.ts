@@ -2,20 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SupabaseAuthenticationError } from "@/lib/supabase/request-authentication";
 
-import { handleListClassifierBatches } from "./classifier-batch-inbox.http";
 import {
   handleDispatchClassifierImport,
   handleGetClassifierImport,
-  handleGetClassifierImportDestination,
   handleReconcileClassifierImport,
   handleRetryClassifierImport,
-  handleStartClassifierImport,
 } from "./classifier-import.http";
 import { PrototypeAdministratorError } from "./prototype-administrator-access";
 import type { PrototypeAdministratorRequestAuthenticator } from "./prototype-administrator-auth";
 
 const importId = "00000000-0000-0000-0000-000000000003";
-const batchId = "00000000-0000-0000-0000-000000000004";
 
 type ProtectedOperation = (
   invoked: ReturnType<typeof vi.fn>,
@@ -23,52 +19,6 @@ type ProtectedOperation = (
 ) => Promise<Response>;
 
 const protectedOperations: { name: string; run: ProtectedOperation }[] = [
-  {
-    name: "batch inbox",
-    run: (invoked, authenticate) =>
-      handleListClassifierBatches(
-        request("/v1/admin/classifier-batches"),
-        {
-          list: async () => {
-            invoked();
-            throw new Error("must not run");
-          },
-        },
-        authenticate,
-      ),
-  },
-  {
-    name: "destination",
-    run: (invoked, authenticate) =>
-      handleGetClassifierImportDestination(
-        request("/v1/admin/classifier-import-destination"),
-        {
-          getDestination: async () => {
-            invoked();
-            throw new Error("must not run");
-          },
-        },
-        authenticate,
-      ),
-  },
-  {
-    name: "start",
-    run: (invoked, authenticate) =>
-      handleStartClassifierImport(
-        request("/v1/admin/classifier-imports", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ classifierBatchId: batchId }),
-        }),
-        {
-          start: async () => {
-            invoked();
-            throw new Error("must not run");
-          },
-        },
-        authenticate,
-      ),
-  },
   {
     name: "status",
     run: (invoked, authenticate) =>
@@ -185,10 +135,11 @@ describe("classifier import administrator authorization", () => {
       expectedCode: "authentication_configuration_invalid",
     },
   ])("preserves stable $expectedCode errors", async ({ error, expectedStatus, expectedCode }) => {
-    const response = await handleGetClassifierImportDestination(
-      request("/v1/admin/classifier-import-destination"),
+    const response = await handleGetClassifierImport(
+      request(`/v1/admin/classifier-imports/${importId}`),
+      importId,
       {
-        getDestination: async () => {
+        getStatus: async () => {
           throw new Error("must not run");
         },
       },

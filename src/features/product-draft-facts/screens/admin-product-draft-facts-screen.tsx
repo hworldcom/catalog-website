@@ -20,10 +20,10 @@ const S = {
     "Xem lại thông tin có cấu trúc trước khi tạo mô tả danh mục.",
   ),
   back: t(
-    "Back to classifier imports",
-    "Wróć do importów klasyfikatora",
-    "Zurück zu Klassifikator-Importen",
-    "Quay lại nhập từ bộ phân loại",
+    "Back to ProductDrafts",
+    "Wróć do szkiców produktów",
+    "Zurück zu Produktentwürfen",
+    "Quay lại bản nháp sản phẩm",
   ),
 };
 
@@ -40,7 +40,9 @@ export function AdminProductDraftFactsScreen({ productDraftId }: { productDraftI
             </p>
           </div>
           <Button asChild variant="outline">
-            <Link to="/admin/classifier-imports">{tr(S.back)}</Link>
+            <Link to="/admin/product-drafts" search={{ limit: 25 }}>
+              {tr(S.back)}
+            </Link>
           </Button>
         </div>
 

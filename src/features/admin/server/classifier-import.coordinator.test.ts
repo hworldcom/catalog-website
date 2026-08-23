@@ -1,20 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import type { ClassifierImportConfig } from "./classifier-import.config";
-import type { ClassifierImportDestinationResolver } from "./classifier-import-destination.service";
 import type { ClassifierImportDispatcher } from "./classifier-import.dispatcher";
-import {
-  ClassifierImportCoordinator,
-  type ClassifierImportPreflightReader,
-} from "./classifier-import.coordinator";
+import { ClassifierImportCoordinator } from "./classifier-import.coordinator";
 import type { ClassifierImportRepository } from "./classifier-import.repository";
 import type {
-  ApprovedGroupsSnapshot,
   ClassifierImportGroupOutcome,
   ClassifierImportRun,
   GroupImagePreparationService,
 } from "./classifier-import.types";
-import { ClassifierImportError } from "./classifier-import.types";
 
 const config: ClassifierImportConfig = {
   classifierApiBaseUrl: "http://classifier.test",
@@ -30,7 +24,6 @@ const config: ClassifierImportConfig = {
 };
 
 const sellerId = "00000000-0000-0000-0000-000000000002";
-const alternateSellerId = "00000000-0000-0000-0000-000000000099";
 const runId = "00000000-0000-0000-0000-000000000003";
 const batchId = "00000000-0000-0000-0000-000000000004";
 
@@ -59,18 +52,6 @@ function run(overrides: Partial<ClassifierImportRun> = {}): ClassifierImportRun 
   };
 }
 
-function approvedSnapshot(
-  organizationId = config.classifierOrganizationId,
-): ApprovedGroupsSnapshot {
-  return {
-    batchId,
-    organizationId,
-    status: "approved",
-    pipelineVersion: "2026-06-01",
-    groups: [],
-  };
-}
-
 function group(
   groupId: string,
   status: ClassifierImportGroupOutcome["status"],
@@ -95,11 +76,8 @@ function repository(
   overrides: Partial<ClassifierImportRepository> = {},
 ): ClassifierImportRepository {
   return {
-    getRunBySource: async () => null,
-    createOrGetRun: async () => ({ run: run(), created: true }),
     getRun: async () => run(),
     getSellerName: async () => "Kesar Textiles",
-    getEligibleSeller: async () => ({ id: sellerId, name: "Kesar Textiles" }),
     listGroupOutcomes: async () => [],
     retryImport: async () => "noop",
     reconcileImport: async () => "not_allowed",
@@ -133,22 +111,6 @@ function imagePreparation(
   };
 }
 
-function preflight(
-  getApprovedGroups: ClassifierImportPreflightReader["getApprovedGroups"] = async () =>
-    approvedSnapshot(),
-): ClassifierImportPreflightReader {
-  return { getApprovedGroups };
-}
-
-function destination(
-  resolveDestination: ClassifierImportDestinationResolver["resolveDestination"] = async () => ({
-    id: sellerId,
-    name: "Kesar Textiles",
-  }),
-): ClassifierImportDestinationResolver {
-  return { resolveDestination };
-}
-
 function dispatcher(
   dispatch: ClassifierImportDispatcher["dispatch"] = async () => "accepted",
 ): ClassifierImportDispatcher {
@@ -157,8 +119,6 @@ function dispatcher(
 
 function coordinator(
   repositoryValue: ClassifierImportRepository = repository(),
-  preflightValue: ClassifierImportPreflightReader = preflight(),
-  destinationValue: ClassifierImportDestinationResolver = destination(),
   dispatcherValue: ClassifierImportDispatcher = dispatcher(),
   now: () => number = Date.now,
 ): ClassifierImportCoordinator {
@@ -166,168 +126,12 @@ function coordinator(
     repositoryValue,
     imagePreparation(),
     config,
-    preflightValue,
-    destinationValue,
     dispatcherValue,
     now,
   );
 }
 
 describe("ClassifierImportCoordinator", () => {
-  it("authorizes a new import in the required dependency order", async () => {
-    const calls: string[] = [];
-    const subject = coordinator(
-      repository({
-        getRunBySource: async () => {
-          calls.push("lookup");
-          return null;
-        },
-        createOrGetRun: async (input) => {
-          calls.push(`create:${input.sellerId}`);
-          return { run: run(), created: true };
-        },
-      }),
-      preflight(async () => {
-        calls.push("preflight");
-        return approvedSnapshot();
-      }),
-      destination(async () => {
-        calls.push("destination");
-        return { id: sellerId, name: "Kesar Textiles" };
-      }),
-      dispatcher(async (id) => {
-        calls.push(`dispatch:${id}`);
-        return "accepted";
-      }),
-    );
-
-    await expect(subject.start(batchId)).resolves.toEqual({
-      httpStatus: 202,
-      body: {
-        importId: runId,
-        classifierBatchId: batchId,
-        destinationSeller: { id: sellerId, name: "Kesar Textiles" },
-        status: "pending",
-        dispatchStatus: "accepted",
-      },
-    });
-    expect(calls).toEqual([
-      "lookup",
-      "destination",
-      "preflight",
-      `create:${sellerId}`,
-      `dispatch:${runId}`,
-    ]);
-  });
-
-  it("returns an existing import without resolving the default or calling the classifier", async () => {
-    const subject = coordinator(
-      repository({ getRunBySource: async () => run() }),
-      preflight(async () => {
-        throw new Error("preflight must not run");
-      }),
-      destination(async () => {
-        throw new Error("destination must not resolve");
-      }),
-    );
-
-    await expect(subject.start(batchId)).resolves.toMatchObject({
-      httpStatus: 202,
-      body: {
-        importId: runId,
-        destinationSeller: { id: sellerId, name: "Kesar Textiles" },
-        dispatchStatus: "accepted",
-      },
-    });
-  });
-
-  it("returns completed imports as an idempotent success", async () => {
-    const subject = coordinator(
-      repository({
-        getRunBySource: async () =>
-          run({ status: "completed", completed_at: "2026-07-19T00:01:00Z" }),
-      }),
-    );
-    await expect(subject.start(batchId)).resolves.toMatchObject({
-      httpStatus: 200,
-      body: { status: "completed", dispatchStatus: "not_required" },
-    });
-  });
-
-  it("requires explicit retry for an existing terminal failure", async () => {
-    const subject = coordinator(
-      repository({
-        getRunBySource: async () => run({ status: "completed_with_errors" }),
-      }),
-    );
-    await expect(subject.start(batchId)).rejects.toMatchObject({
-      status: 409,
-      code: "classifier_import_retry_required",
-      details: { importId: runId },
-    });
-  });
-
-  it("returns the concurrent winner's stored seller without comparing it to the default", async () => {
-    const subject = coordinator(
-      repository({
-        createOrGetRun: async () => ({
-          run: run({ seller_id: alternateSellerId }),
-          created: false,
-        }),
-        getSellerName: async (id) => (id === alternateSellerId ? "Concurrent Store" : null),
-      }),
-    );
-
-    await expect(subject.start(batchId)).resolves.toMatchObject({
-      body: {
-        destinationSeller: { id: alternateSellerId, name: "Concurrent Store" },
-      },
-    });
-  });
-
-  it.each([
-    ["classifier_batch_not_found", 404, "classifier_batch_not_found"],
-    ["classifier_batch_not_approved", 409, "classifier_batch_not_approved"],
-    ["approved_groups_export_disabled", 503, "classifier_import_preflight_unavailable"],
-    ["approved_groups_request_failed", 503, "classifier_import_preflight_unavailable"],
-    ["approved_groups_response_invalid", 502, "classifier_import_preflight_response_invalid"],
-    [
-      "approved_groups_unexpected_client_error",
-      502,
-      "classifier_import_preflight_response_invalid",
-    ],
-  ])("maps preflight failure %s", async (sourceCode, httpStatus, apiCode) => {
-    let created = false;
-    const subject = coordinator(
-      repository({
-        createOrGetRun: async () => {
-          created = true;
-          return { run: run(), created: true };
-        },
-      }),
-      preflight(async () => {
-        throw new ClassifierImportError(sourceCode, false);
-      }),
-    );
-
-    await expect(subject.start(batchId)).rejects.toMatchObject({
-      status: httpStatus,
-      code: apiCode,
-    });
-    expect(created).toBe(false);
-  });
-
-  it("rejects a preflight response for a different organization", async () => {
-    const subject = coordinator(
-      repository(),
-      preflight(async () => approvedSnapshot("00000000-0000-0000-0000-000000000097")),
-    );
-    await expect(subject.start(batchId)).rejects.toMatchObject({
-      status: 502,
-      code: "classifier_import_preflight_response_invalid",
-    });
-  });
-
   it("returns separate group counts and server-derived actions", async () => {
     const groups = [
       group("00000000-0000-0000-0000-000000000011", "pending"),
@@ -383,8 +187,6 @@ describe("ClassifierImportCoordinator", () => {
         retryImport: async () => "requeued",
         getRun: async () => run({ status: "pending" }),
       }),
-      preflight(),
-      destination(),
       dispatcher(async (id) => {
         dispatched.push(id);
         return "accepted";
@@ -406,12 +208,7 @@ describe("ClassifierImportCoordinator", () => {
   });
 
   it("dispatches pending recovery work and rejects synchronous scheduling failures", async () => {
-    const accepted = coordinator(
-      repository({ getRun: async () => run() }),
-      preflight(),
-      destination(),
-      dispatcher(),
-    );
+    const accepted = coordinator(repository({ getRun: async () => run() }), dispatcher());
     await expect(accepted.dispatch(runId)).resolves.toMatchObject({
       httpStatus: 202,
       body: { status: "pending", actions: { canDispatch: true } },
@@ -419,8 +216,6 @@ describe("ClassifierImportCoordinator", () => {
 
     const unavailable = coordinator(
       repository({ getRun: async () => run() }),
-      preflight(),
-      destination(),
       dispatcher(async () => {
         throw new Error("scheduler unavailable");
       }),
@@ -444,8 +239,6 @@ describe("ClassifierImportCoordinator", () => {
             last_heartbeat_at: currentHeartbeat,
           }),
       }),
-      preflight(),
-      destination(),
       dispatcher(),
       () => Date.parse(currentHeartbeat) + 899_000,
     );
@@ -461,8 +254,6 @@ describe("ClassifierImportCoordinator", () => {
             last_heartbeat_at: currentHeartbeat,
           }),
       }),
-      preflight(),
-      destination(),
       dispatcher(),
       () => Date.parse(currentHeartbeat) + 901_000,
     );

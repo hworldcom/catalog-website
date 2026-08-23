@@ -1,14 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  readClassifierImportConfig,
-  readDefaultClassifierSellerId,
-} from "./classifier-import.config";
+import { readClassifierImportConfig } from "./classifier-import.config";
 
 const requiredEnvironment = {
   BAZORIA_CLASSIFIER_API_BASE_URL: "http://localhost:8000/",
   BAZORIA_DEFAULT_CLASSIFIER_ORGANIZATION_ID: "00000000-0000-0000-0000-000000000001",
-  BAZORIA_DEFAULT_SELLER_ID: "00000000-0000-0000-0000-000000000002",
   BAZORIA_CLASSIFIER_IMPORT_DISPATCH_MODE: "local",
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
@@ -30,9 +26,8 @@ describe("readClassifierImportConfig", () => {
     });
   });
 
-  it("does not require the prototype default seller for shared runtime configuration", () => {
-    const { BAZORIA_DEFAULT_SELLER_ID: _sellerId, ...environment } = requiredEnvironment;
-    expect(readClassifierImportConfig(environment).classifierOrganizationId).toBe(
+  it("starts without a prototype default seller setting", () => {
+    expect(readClassifierImportConfig(requiredEnvironment).classifierOrganizationId).toBe(
       "00000000-0000-0000-0000-000000000001",
     );
   });
@@ -108,19 +103,5 @@ describe("readClassifierImportConfig", () => {
         BAZORIA_CLASSIFIER_IMPORT_WORKER_POLL_INTERVAL_SECONDS: "1.25",
       }).workerPollIntervalMs,
     ).toBe(1_250);
-  });
-});
-
-describe("readDefaultClassifierSellerId", () => {
-  it("reads the prototype default seller independently", () => {
-    expect(readDefaultClassifierSellerId(requiredEnvironment)).toBe(
-      "00000000-0000-0000-0000-000000000002",
-    );
-  });
-
-  it.each([undefined, "", "not-a-uuid"])("rejects an invalid default seller: %s", (value) => {
-    expect(() => readDefaultClassifierSellerId({ BAZORIA_DEFAULT_SELLER_ID: value })).toThrow(
-      "Invalid classifier import configuration: BAZORIA_DEFAULT_SELLER_ID",
-    );
   });
 });

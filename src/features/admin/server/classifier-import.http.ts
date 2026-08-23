@@ -2,24 +2,14 @@ import { z } from "zod";
 
 import { SupabaseAuthenticationError } from "@/lib/supabase/request-authentication";
 
-import type { ClassifierImportDestinationReader } from "./classifier-import-destination.service";
 import type { ClassifierImportCoordinator } from "./classifier-import.coordinator";
 import { ClassifierImportApiError } from "./classifier-import.types";
-import {
-  getClassifierImportCoordinator,
-  getClassifierImportDestinationService,
-} from "./classifier-import.runtime";
+import { getClassifierImportCoordinator } from "./classifier-import.runtime";
 import { PrototypeAdministratorError } from "./prototype-administrator-access";
 import {
   authenticatePrototypeAdministratorRequest,
   type PrototypeAdministratorRequestAuthenticator,
 } from "./prototype-administrator-auth";
-
-const startRequestSchema = z
-  .object({
-    classifierBatchId: z.string().uuid(),
-  })
-  .strict();
 
 const retryRequestSchema = z.object({
   includeNonRetryable: z.boolean().default(false),
@@ -31,30 +21,6 @@ const responseHeaders = {
   "Cache-Control": "no-store",
   "Content-Type": "application/json; charset=utf-8",
 };
-
-export async function handleStartClassifierImport(
-  request: Request,
-  injectedCoordinator?: Pick<ClassifierImportCoordinator, "start">,
-  authenticate: PrototypeAdministratorRequestAuthenticator = authenticatePrototypeAdministratorRequest,
-): Promise<Response> {
-  return handleRequest(request, authenticate, async () => {
-    const payload = startRequestSchema.parse(await request.json());
-    const coordinator = injectedCoordinator ?? (await getClassifierImportCoordinator());
-    const result = await coordinator.start(payload.classifierBatchId);
-    return json(result.body, result.httpStatus);
-  });
-}
-
-export async function handleGetClassifierImportDestination(
-  request: Request,
-  injectedReader?: ClassifierImportDestinationReader,
-  authenticate: PrototypeAdministratorRequestAuthenticator = authenticatePrototypeAdministratorRequest,
-): Promise<Response> {
-  return handleRequest(request, authenticate, async () => {
-    const reader = injectedReader ?? (await getClassifierImportDestinationService());
-    return json(await reader.getDestination(), 200);
-  });
-}
 
 export async function handleGetClassifierImport(
   request: Request,

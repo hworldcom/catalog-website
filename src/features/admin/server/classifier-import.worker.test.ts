@@ -3,8 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { ClassifierImportConfig } from "./classifier-import.config";
 import type {
   ClassifierImportRepository,
-  CreateImportRunInput,
-  CreateImportRunResult,
   PreparedImportGroup,
   ReconcileImportResult,
   RetryImportResult,
@@ -112,27 +110,12 @@ class MemoryRepository implements ClassifierImportRepository {
     this.claimed = run;
   }
 
-  async getRunBySource(
-    _classifierOrganizationId: string,
-    _classifierBatchId: string,
-  ): Promise<ClassifierImportRun | null> {
-    return null;
-  }
-
-  async createOrGetRun(_input: CreateImportRunInput): Promise<CreateImportRunResult> {
-    throw new Error("not used");
-  }
-
   async getRun(_importId: string): Promise<ClassifierImportRun | null> {
     return this.claimed;
   }
 
   async getSellerName(_sellerId: string): Promise<string | null> {
     return "Kesar Textiles";
-  }
-
-  async getEligibleSeller(_sellerId: string) {
-    return { id: sellerId, name: "Kesar Textiles" };
   }
 
   async listGroupOutcomes(_importId: string): Promise<ClassifierImportGroupOutcome[]> {

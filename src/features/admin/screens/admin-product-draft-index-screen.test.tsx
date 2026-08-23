@@ -126,6 +126,21 @@ describe("AdminProductDraftIndexScreenView", () => {
     });
   });
 
+  it("clears filters to the draft work queue and labels historical records as products", async () => {
+    const onRequestChange = vi.fn();
+    renderScreen(client(page([item({ status: "published" })])), { request, onRequestChange });
+
+    expect(await screen.findByRole("link", { name: "Review product" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    expect(onRequestChange).toHaveBeenCalledWith({
+      limit: 25,
+      cursor: null,
+      status: "draft",
+      sellerId: null,
+    });
+  });
+
   it("persists the next cursor and can reset to the first page", async () => {
     const onRequestChange = vi.fn();
     renderScreen(client(page([item()], "next-page")), {

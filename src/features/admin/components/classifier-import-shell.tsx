@@ -5,11 +5,11 @@ import { LanguageSwitcher, t, tr } from "@/lib/i18n";
 import { useAdministratorNavigationContext } from "../administrator-navigation.context";
 
 const S = {
-  classifierImports: t(
-    "Classifier imports",
-    "Importy klasyfikatora",
-    "Klassifikator-Importe",
-    "Nhập từ bộ phân loại",
+  catalogOperations: t(
+    "Catalog operations",
+    "Operacje katalogowe",
+    "Katalogvorgänge",
+    "Vận hành danh mục",
   ),
   productDrafts: t("ProductDrafts", "Szkice produktów", "Produktentwürfe", "Bản nháp sản phẩm"),
   moderationRequests: t(
@@ -39,8 +39,8 @@ export function ClassifierImportShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-muted/30 text-foreground">
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link to="/admin/classifier-imports" className="min-w-0">
-            <div className="font-display text-lg font-semibold">{tr(S.classifierImports)}</div>
+          <Link to="/admin/classifier-uploads/new" className="min-w-0">
+            <div className="font-display text-lg font-semibold">{tr(S.catalogOperations)}</div>
             <div className="text-xs text-muted-foreground">{tr(S.internalOperations)}</div>
           </Link>
           <nav className="flex items-center gap-3 text-sm">

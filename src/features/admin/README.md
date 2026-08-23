@@ -6,16 +6,17 @@ Current status:
 
 - durable classifier-import coordination and `ProductDraft` source identity are
   implemented server-side;
-- the browser-facing inbox is available at `/v1/admin/classifier-batches`, with
-  start, status, retry, and reconciliation endpoints under
-  `/v1/admin/classifier-imports`;
+- new imports are created only through seller-owned or administrator-delegated
+  classifier workflows that stored the immutable seller before upload;
+- existing import status, retry, reconciliation, and dispatch endpoints remain
+  available by import identifier under `/v1/admin/classifier-imports`;
 - promoted classifier images are copied into Bazoria-owned storage by the
   import worker, with new and retried ProductDraft images written to the
   private `product-draft-images` bucket;
 - administrator authorization immediately dispatches the exact durable import
   through the local backend; and
-- an authenticated approved-batch inbox, explicit import authorization, and
-  durable status pages are available under `/admin/classifier-imports`;
+- `/admin/classifier-imports` is a compatibility redirect to delegated upload,
+  while durable import detail pages remain available for support and recovery;
 - allowlisted administrators can continue administrator-created seller
   workflows through delegated browser review and ProductDraft import, using
   protected thumbnail delivery, immutable seller context, and durable
@@ -30,9 +31,9 @@ Current status:
   `/admin/moderation/{submissionType}/{submissionId}` for immutable comparison,
   replay-safe decisions, backend-authorized activation recovery, and private
   image delivery; and
-- every raw classifier-import administrator endpoint validates the Supabase
-  bearer token and the server-only prototype-administrator allowlist before
-  constructing its service-role runtime.
+- every preserved classifier-import administrator operation validates the
+  Supabase bearer token and server-only prototype-administrator allowlist
+  before constructing its service-role runtime.
 
 Boundaries:
 
@@ -43,6 +44,8 @@ Boundaries:
   ticket says otherwise.
 - Classifier-approved groups must become `ProductDraft` records through an
   explicit server-side import first, never public products automatically.
+- A raw classifier batch identifier is not an ownership boundary and cannot
+  create a new Bazoria import.
 - Classifier import configuration and service-role database access remain
   server-only.
 - Browser polling only reads progress; backend dispatch initiates worker

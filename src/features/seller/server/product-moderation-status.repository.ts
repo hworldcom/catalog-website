@@ -4,6 +4,7 @@ import type {
   ProductActivationStatus,
   ProductModerationReviewStatus,
   ProductModerationSubmissionKind,
+  ProductMarketplaceVisibility,
   ProductPublicState,
 } from "../product-moderation-status.types";
 import type { Json } from "@/lib/supabase/types";
@@ -11,6 +12,7 @@ import type { Json } from "@/lib/supabase/types";
 export type ProductModerationStatusRecord = {
   id: string;
   status: ProductPublicState;
+  marketplace_visibility: ProductMarketplaceVisibility;
   moderation_revision: number;
   has_working_copy: boolean;
   review_submission_id: string | null;

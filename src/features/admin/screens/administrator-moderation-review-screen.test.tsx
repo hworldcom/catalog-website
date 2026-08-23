@@ -208,6 +208,22 @@ describe("AdministratorModerationReviewScreenView", () => {
     expect(screen.getByRole("button", { name: "Approve and start activation" })).toBeEnabled();
   });
 
+  it("warns about stale description languages without disabling administrator decisions", async () => {
+    const detail = productDetail();
+    if (!detail.proposed.snapshot.facts) throw new Error("Expected submitted facts.");
+    detail.proposed.snapshot.facts.factsRevision = 2;
+
+    renderReview("initial_product", client({ product: detail }));
+
+    expect(
+      await screen.findByText(
+        "This description uses facts revision 1; the submitted facts are revision 2. Review the text before deciding.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("Older facts")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Approve and start activation" })).toBeEnabled();
+  });
+
   it("refreshes stale action conflicts and exposes only backend-authorized recovery", async () => {
     vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(requestId);
     const initial = productDetail({ canDecide: false, canRetryActivation: true });

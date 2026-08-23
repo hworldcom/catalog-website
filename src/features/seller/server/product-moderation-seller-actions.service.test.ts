@@ -263,6 +263,7 @@ function statusDetail(overrides: Partial<ProductModerationStatusDetail> = {}) {
   return {
     productId,
     publicState: "published",
+    marketplaceVisibility: "visible",
     actionRevision: 8,
     hasWorkingCopy: true,
     review: null,

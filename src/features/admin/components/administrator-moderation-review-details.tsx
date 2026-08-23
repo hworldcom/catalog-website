@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { readOnlyModerationImageCredentialIdentity } from "@/features/moderation/read-only-moderation-refresh";
+import { productModerationDescriptionWarnings } from "@/features/seller/product-moderation-description-freshness";
 import { t, tr, useLang, type Lang } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase/client";
 
@@ -115,6 +116,13 @@ const S = {
     "Keine Beschreibungen eingereicht",
     "Không có mô tả được gửi",
   ),
+  outdatedDescription: t(
+    "This description uses facts revision {description}; the submitted facts are revision {current}. Review the text before deciding.",
+    "Ten opis używa wersji danych {description}; przesłane dane są w wersji {current}. Sprawdź tekst przed decyzją.",
+    "Diese Beschreibung verwendet Faktenversion {description}; die eingereichten Fakten haben Version {current}. Prüfen Sie den Text vor der Entscheidung.",
+    "Mô tả này dùng phiên bản thông tin {description}; thông tin đã gửi là phiên bản {current}. Hãy xem lại nội dung trước khi quyết định.",
+  ),
+  outdated: t("Older facts", "Starsze dane", "Ältere Fakten", "Thông tin cũ"),
   facts: t("Reviewed facts", "Sprawdzone dane", "Geprüfte Fakten", "Dữ liệu đã duyệt"),
   noFacts: t(
     "No structured facts submitted",
@@ -325,6 +333,9 @@ function ProductSnapshotCard({
 }) {
   const snapshot = revision.snapshot;
   const category = categories.find((candidate) => candidate.id === snapshot.categoryId);
+  const warnings = new Map(
+    productModerationDescriptionWarnings(snapshot).map((warning) => [warning.language, warning]),
+  );
   const lang = useLang();
   return (
     <Card className="min-w-0">
@@ -391,15 +402,39 @@ function ProductSnapshotCard({
           <h3 className="text-sm font-semibold">{tr(S.descriptions)}</h3>
           {snapshot.descriptions.length ? (
             <div className="space-y-2">
-              {snapshot.descriptions.map((description) => (
-                <div key={description.language} className="border border-border bg-muted/20 p-3">
-                  <div className="mb-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline">{description.language.toUpperCase()}</Badge>
-                    <span>{description.source}</span>
+              {snapshot.descriptions.map((description) => {
+                const warning = warnings.get(description.language);
+                return (
+                  <div
+                    key={description.language}
+                    className={
+                      warning
+                        ? "border border-amber-400 bg-amber-50 p-3 text-amber-950"
+                        : "border border-border bg-muted/20 p-3"
+                    }
+                  >
+                    <div className="mb-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline">{description.language.toUpperCase()}</Badge>
+                      <span>{description.source}</span>
+                      {warning ? <Badge variant="outline">{tr(S.outdated)}</Badge> : null}
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm">{description.descriptionText}</p>
+                    {warning ? (
+                      <p className="mt-2 text-xs font-medium">
+                        {tr(S.outdatedDescription)
+                          .replace(
+                            "{description}",
+                            warning.descriptionFactsRevision?.toString() ?? tr(S.notSet),
+                          )
+                          .replace(
+                            "{current}",
+                            warning.currentFactsRevision?.toString() ?? tr(S.notSet),
+                          )}
+                      </p>
+                    ) : null}
                   </div>
-                  <p className="whitespace-pre-wrap text-sm">{description.descriptionText}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">{tr(S.noDescriptions)}</p>

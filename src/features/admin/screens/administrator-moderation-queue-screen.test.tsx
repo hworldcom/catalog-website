@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildAdministratorModerationDetailHref } from "../administrator-moderation.navigation";
 import type {
@@ -14,8 +14,14 @@ import {
   type AdministratorModerationQueueClient,
 } from "./administrator-moderation-queue-screen";
 
+const browserMocks = vi.hoisted(() => ({ getSession: vi.fn() }));
+
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}));
+
+vi.mock("@/lib/supabase/client", () => ({
+  supabase: { auth: { getSession: browserMocks.getSession } },
 }));
 
 const request: AdministratorModerationRequest = {
@@ -28,7 +34,26 @@ const request: AdministratorModerationRequest = {
 };
 
 describe("AdministratorModerationQueueScreenView", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    browserMocks.getSession.mockReset();
+  });
+
   it("renders mixed seller and product rows with immutable previews and return links", async () => {
+    browserMocks.getSession.mockResolvedValue({
+      data: { session: { access_token: "administrator-access-token" } },
+    });
+    const fetchImage = vi.fn(
+      async () =>
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: { "Content-Type": "image/png" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchImage);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:administrator-queue-preview");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     const seller = sellerItem();
     const product = productItem();
     renderScreen(client(page([seller, product])));
@@ -37,9 +62,20 @@ describe("AdministratorModerationQueueScreenView", () => {
     expect(screen.getAllByText("New seller").length).toBeGreaterThan(1);
     expect(screen.getByText("Cotton trousers")).toBeVisible();
     expect(screen.getByText("Publishing")).toBeVisible();
-    expect(screen.getByRole("img", { name: "Seller One preview" })).toHaveAttribute(
+    expect(await screen.findByRole("img", { name: "Seller One preview" })).toHaveAttribute(
       "src",
+      "blob:administrator-queue-preview",
+    );
+    expect(fetchImage).toHaveBeenCalledWith(
       seller.preview.url,
+      expect.objectContaining({
+        headers: { Authorization: "Bearer administrator-access-token" },
+        cache: "no-store",
+      }),
+    );
+    expect(screen.getByRole("img", { name: "Cotton trousers preview" })).toHaveAttribute(
+      "src",
+      product.preview.url,
     );
     expect(screen.getAllByRole("link", { name: "Review request" })[1]).toHaveAttribute(
       "href",
@@ -202,7 +238,7 @@ function sellerItem(
     submittedAt: "2026-08-18T10:00:00.000Z",
     reviewStatus: "pending",
     sellerVisibleReason: null,
-    preview: availablePreview("https://seller.test/logo"),
+    preview: availablePreview(`/v1/seller-profile-assets/${uuid(11)}`, "seller_logo"),
     activation: null,
     ...overrides,
   } as AdministratorModerationQueueItem;
@@ -235,13 +271,16 @@ function productItem(
   } as AdministratorModerationQueueItem;
 }
 
-function availablePreview(url: string): AdministratorModerationQueueItem["preview"] {
+function availablePreview(
+  url: string,
+  kind: AdministratorModerationQueueItem["preview"]["kind"] = "product_cover",
+): AdministratorModerationQueueItem["preview"] {
   return {
-    kind: "product_cover",
+    kind,
     deliveryStatus: "available",
     deliveryErrorCode: null,
     url,
-    expiresAt: "2999-08-18T12:00:00.000Z",
+    expiresAt: kind === "product_cover" ? "2999-08-18T12:00:00.000Z" : null,
   };
 }
 

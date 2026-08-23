@@ -1,17 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  ClassifierImportRequestError,
   createClassifierImportClient,
   type ClassifierImportSnapshot,
 } from "./classifier-import.api";
 
 const importId = "00000000-0000-0000-0000-000000000010";
 const batchId = "00000000-0000-0000-0000-000000000020";
-const destinationSeller = {
-  id: "00000000-0000-0000-0000-000000000030",
-  name: "Kesar Textiles",
-};
 const accessToken = "header.payload.signature";
 const getAccessToken = vi.fn(async () => accessToken);
 
@@ -71,85 +66,6 @@ function expectAuthenticatedRequest(
 }
 
 describe("createClassifierImportClient", () => {
-  it("lists one cursor page of approved classifier batches", async () => {
-    const page = { items: [], nextCursor: "next-page" };
-    const fetcher = vi.fn(async () => jsonResponse(page));
-    const client = createClient(fetcher);
-
-    await expect(client.listBatches({ limit: 20, cursor: "created-at|batch-id" })).resolves.toEqual(
-      page,
-    );
-    expectAuthenticatedRequest(
-      fetcher,
-      "/v1/admin/classifier-batches?limit=20&cursor=created-at%7Cbatch-id",
-      { signal: undefined },
-    );
-  });
-
-  it("loads the read-only prototype destination", async () => {
-    const destination = { destinationSeller, source: "prototype_default" } as const;
-    const fetcher = vi.fn(async () => jsonResponse(destination));
-    const client = createClient(fetcher);
-
-    await expect(client.getDestination()).resolves.toEqual(destination);
-    expectAuthenticatedRequest(fetcher, "/v1/admin/classifier-import-destination", {
-      signal: undefined,
-    });
-  });
-
-  it("starts an import with the exact browser contract", async () => {
-    const fetcher = vi.fn(async () =>
-      jsonResponse(
-        {
-          importId,
-          classifierBatchId: batchId,
-          destinationSeller,
-          status: "pending",
-          dispatchStatus: "accepted",
-        },
-        202,
-      ),
-    );
-    const client = createClient(fetcher);
-
-    await expect(client.start(batchId)).resolves.toEqual({
-      importId,
-      classifierBatchId: batchId,
-      destinationSeller,
-      status: "pending",
-      dispatchStatus: "accepted",
-    });
-    expectAuthenticatedRequest(fetcher, "/v1/admin/classifier-imports", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ classifierBatchId: batchId }),
-    });
-  });
-
-  it("preserves retry-required navigation metadata", async () => {
-    const fetcher = vi.fn(async () =>
-      jsonResponse(
-        {
-          detail: {
-            code: "classifier_import_retry_required",
-            message: "The import requires an explicit retry.",
-            importId,
-          },
-        },
-        409,
-      ),
-    );
-    const client = createClient(fetcher);
-
-    const error = await client.start(batchId).catch((caught) => caught);
-    expect(error).toBeInstanceOf(ClassifierImportRequestError);
-    expect(error).toMatchObject({
-      status: 409,
-      code: "classifier_import_retry_required",
-      importId,
-    });
-  });
-
   it("sends temporary retry without a request body", async () => {
     const fetcher = vi.fn(async () => jsonResponse(snapshot(), 200));
     const client = createClient(fetcher);

@@ -49,6 +49,7 @@ function detailRow() {
     pack_size: "10 pieces",
     stock: "in_stock",
     status: "draft",
+    marketplace_visibility: "not_published",
     moderation_revision: 3,
     has_working_copy: false,
     created_at: "2026-08-16T09:00:00.000Z",

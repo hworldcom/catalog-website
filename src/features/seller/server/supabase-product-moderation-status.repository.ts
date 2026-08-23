@@ -12,6 +12,12 @@ export const productModerationStatusFieldsSchema = z
   .object({
     id: z.string().uuid(),
     status: z.enum(["draft", "published", "archived"]),
+    marketplace_visibility: z.enum([
+      "not_published",
+      "visible",
+      "storefront_disabled",
+      "seller_approval_required",
+    ]),
     moderation_revision: z.number().int().positive(),
     has_working_copy: z.boolean(),
     review_submission_id: z.string().uuid().nullable(),

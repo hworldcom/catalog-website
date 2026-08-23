@@ -21,9 +21,6 @@ import { Route as CCategoryRouteImport } from './routes/c.$category'
 import { Route as AuthenticatedSellerRouteImport } from './routes/_authenticated/seller'
 import { Route as AuthenticatedSellerIndexRouteImport } from './routes/_authenticated/seller.index'
 import { Route as V1SellerProfileAssetsAssetIdRouteImport } from './routes/v1.seller-profile-assets.$assetId'
-import { Route as V1AdminClassifierImportsRouteImport } from './routes/v1.admin.classifier-imports'
-import { Route as V1AdminClassifierImportDestinationRouteImport } from './routes/v1.admin.classifier-import-destination'
-import { Route as V1AdminClassifierBatchesRouteImport } from './routes/v1.admin.classifier-batches'
 import { Route as AuthenticatedSellerStorefrontRouteImport } from './routes/_authenticated/seller.storefront'
 import { Route as AuthenticatedSellerProductsRouteImport } from './routes/_authenticated/seller.products'
 import { Route as AuthenticatedSellerLeadsRouteImport } from './routes/_authenticated/seller.leads'
@@ -114,24 +111,6 @@ const V1SellerProfileAssetsAssetIdRoute =
   V1SellerProfileAssetsAssetIdRouteImport.update({
     id: '/v1/seller-profile-assets/$assetId',
     path: '/v1/seller-profile-assets/$assetId',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const V1AdminClassifierImportsRoute =
-  V1AdminClassifierImportsRouteImport.update({
-    id: '/v1/admin/classifier-imports',
-    path: '/v1/admin/classifier-imports',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const V1AdminClassifierImportDestinationRoute =
-  V1AdminClassifierImportDestinationRouteImport.update({
-    id: '/v1/admin/classifier-import-destination',
-    path: '/v1/admin/classifier-import-destination',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const V1AdminClassifierBatchesRoute =
-  V1AdminClassifierBatchesRouteImport.update({
-    id: '/v1/admin/classifier-batches',
-    path: '/v1/admin/classifier-batches',
     getParentRoute: () => rootRouteImport,
   } as any)
 const AuthenticatedSellerStorefrontRoute =
@@ -334,9 +313,6 @@ export interface FileRoutesByFullPath {
   '/seller/leads': typeof AuthenticatedSellerLeadsRoute
   '/seller/products': typeof AuthenticatedSellerProductsRoute
   '/seller/storefront': typeof AuthenticatedSellerStorefrontRoute
-  '/v1/admin/classifier-batches': typeof V1AdminClassifierBatchesRoute
-  '/v1/admin/classifier-import-destination': typeof V1AdminClassifierImportDestinationRoute
-  '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
   '/v1/seller-profile-assets/$assetId': typeof V1SellerProfileAssetsAssetIdRoute
   '/seller/': typeof AuthenticatedSellerIndexRoute
   '/admin/classifier-imports/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
@@ -379,9 +355,6 @@ export interface FileRoutesByTo {
   '/seller/leads': typeof AuthenticatedSellerLeadsRoute
   '/seller/products': typeof AuthenticatedSellerProductsRoute
   '/seller/storefront': typeof AuthenticatedSellerStorefrontRoute
-  '/v1/admin/classifier-batches': typeof V1AdminClassifierBatchesRoute
-  '/v1/admin/classifier-import-destination': typeof V1AdminClassifierImportDestinationRoute
-  '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
   '/v1/seller-profile-assets/$assetId': typeof V1SellerProfileAssetsAssetIdRoute
   '/seller': typeof AuthenticatedSellerIndexRoute
   '/admin/classifier-imports/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
@@ -427,9 +400,6 @@ export interface FileRoutesById {
   '/_authenticated/seller/leads': typeof AuthenticatedSellerLeadsRoute
   '/_authenticated/seller/products': typeof AuthenticatedSellerProductsRoute
   '/_authenticated/seller/storefront': typeof AuthenticatedSellerStorefrontRoute
-  '/v1/admin/classifier-batches': typeof V1AdminClassifierBatchesRoute
-  '/v1/admin/classifier-import-destination': typeof V1AdminClassifierImportDestinationRoute
-  '/v1/admin/classifier-imports': typeof V1AdminClassifierImportsRouteWithChildren
   '/v1/seller-profile-assets/$assetId': typeof V1SellerProfileAssetsAssetIdRoute
   '/_authenticated/seller/': typeof AuthenticatedSellerIndexRoute
   '/_authenticated/admin/classifier-imports_/$importId': typeof AuthenticatedAdminClassifierImportsImportIdRoute
@@ -475,9 +445,6 @@ export interface FileRouteTypes {
     | '/seller/leads'
     | '/seller/products'
     | '/seller/storefront'
-    | '/v1/admin/classifier-batches'
-    | '/v1/admin/classifier-import-destination'
-    | '/v1/admin/classifier-imports'
     | '/v1/seller-profile-assets/$assetId'
     | '/seller/'
     | '/admin/classifier-imports/$importId'
@@ -520,9 +487,6 @@ export interface FileRouteTypes {
     | '/seller/leads'
     | '/seller/products'
     | '/seller/storefront'
-    | '/v1/admin/classifier-batches'
-    | '/v1/admin/classifier-import-destination'
-    | '/v1/admin/classifier-imports'
     | '/v1/seller-profile-assets/$assetId'
     | '/seller'
     | '/admin/classifier-imports/$importId'
@@ -567,9 +531,6 @@ export interface FileRouteTypes {
     | '/_authenticated/seller/leads'
     | '/_authenticated/seller/products'
     | '/_authenticated/seller/storefront'
-    | '/v1/admin/classifier-batches'
-    | '/v1/admin/classifier-import-destination'
-    | '/v1/admin/classifier-imports'
     | '/v1/seller-profile-assets/$assetId'
     | '/_authenticated/seller/'
     | '/_authenticated/admin/classifier-imports_/$importId'
@@ -607,9 +568,6 @@ export interface RootRouteChildren {
   DemoMarketplaceRoute: typeof DemoMarketplaceRoute
   PProductIdRoute: typeof PProductIdRoute
   SSellerSlugRoute: typeof SSellerSlugRoute
-  V1AdminClassifierBatchesRoute: typeof V1AdminClassifierBatchesRoute
-  V1AdminClassifierImportDestinationRoute: typeof V1AdminClassifierImportDestinationRoute
-  V1AdminClassifierImportsRoute: typeof V1AdminClassifierImportsRouteWithChildren
   V1SellerProfileAssetsAssetIdRoute: typeof V1SellerProfileAssetsAssetIdRoute
   V1PublicSellersSellerIdProfileImagesKindRoute: typeof V1PublicSellersSellerIdProfileImagesKindRoute
   V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute: typeof V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute
@@ -700,27 +658,6 @@ declare module '@tanstack/react-router' {
       path: '/v1/seller-profile-assets/$assetId'
       fullPath: '/v1/seller-profile-assets/$assetId'
       preLoaderRoute: typeof V1SellerProfileAssetsAssetIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/admin/classifier-imports': {
-      id: '/v1/admin/classifier-imports'
-      path: '/v1/admin/classifier-imports'
-      fullPath: '/v1/admin/classifier-imports'
-      preLoaderRoute: typeof V1AdminClassifierImportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/admin/classifier-import-destination': {
-      id: '/v1/admin/classifier-import-destination'
-      path: '/v1/admin/classifier-import-destination'
-      fullPath: '/v1/admin/classifier-import-destination'
-      preLoaderRoute: typeof V1AdminClassifierImportDestinationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/admin/classifier-batches': {
-      id: '/v1/admin/classifier-batches'
-      path: '/v1/admin/classifier-batches'
-      fullPath: '/v1/admin/classifier-batches'
-      preLoaderRoute: typeof V1AdminClassifierBatchesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/seller/storefront': {
@@ -1032,42 +969,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-interface V1AdminClassifierImportsImportIdRouteChildren {
-  V1AdminClassifierImportsImportIdDispatchRoute: typeof V1AdminClassifierImportsImportIdDispatchRoute
-  V1AdminClassifierImportsImportIdReconcileRoute: typeof V1AdminClassifierImportsImportIdReconcileRoute
-  V1AdminClassifierImportsImportIdRetryRoute: typeof V1AdminClassifierImportsImportIdRetryRoute
-}
-
-const V1AdminClassifierImportsImportIdRouteChildren: V1AdminClassifierImportsImportIdRouteChildren =
-  {
-    V1AdminClassifierImportsImportIdDispatchRoute:
-      V1AdminClassifierImportsImportIdDispatchRoute,
-    V1AdminClassifierImportsImportIdReconcileRoute:
-      V1AdminClassifierImportsImportIdReconcileRoute,
-    V1AdminClassifierImportsImportIdRetryRoute:
-      V1AdminClassifierImportsImportIdRetryRoute,
-  }
-
-const V1AdminClassifierImportsImportIdRouteWithChildren =
-  V1AdminClassifierImportsImportIdRoute._addFileChildren(
-    V1AdminClassifierImportsImportIdRouteChildren,
-  )
-
-interface V1AdminClassifierImportsRouteChildren {
-  V1AdminClassifierImportsImportIdRoute: typeof V1AdminClassifierImportsImportIdRouteWithChildren
-}
-
-const V1AdminClassifierImportsRouteChildren: V1AdminClassifierImportsRouteChildren =
-  {
-    V1AdminClassifierImportsImportIdRoute:
-      V1AdminClassifierImportsImportIdRouteWithChildren,
-  }
-
-const V1AdminClassifierImportsRouteWithChildren =
-  V1AdminClassifierImportsRoute._addFileChildren(
-    V1AdminClassifierImportsRouteChildren,
-  )
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -1078,10 +979,6 @@ const rootRouteChildren: RootRouteChildren = {
   DemoMarketplaceRoute: DemoMarketplaceRoute,
   PProductIdRoute: PProductIdRoute,
   SSellerSlugRoute: SSellerSlugRoute,
-  V1AdminClassifierBatchesRoute: V1AdminClassifierBatchesRoute,
-  V1AdminClassifierImportDestinationRoute:
-    V1AdminClassifierImportDestinationRoute,
-  V1AdminClassifierImportsRoute: V1AdminClassifierImportsRouteWithChildren,
   V1SellerProfileAssetsAssetIdRoute: V1SellerProfileAssetsAssetIdRoute,
   V1PublicSellersSellerIdProfileImagesKindRoute:
     V1PublicSellersSellerIdProfileImagesKindRoute,

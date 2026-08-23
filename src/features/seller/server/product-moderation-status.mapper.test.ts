@@ -76,6 +76,7 @@ describe("mapProductModerationStatus", () => {
     expect(mapped).toMatchObject({
       productId: uuid(1),
       publicState: "draft",
+      marketplaceVisibility: "not_published",
       actionRevision: 3,
       hasWorkingCopy: true,
       review: {
@@ -107,6 +108,18 @@ describe("mapProductModerationStatus", () => {
         approved({ activation_phase: "activation", activation_status: "cleanup_required" }),
       ),
     ).toThrow(/inconsistent/);
+
+    expect(() =>
+      mapProductModerationStatus(
+        record({ status: "published", marketplace_visibility: "not_published" }),
+      ),
+    ).toThrow(/non-published marketplace visibility/);
+
+    expect(() =>
+      mapProductModerationStatus(
+        record({ status: "draft", marketplace_visibility: "storefront_disabled" }),
+      ),
+    ).toThrow(/marketplace-visible state/);
   });
 });
 
@@ -133,6 +146,7 @@ function record(
   return {
     id: uuid(1),
     status: "draft",
+    marketplace_visibility: "not_published",
     moderation_revision: 3,
     has_working_copy: false,
     review_submission_id: null,

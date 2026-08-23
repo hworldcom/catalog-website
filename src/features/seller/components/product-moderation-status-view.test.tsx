@@ -1,9 +1,18 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProductModerationStatusDetail } from "../product-moderation-status.types";
 import { productModerationImageCredentialIdentity } from "../product-moderation-status-refresh";
-import { ProductModerationSubmittedRevisionView } from "./product-moderation-status-view";
+import {
+  ProductModerationAxes,
+  ProductModerationOutcomeNotice,
+  ProductModerationSubmittedRevisionView,
+} from "./product-moderation-status-view";
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}));
 
 describe("ProductModerationSubmittedRevisionView", () => {
   it("reports an image failure with its credential context", () => {
@@ -85,6 +94,110 @@ describe("ProductModerationSubmittedRevisionView", () => {
     expect(within(factsCard).getAllByText("Not available")).toHaveLength(2);
     expect(screen.queryByText(/privateMetadata|must not be rendered/)).not.toBeInTheDocument();
   });
+
+  it("identifies a submitted description based on older facts", () => {
+    const current = status();
+    if (!current.submittedRevision) throw new Error("The submitted revision is missing.");
+    current.submittedRevision.snapshot.facts = { factsRevision: 2, facts: {} };
+    current.submittedRevision.snapshot.descriptions = [
+      {
+        language: "en",
+        descriptionText: "Black running trousers.",
+        source: "human",
+        factsRevision: 1,
+        provider: null,
+        model: null,
+        pipelineVersion: null,
+        generatedAt: null,
+      },
+    ];
+
+    render(<ProductModerationSubmittedRevisionView status={current} categoryName="Trousers" />);
+
+    expect(screen.getByText("Older facts")).toBeVisible();
+    expect(
+      screen.getByText(
+        "This description uses facts revision 1; the submitted facts are revision 2.",
+      ),
+    ).toBeVisible();
+  });
+});
+
+describe("ProductModerationOutcomeNotice", () => {
+  it("presents product state separately from effective marketplace visibility", () => {
+    const current = status();
+    current.publicState = "published";
+    current.marketplaceVisibility = "storefront_disabled";
+
+    render(<ProductModerationAxes status={current} />);
+
+    expect(screen.getByText("Product state")).toBeVisible();
+    expect(screen.getByText("Published")).toBeVisible();
+    expect(screen.getByText("Marketplace")).toBeVisible();
+    expect(screen.getByText("Storefront disabled")).toBeVisible();
+  });
+
+  it("shows a durable pending-review notice", () => {
+    render(<ProductModerationOutcomeNotice status={status()} />);
+
+    expect(screen.getByText("Pending administrator review")).toBeVisible();
+    expect(screen.getByText(/not public yet/)).toBeVisible();
+  });
+
+  it("shows a durable published notice and public link", () => {
+    const current = status();
+    current.publicState = "published";
+    current.marketplaceVisibility = "visible";
+    if (current.review) current.review.status = "approved";
+
+    render(<ProductModerationOutcomeNotice status={current} />);
+
+    expect(screen.getByText("Product published")).toBeVisible();
+    expect(screen.getByRole("link", { name: "View published product" })).toBeVisible();
+  });
+
+  it("shows storefront recovery without a broken public link", () => {
+    const current = status();
+    current.publicState = "published";
+    current.marketplaceVisibility = "storefront_disabled";
+    if (current.review) current.review.status = "approved";
+
+    render(<ProductModerationOutcomeNotice status={current} />);
+
+    expect(screen.getByText("Product published; storefront disabled")).toBeVisible();
+    expect(screen.getByText(/will not appear.*until you enable your storefront/i)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open storefront settings" })).toHaveAttribute(
+      "href",
+      "/seller/storefront",
+    );
+    expect(screen.queryByRole("link", { name: "View published product" })).not.toBeInTheDocument();
+  });
+
+  it("does not present a defensive seller-approval failure as success", () => {
+    const current = status();
+    current.publicState = "published";
+    current.marketplaceVisibility = "seller_approval_required";
+    if (current.review) current.review.status = "approved";
+
+    render(<ProductModerationOutcomeNotice status={current} />);
+
+    expect(screen.getByText("Product hidden; seller approval required")).toBeVisible();
+    expect(screen.queryByRole("link", { name: "View published product" })).not.toBeInTheDocument();
+  });
+
+  it("does not confuse a pending update with the already-public baseline", () => {
+    const current = status();
+    current.publicState = "published";
+    current.marketplaceVisibility = "visible";
+    if (!current.review) throw new Error("The review fixture is missing.");
+    current.review.kind = "update";
+
+    render(<ProductModerationOutcomeNotice status={current} />);
+
+    expect(screen.getByText("Pending administrator review")).toBeVisible();
+    expect(screen.getByText(/current public version remains visible/i)).toBeVisible();
+    expect(screen.queryByText("Product published")).not.toBeInTheDocument();
+  });
 });
 
 function status(): ProductModerationStatusDetail {
@@ -95,6 +208,7 @@ function status(): ProductModerationStatusDetail {
   return {
     productId,
     publicState: "draft",
+    marketplaceVisibility: "not_published",
     actionRevision: 1,
     hasWorkingCopy: false,
     review: {

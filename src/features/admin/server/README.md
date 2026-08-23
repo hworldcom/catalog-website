@@ -13,17 +13,17 @@ Classifier import modules in this folder own:
   workflow's immutable stored seller;
 - token-fenced administrator action attempts for group approval, batch
   approval/import authorization, and import retry;
-- durable import start, status, retry, and reconciliation coordination;
+- durable import status, retry, reconciliation, and dispatch coordination;
 - immediate claim-specific local import dispatch after durable authorization;
 - attempt-token-fenced worker orchestration;
 - the Supabase repository adapter.
 
-New import authorization is explicitly ordered: validate the request, return
-an existing source import when present, resolve the prototype destination,
-preflight the approved classifier batch, and only then atomically create or
-reload the durable import. The default destination is not resolved for
-existing imports. Workers always use the seller identifier stored on the
-claimed import run.
+New import authorization belongs to seller-owned and administrator-delegated
+classifier workflows. Those workflows store the immutable seller before
+upload and create or find imports through
+`create_or_get_owned_classifier_import(...)`. A raw classifier batch
+identifier cannot create an import. Workers always use the seller identifier
+stored on the claimed import run.
 
 The production image-preparation adapter reads normalized classifier JPEGs,
 performs create-only writes to the bucket stored on each ProductDraft image,
@@ -43,7 +43,6 @@ Required server-only classifier import settings:
 BAZORIA_CLASSIFIER_API_BASE_URL
 BAZORIA_CLASSIFIER_IMPORT_DISPATCH_MODE=local
 BAZORIA_DEFAULT_CLASSIFIER_ORGANIZATION_ID
-BAZORIA_DEFAULT_SELLER_ID
 BAZORIA_PROTOTYPE_ADMIN_USER_IDS
 SUPABASE_URL
 SUPABASE_PUBLISHABLE_KEY
@@ -57,11 +56,9 @@ administrator access. Raw browser requests attach the current Supabase access
 token; their handlers authenticate and authorize before creating a
 service-role runtime.
 
-`BAZORIA_DEFAULT_SELLER_ID` is resolved lazily only by new import authorization
-and `GET /v1/admin/classifier-import-destination`. Approved-batch inbox reads,
-existing-import idempotency, and worker execution do not use the current
-default. The configured seller must exist, be published, and have a nonblank
-name before a new import can be authorized.
+`BAZORIA_DEFAULT_SELLER_ID` is retired and must be removed from operator
+configuration. The server does not read it. Seller attribution comes only from
+the authorized seller-owned workflow.
 
 Optional positive timeout settings and their defaults:
 
