@@ -5,7 +5,12 @@ import { PageError } from "@/components/layout/page-error";
 import { audienceNavigationQueryOptions, sellerQueryOptions } from "@/features/marketplace/queries";
 import { SellerStorefrontScreen } from "@/features/marketplace/screens/seller-storefront-screen";
 import { normalizePublicAudience } from "@/features/marketplace/public-audience";
-import { normalizeLanguage } from "@/lib/i18n";
+import {
+  bazoriaSocialDescription,
+  buildSellerSocialPreview,
+  buildSocialMeta,
+} from "@/features/marketplace/social-sharing";
+import { normalizeLanguage, pick } from "@/lib/i18n";
 
 export const Route = createFileRoute("/s/$sellerSlug")({
   loaderDeps: ({ search }) => ({
@@ -33,20 +38,33 @@ export const Route = createFileRoute("/s/$sellerSlug")({
   notFoundComponent: () => (
     <NotFound title="Storefront not found" message="We couldn't find that supplier." />
   ),
-  head: ({ loaderData, params }) => {
-    const sellerName = loaderData?.seller?.name ?? prettify(params.sellerSlug);
-    const description = buildDescription(sellerName, loaderData?.seller?.about);
-    const coverImage = loaderData?.seller?.cover_image_url;
+  head: ({ loaderData, match }) => {
+    const seller = loaderData?.seller;
+    if (!seller) {
+      return {
+        meta: [
+          { title: "Storefront — Bazoria" },
+          {
+            name: "description",
+            content: pick(bazoriaSocialDescription, match.loaderDeps.lang),
+          },
+        ],
+      };
+    }
 
-    return {
-      meta: [
-        { title: `${sellerName} — Wholesale Storefront on Bazoria` },
-        { name: "description", content: description },
-        { property: "og:title", content: `${sellerName} — Wholesale Storefront on Bazoria` },
-        { property: "og:description", content: description },
-        ...(coverImage ? [{ property: "og:image", content: coverImage }] : []),
-      ],
-    };
+    const preview = buildSellerSocialPreview({
+      origin: loaderData.publicSiteOrigin,
+      canonicalSlug: loaderData.canonicalSlug ?? seller.slug,
+      sellerName: seller.name,
+      sellerAbout: seller.about,
+      sellerCity: seller.city,
+      sellerCountry: seller.country,
+      logoImageUrl: seller.logo_url,
+      coverImageUrl: seller.cover_image_url,
+      language: match.loaderDeps.lang,
+      audience: match.loaderDeps.audience,
+    });
+    return { meta: buildSocialMeta(preview) };
   },
 });
 
@@ -54,17 +72,4 @@ function SellerStorefrontRoute() {
   const { sellerSlug } = Route.useParams();
   const { audience } = Route.useLoaderDeps();
   return <SellerStorefrontScreen sellerSlug={sellerSlug} audience={audience} />;
-}
-
-function prettify(slug: string) {
-  return slug
-    .split("-")
-    .map((w) => w[0]?.toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-function buildDescription(sellerName: string, about: string | null | undefined) {
-  const description = about?.trim();
-  if (description) return description.slice(0, 160);
-  return `Browse the wholesale catalog and contact ${sellerName} directly on Bazoria.`;
 }

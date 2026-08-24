@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
       text: string;
       resolvedLanguage: "EN" | "PL" | "DE" | "VI";
     } | null,
+    publicSiteOrigin: "https://bazoria.example",
   },
 }));
 

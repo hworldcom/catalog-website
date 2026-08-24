@@ -8,9 +8,11 @@ import { productCodeCopy } from "@/features/product-code/product-code.copy";
 import { pick, t, tr, type Lang } from "@/lib/i18n";
 
 import { InquiryForm } from "../components/inquiry-form";
+import { SocialShareMenu } from "../components/social-share-menu";
 import type { PublicAudience } from "../public-audience";
 import { getPublicCategoryLabel } from "../public-category-labels";
 import { productQueryOptions } from "../queries";
+import { buildProductSocialPreview } from "../social-sharing";
 
 const P = {
   marketplace: t("Marketplace", "Marketplace", "Marktplatz", "Marketplace"),
@@ -45,6 +47,19 @@ export function ProductDetailScreen({
   const { data } = useSuspenseQuery(productQueryOptions(productId, language, audience));
   const { product, seller, images, category, description } = data;
   if (!product || !seller) return null;
+  const socialPreview = buildProductSocialPreview({
+    origin: data.publicSiteOrigin,
+    productId: product.id,
+    productTitle: product.title,
+    productDescription: description?.text ?? null,
+    price: product.price,
+    currency: product.currency,
+    supplierName: seller.name,
+    coverImageUrl: product.cover_image_url,
+    galleryImageUrls: images.map((image) => image.url),
+    language,
+    audience,
+  });
 
   return (
     <PublicShell marketplaceAudience={audience}>
@@ -85,7 +100,16 @@ export function ProductDetailScreen({
           </div>
 
           <div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight">{product.title}</h1>
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="font-display text-3xl font-semibold tracking-tight">
+                {product.title}
+              </h1>
+              <SocialShareMenu
+                title={socialPreview.title}
+                url={socialPreview.url}
+                language={language}
+              />
+            </div>
             <div className="mt-3 flex items-baseline gap-3">
               <span className="font-display text-2xl font-semibold text-primary">
                 {formatPrice(product.price, product.currency)}

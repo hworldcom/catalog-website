@@ -1,6 +1,9 @@
 import { ArrowRight, CalendarDays, CheckCircle, MapPin, MessageCircle } from "lucide-react";
 
 import { t, tr } from "@/lib/i18n";
+import type { Lang } from "@/lib/i18n";
+
+import { SocialShareMenu } from "./social-share-menu";
 
 const H = {
   verified: t(
@@ -24,6 +27,9 @@ export function SellerStorefrontHero({
   establishedYear,
   whatsappUrl,
   hasProducts,
+  shareTitle,
+  shareUrl,
+  language,
 }: {
   sellerName: string;
   coverImageUrl: string | null;
@@ -33,6 +39,9 @@ export function SellerStorefrontHero({
   establishedYear: number | null;
   whatsappUrl: string | null;
   hasProducts: boolean;
+  shareTitle: string;
+  shareUrl: string;
+  language: Lang;
 }) {
   return (
     <section id="top" className="relative scroll-mt-20 overflow-hidden">
@@ -112,6 +121,12 @@ export function SellerStorefrontHero({
                 {tr(H.whatsapp)}
               </a>
             ) : null}
+            <SocialShareMenu
+              title={shareTitle}
+              url={shareUrl}
+              language={language}
+              className="border-foreground/20 bg-background/70 hover:bg-background"
+            />
           </div>
         </div>
       </div>

@@ -1,5 +1,7 @@
 import { t, tr } from "@/lib/i18n";
 
+import { formatPriceValue } from "./product-price";
+
 export type ProductStock = "in_stock" | "low_stock" | "out_of_stock" | "made_to_order";
 
 const S = {
@@ -11,11 +13,7 @@ const S = {
 };
 
 export function formatPrice(price: number | string | null, currency: string): string {
-  const ask = tr(S.askQuote);
-  if (price == null) return ask;
-  const n = typeof price === "string" ? Number(price) : price;
-  if (!Number.isFinite(n)) return ask;
-  return `${currency} ${n.toFixed(2)}`;
+  return formatPriceValue(price, currency) ?? tr(S.askQuote);
 }
 
 export function getStockLabel(s: ProductStock): string {

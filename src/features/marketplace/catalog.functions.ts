@@ -9,6 +9,7 @@ import {
   toDatabaseDescriptionLanguage,
 } from "./public-product-description";
 import { publicAudienceSchema } from "./public-audience";
+import { resolvePublicSiteOrigin } from "./public-site-origin";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -128,11 +129,12 @@ export const getSellerPage = createServerFn({ method: "GET" })
     z.object({ slug: z.string().min(1).max(80), audience: publicAudienceSchema }).parse(input),
   )
   .handler(async ({ data }) => {
+    const publicSiteOrigin = resolvePublicSiteOrigin(process.env);
     const sb = publicClient();
     const resolution = await sb.rpc("resolve_public_seller_slug", { p_slug: data.slug });
     if (resolution.error) throw resolution.error;
     const resolved = resolution.data?.[0];
-    if (!resolved) return { seller: null, products: [], canonicalSlug: null };
+    if (!resolved) return { seller: null, products: [], canonicalSlug: null, publicSiteOrigin };
 
     const { data: seller, error } = await sb
       .from("sellers")
@@ -141,7 +143,7 @@ export const getSellerPage = createServerFn({ method: "GET" })
       .eq("published", true)
       .maybeSingle();
     if (error) throw error;
-    if (!seller) return { seller: null, products: [], canonicalSlug: null };
+    if (!seller) return { seller: null, products: [], canonicalSlug: null, publicSiteOrigin };
     const { data: products, error: pErr } = await sb.rpc("list_public_seller_products", {
       p_seller_slug: seller.slug,
       p_audience: data.audience,
@@ -151,6 +153,7 @@ export const getSellerPage = createServerFn({ method: "GET" })
     return {
       seller,
       canonicalSlug: resolved.canonical_slug,
+      publicSiteOrigin,
       products: (products ?? []).map((product) => ({
         id: product.id,
         title: product.title,
@@ -184,6 +187,7 @@ export const getProductPage = createServerFn({ method: "GET" })
       .parse(input),
   )
   .handler(async ({ data }) => {
+    const publicSiteOrigin = resolvePublicSiteOrigin(process.env);
     const sb = publicClient();
     const { data: product, error } = await sb
       .from("products")
@@ -193,7 +197,14 @@ export const getProductPage = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw error;
     if (!product) {
-      return { product: null, seller: null, images: [], category: null, description: null };
+      return {
+        product: null,
+        seller: null,
+        images: [],
+        category: null,
+        description: null,
+        publicSiteOrigin,
+      };
     }
     const seller = await sb
       .from("sellers")
@@ -203,7 +214,14 @@ export const getProductPage = createServerFn({ method: "GET" })
       .maybeSingle();
     if (seller.error) throw seller.error;
     if (!seller.data) {
-      return { product: null, seller: null, images: [], category: null, description: null };
+      return {
+        product: null,
+        seller: null,
+        images: [],
+        category: null,
+        description: null,
+        publicSiteOrigin,
+      };
     }
     try {
       product.product_code = parseStoredProductCode(product.product_code);
@@ -239,6 +257,7 @@ export const getProductPage = createServerFn({ method: "GET" })
       images: images.data ?? [],
       category: category.data,
       description: readPublicProductDescription(description.data),
+      publicSiteOrigin,
     };
   });
 

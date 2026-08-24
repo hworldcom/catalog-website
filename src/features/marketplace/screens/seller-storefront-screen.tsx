@@ -23,6 +23,7 @@ import {
   groupStorefrontProducts,
   type StorefrontProduct,
 } from "../seller-storefront";
+import { buildSellerSocialPreview } from "../social-sharing";
 
 const S = {
   catalog: t("Wholesale catalog", "Katalog hurtowy", "Großhandelskatalog", "Danh mục bán buôn"),
@@ -115,6 +116,18 @@ export function SellerStorefrontScreen({
   const selectedCategory =
     categoryGroups.find((group) => group.category.id === selectedCategoryId)?.category ?? null;
   const showAbout = Boolean(seller.about || location || seller.established_year);
+  const socialPreview = buildSellerSocialPreview({
+    origin: data.publicSiteOrigin,
+    canonicalSlug: data.canonicalSlug ?? seller.slug,
+    sellerName: seller.name,
+    sellerAbout: seller.about,
+    sellerCity: seller.city,
+    sellerCountry: seller.country,
+    logoImageUrl: seller.logo_url,
+    coverImageUrl: seller.cover_image_url,
+    language,
+    audience,
+  });
 
   const moveToCatalog = (categoryId: string | null) => {
     setSelectedCategoryId(categoryId);
@@ -148,6 +161,9 @@ export function SellerStorefrontScreen({
           establishedYear={seller.established_year}
           whatsappUrl={whatsappUrl}
           hasProducts={products.length > 0}
+          shareTitle={socialPreview.title}
+          shareUrl={socialPreview.url}
+          language={language}
         />
 
         {categoryGroups.length > 0 ? (

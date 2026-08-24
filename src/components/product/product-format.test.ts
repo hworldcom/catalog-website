@@ -11,6 +11,8 @@ describe("formatPrice", () => {
   it("falls back to quote copy for missing or invalid prices", () => {
     expect(formatPrice(null, "USD")).toBe("Ask for quote");
     expect(formatPrice("not-a-price", "USD")).toBe("Ask for quote");
+    expect(formatPrice(-1, "USD")).toBe("Ask for quote");
+    expect(formatPrice(12, "usd")).toBe("Ask for quote");
   });
 });
 
