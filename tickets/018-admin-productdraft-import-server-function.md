@@ -1,5 +1,11 @@
 # Ticket 018 - Admin ProductDraft Import Server Function
 
+## Status
+
+Superseded and delivered through tickets `025`, `026`, and the later
+seller-owned classifier workflow. Do not implement this earlier synchronous
+design.
+
 ## Goal
 
 Create an admin-only Bazoria server function that imports approved classifier groups into Bazoria `ProductDraft` records.

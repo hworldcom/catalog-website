@@ -1,5 +1,9 @@
 # Ticket 013 - Remove Legacy Seller Functions Module
 
+## Status
+
+Implemented. The legacy module and all imports from it are removed.
+
 ## Goal
 
 Delete `src/lib/seller.functions.ts` after all seller server functions have moved into feature modules.

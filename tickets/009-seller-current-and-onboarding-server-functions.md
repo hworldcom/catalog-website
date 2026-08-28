@@ -1,5 +1,9 @@
 # Ticket 009 - Split Seller Current And Onboarding Functions
 
+## Status
+
+Implemented.
+
 ## Goal
 
 Move current seller lookup, seller onboarding, role assignment, and slug creation out of `src/lib/seller.functions.ts`.

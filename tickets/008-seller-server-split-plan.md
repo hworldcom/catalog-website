@@ -1,5 +1,9 @@
 # Ticket 008 - Seller Server Functions Split Plan
 
+## Status
+
+Completed through tickets `009` through `014`.
+
 ## Goal
 
 Replace the single `src/lib/seller.functions.ts` module with smaller seller feature server modules.

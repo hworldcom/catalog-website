@@ -1,5 +1,11 @@
 # Ticket 016 - Plan Classifier ProductDraft Import
 
+## Status
+
+Superseded; do not reopen. The approved-group export, ProductDraft import,
+seller attribution, category mapping, idempotency, and publication boundaries
+were defined and delivered through the later durable classifier workflow.
+
 ## Goal
 
 Define the Bazoria-side import contract for converting approved classifier groups into Bazoria `ProductDraft` records.
@@ -45,4 +51,3 @@ The classifier does not yet provide a production product-draft export endpoint. 
 - Required mappings are documented.
 - Import idempotency approach is documented.
 - The plan confirms approved groups create drafts only, never public products.
-

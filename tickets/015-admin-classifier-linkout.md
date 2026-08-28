@@ -1,5 +1,10 @@
 # Ticket 015 - Admin Link To Classifier
 
+## Status
+
+Superseded; do not implement. The standalone classifier browser application was
+retired, and authenticated classifier workflows now run inside Bazoria Web.
+
 ## Goal
 
 Provide the lowest-risk first admin integration by linking Bazoria admins to the existing catalog-classifier admin tool.

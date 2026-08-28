@@ -1,5 +1,10 @@
 # Ticket 003 - Extract Layout And Product Components
 
+## Status
+
+Completed. Shared layout and product components are extracted and the legacy
+`src/components/bazoria.tsx` module is removed.
+
 ## Goal
 
 Split shared marketplace UI out of `src/components/bazoria.tsx` into focused component modules.

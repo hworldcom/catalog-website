@@ -1,5 +1,10 @@
 # Ticket 001 - Domain Reorg Foundation
 
+## Status
+
+Completed. The domain-owned feature and shared-component structure is present,
+and route files retain URL ownership.
+
 ## Goal
 
 Create the target project structure for domain-owned code while preserving the current UI and URLs.

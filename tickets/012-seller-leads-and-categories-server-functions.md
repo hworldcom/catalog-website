@@ -1,5 +1,9 @@
 # Ticket 012 - Split Seller Leads And Category Picker Functions
 
+## Status
+
+Implemented.
+
 ## Goal
 
 Move seller leads and authenticated category picker functions into focused modules.

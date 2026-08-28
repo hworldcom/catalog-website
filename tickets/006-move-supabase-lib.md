@@ -1,5 +1,10 @@
 # Ticket 006 - Move Supabase Integration To Lib
 
+## Status
+
+Completed. Project-owned Supabase integration lives under `src/lib/supabase`,
+and the former `src/integrations/supabase` directory is removed.
+
 ## Goal
 
 Move Supabase integration files from `src/integrations/supabase` to `src/lib/supabase`.

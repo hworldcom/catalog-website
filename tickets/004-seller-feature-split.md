@@ -1,5 +1,10 @@
 # Ticket 004 - Split Seller Feature
 
+## Status
+
+Completed. Seller screens and components live under `src/features/seller`, and
+the authenticated route files are thin route owners.
+
 ## Goal
 
 Move seller dashboard UI code into `src/features/seller` while keeping existing seller routes and design stable.

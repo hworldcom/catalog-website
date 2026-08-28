@@ -1,5 +1,11 @@
 # Ticket 017 - Admin Classifier API Client
 
+## Status
+
+Superseded by later implementation. Server-only classifier clients, strict
+response validation, configuration, and error mapping now live in the durable
+administrator and seller-classifier workflows.
+
 ## Goal
 
 Add a small Bazoria Web server-side client for reading approved classifier data.
@@ -29,4 +35,3 @@ Requires classifier production authentication and an approved-group export endpo
 - Classifier API credentials are not exposed to client bundles.
 - `npm run lint:node22` passes with no new errors.
 - `npm run build:node22` passes.
-

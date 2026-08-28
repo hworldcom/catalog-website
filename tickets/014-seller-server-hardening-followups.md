@@ -1,5 +1,10 @@
 # Ticket 014 - Seller Server Hardening Follow-Ups
 
+## Status
+
+Implemented. Product reads and mutations are explicitly seller-scoped and use
+the shared current-seller service.
+
 ## Goal
 
 After the mechanical split, review seller server functions for authorization and consistency gaps.

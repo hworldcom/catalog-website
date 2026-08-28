@@ -1,5 +1,11 @@
 # Ticket 019 - Admin ProductDraft Review Workflow
 
+## Status
+
+Implemented through later administrator ProductDraft index, unified review,
+delegated editing, and explicit publication tickets. No work remains under this
+original ticket.
+
 ## Goal
 
 Add Bazoria admin screens for reviewing imported `ProductDraft` records before publication.
@@ -26,4 +32,3 @@ Add Bazoria admin screens for reviewing imported `ProductDraft` records before p
 - Product fields not supplied by classifier are clearly editable before publish.
 - `npm run lint:node22` passes with no new errors.
 - `npm run build:node22` passes.
-

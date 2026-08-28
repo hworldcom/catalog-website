@@ -1,5 +1,10 @@
 # Ticket 002 - Split Marketplace Feature
 
+## Status
+
+Completed. Marketplace server operations and screen bodies live under
+`src/features/marketplace`, with route files retaining routing concerns.
+
 ## Goal
 
 Move buyer-facing marketplace code into `src/features/marketplace` while preserving the current design.

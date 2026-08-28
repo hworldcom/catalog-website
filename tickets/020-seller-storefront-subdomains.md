@@ -1,5 +1,11 @@
 # Ticket 020 - Seller Storefront Subdomains
 
+## Status
+
+Deferred product idea; not required by the current roadmap. Do not implement
+until seller subdomains are explicitly approved and production wildcard Domain
+Name System, hosting, and certificate support are confirmed.
+
 ## Goal
 
 Support admin-created seller storefront subdomains while keeping the existing path-based storefront URLs.
@@ -128,4 +134,3 @@ Option B is better if custom domains are likely later.
 - Requests to an unknown subdomain return not found or a controlled fallback.
 - `npm run lint:node22` passes with no new errors.
 - `npm run build:node22` passes.
-

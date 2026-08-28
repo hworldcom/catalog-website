@@ -1,5 +1,9 @@
 # Ticket 011 - Split Seller Product Functions
 
+## Status
+
+Implemented. Ticket `014` subsequently strengthened explicit seller ownership.
+
 ## Goal
 
 Move product CRUD server functions into a dedicated seller products module.

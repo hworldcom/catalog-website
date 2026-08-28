@@ -1,5 +1,10 @@
 # Ticket 002a - Add Test Harness
 
+## Status
+
+Completed. Vitest, React Testing Library, Node.js 22 test commands, and
+application-owned tests are present.
+
 ## Goal
 
 Add a lightweight test harness before continuing component and server-function

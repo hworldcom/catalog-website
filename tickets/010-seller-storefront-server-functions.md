@@ -1,5 +1,9 @@
 # Ticket 010 - Split Seller Storefront Functions
 
+## Status
+
+Implemented.
+
 ## Goal
 
 Move storefront update and publishing server functions into a dedicated module.

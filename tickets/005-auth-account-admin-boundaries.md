@@ -1,5 +1,10 @@
 # Ticket 005 - Auth Account Admin Boundaries
 
+## Status
+
+Completed. Authentication, account, and administrator feature boundaries are
+established; later tickets expanded their product behavior.
+
 ## Goal
 
 Prepare feature boundaries for auth, account, and admin without prematurely building product scope.
