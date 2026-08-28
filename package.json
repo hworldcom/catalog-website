@@ -50,8 +50,8 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@fontsource/bodoni-moda": "^5.3.0",
     "@fontsource/inter": "^5.2.8",
-    "@fontsource/space-grotesk": "^5.2.10",
     "@google-cloud/tasks": "^7.0.0",
     "@grpc/grpc-js": "^1.14.4",
     "@hookform/resolvers": "^5.2.2",

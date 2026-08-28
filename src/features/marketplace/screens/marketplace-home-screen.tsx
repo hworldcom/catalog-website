@@ -145,7 +145,7 @@ export function MarketplaceHomeScreen({ audience }: { audience: PublicAudience }
       <section className="border-b border-border/60 bg-gradient-to-b from-primary/10 to-transparent">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
           <div className="text-xs uppercase tracking-widest text-primary/80">{tr(H.kicker)}</div>
-          <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
+          <h1 className="mt-3 font-display text-4xl font-semibold leading-[1.12] tracking-tight sm:text-5xl">
             {tr(H.titleA)}
             <br />
             <span className="text-primary">{tr(H.titleB)}</span>

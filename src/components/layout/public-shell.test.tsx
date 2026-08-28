@@ -93,9 +93,11 @@ describe("PublicShell marketplace navigation", () => {
     );
 
     const expected = JSON.stringify({ lang: "DE", audience: "all" });
-    expect(screen.getByRole("link", { name: "Bazoria" })).toHaveAttribute(
-      "data-route-search",
-      expected,
+    const logoLink = screen.getByRole("link", { name: "Bazoria" });
+    expect(logoLink).toHaveAttribute("data-route-search", expected);
+    expect(screen.getByRole("img", { name: "Bazoria" })).toHaveAttribute(
+      "src",
+      "/assets/brand/bazoria-logo.svg",
     );
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute(
       "data-route-search",

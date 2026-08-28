@@ -57,16 +57,14 @@ function TopNav({ marketplaceAudience }: { marketplaceAudience?: PublicAudience 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link
-          to="/"
-          search={marketplaceHomeSearch}
-          aria-label="Bazoria"
-          className="flex items-center gap-2"
-        >
-          <span className="flex h-8 w-8 items-center justify-center border border-primary/50 bg-primary/10 font-display text-sm font-bold text-primary">
-            B
-          </span>
-          <span className="font-display text-lg font-semibold tracking-tight">Bazoria</span>
+        <Link to="/" search={marketplaceHomeSearch} className="flex shrink-0 items-center">
+          <img
+            src="/assets/brand/bazoria-logo.svg"
+            alt="Bazoria"
+            width="158"
+            height="41"
+            className="h-8 w-auto max-w-[8.5rem] sm:h-9 sm:max-w-[9.5rem]"
+          />
         </Link>
         <nav className="flex items-center gap-4 text-sm text-muted-foreground">
           <Link
