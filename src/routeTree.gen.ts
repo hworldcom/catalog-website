@@ -157,9 +157,9 @@ const AuthenticatedAdminClassifierImportsRoute =
   } as any)
 const V1AdminClassifierImportsImportIdRoute =
   V1AdminClassifierImportsImportIdRouteImport.update({
-    id: '/$importId',
-    path: '/$importId',
-    getParentRoute: () => V1AdminClassifierImportsRoute,
+    id: '/v1/admin/classifier-imports/$importId',
+    path: '/v1/admin/classifier-imports/$importId',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const AuthenticatedSellerProductsNewRoute =
   AuthenticatedSellerProductsNewRouteImport.update({
@@ -569,6 +569,7 @@ export interface RootRouteChildren {
   PProductIdRoute: typeof PProductIdRoute
   SSellerSlugRoute: typeof SSellerSlugRoute
   V1SellerProfileAssetsAssetIdRoute: typeof V1SellerProfileAssetsAssetIdRoute
+  V1AdminClassifierImportsImportIdRoute: typeof V1AdminClassifierImportsImportIdRouteWithChildren
   V1PublicSellersSellerIdProfileImagesKindRoute: typeof V1PublicSellersSellerIdProfileImagesKindRoute
   V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute: typeof V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute
   V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute: typeof V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRoute
@@ -711,10 +712,10 @@ declare module '@tanstack/react-router' {
     }
     '/v1/admin/classifier-imports/$importId': {
       id: '/v1/admin/classifier-imports/$importId'
-      path: '/$importId'
+      path: '/v1/admin/classifier-imports/$importId'
       fullPath: '/v1/admin/classifier-imports/$importId'
       preLoaderRoute: typeof V1AdminClassifierImportsImportIdRouteImport
-      parentRoute: typeof V1AdminClassifierImportsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/seller/products_/new': {
       id: '/_authenticated/seller/products_/new'
@@ -969,6 +970,27 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface V1AdminClassifierImportsImportIdRouteChildren {
+  V1AdminClassifierImportsImportIdDispatchRoute: typeof V1AdminClassifierImportsImportIdDispatchRoute
+  V1AdminClassifierImportsImportIdReconcileRoute: typeof V1AdminClassifierImportsImportIdReconcileRoute
+  V1AdminClassifierImportsImportIdRetryRoute: typeof V1AdminClassifierImportsImportIdRetryRoute
+}
+
+const V1AdminClassifierImportsImportIdRouteChildren: V1AdminClassifierImportsImportIdRouteChildren =
+  {
+    V1AdminClassifierImportsImportIdDispatchRoute:
+      V1AdminClassifierImportsImportIdDispatchRoute,
+    V1AdminClassifierImportsImportIdReconcileRoute:
+      V1AdminClassifierImportsImportIdReconcileRoute,
+    V1AdminClassifierImportsImportIdRetryRoute:
+      V1AdminClassifierImportsImportIdRetryRoute,
+  }
+
+const V1AdminClassifierImportsImportIdRouteWithChildren =
+  V1AdminClassifierImportsImportIdRoute._addFileChildren(
+    V1AdminClassifierImportsImportIdRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -980,6 +1002,8 @@ const rootRouteChildren: RootRouteChildren = {
   PProductIdRoute: PProductIdRoute,
   SSellerSlugRoute: SSellerSlugRoute,
   V1SellerProfileAssetsAssetIdRoute: V1SellerProfileAssetsAssetIdRoute,
+  V1AdminClassifierImportsImportIdRoute:
+    V1AdminClassifierImportsImportIdRouteWithChildren,
   V1PublicSellersSellerIdProfileImagesKindRoute:
     V1PublicSellersSellerIdProfileImagesKindRoute,
   V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute:
