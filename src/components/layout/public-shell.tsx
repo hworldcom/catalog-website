@@ -6,8 +6,9 @@ import { MarketplaceNavigation } from "@/features/marketplace/components/marketp
 import { marketplaceHomeSearch, type PublicAudience } from "@/features/marketplace/public-audience";
 import { LanguageSwitcher, t, tr } from "@/lib/i18n";
 
+import { PublicContainer } from "./public-container";
+
 const S = {
-  home: t("Home", "Strona główna", "Startseite", "Trang chủ"),
   sellerDashboard: t("Seller dashboard", "Panel sprzedawcy", "Verkäufer-Dashboard", "Bảng nhà bán"),
   signIn: t("Sign in", "Zaloguj się", "Anmelden", "Đăng nhập"),
   footerTagline: t(
@@ -16,8 +17,6 @@ const S = {
     "Großhandelssuche für Händler.",
     "Khám phá bán buôn cho nhà bán lẻ.",
   ),
-  designPreview: t("Design preview", "Podgląd designu", "Design-Vorschau", "Xem trước thiết kế"),
-  sampleStorefront: t("Sample storefront", "Przykładowy sklep", "Beispiel-Shop", "Gian hàng mẫu"),
 };
 
 export function PublicShell({
@@ -28,7 +27,7 @@ export function PublicShell({
   marketplaceAudience?: PublicAudience;
 }) {
   return (
-    <div className="storefront-dark min-h-screen bg-background text-foreground">
+    <div className="public-marketplace min-h-screen bg-background text-foreground">
       <TopNav marketplaceAudience={marketplaceAudience} />
       <main>{children}</main>
       <Footer />
@@ -55,42 +54,51 @@ function TopNav({ marketplaceAudience }: { marketplaceAudience?: PublicAudience 
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link to="/" search={marketplaceHomeSearch} className="flex shrink-0 items-center">
-          <img
-            src="/assets/brand/bazoria-logo.svg"
-            alt="Bazoria"
-            width="158"
-            height="41"
-            className="h-8 w-auto max-w-[8.5rem] sm:h-9 sm:max-w-[9.5rem]"
-          />
-        </Link>
-        <nav className="flex items-center gap-4 text-sm text-muted-foreground">
+    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur">
+      <div className="border-b border-border bg-card/95">
+        <PublicContainer className="flex min-h-16 items-center justify-between gap-3 py-2">
           <Link
             to="/"
             search={marketplaceHomeSearch}
-            className="hidden hover:text-foreground sm:inline"
+            aria-label="Bazoria"
+            className="flex min-h-11 shrink-0 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {tr(S.home)}
+            <img
+              src="/favicon.svg"
+              alt=""
+              aria-hidden="true"
+              width="48"
+              height="48"
+              className="h-9 w-9 sm:hidden"
+            />
+            <img
+              src="/assets/brand/bazoria-logo.svg"
+              alt=""
+              aria-hidden="true"
+              width="158"
+              height="41"
+              className="hidden h-9 w-auto max-w-[9.5rem] sm:block"
+            />
           </Link>
-          <LanguageSwitcher />
-          {signedIn ? (
-            <Link
-              to="/seller"
-              className="border border-border px-3 py-1.5 text-foreground hover:border-primary"
-            >
-              {tr(S.sellerDashboard)}
-            </Link>
-          ) : signedIn === false ? (
-            <Link
-              to="/auth"
-              className="border border-orange-600 bg-orange-600 px-3 py-1.5 font-medium text-white hover:border-orange-700 hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
-            >
-              {tr(S.signIn)}
-            </Link>
-          ) : null}
-        </nav>
+          <nav className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground sm:gap-4">
+            <LanguageSwitcher appearance="publicHeader" />
+            {signedIn ? (
+              <Link
+                to="/seller"
+                className="inline-flex min-h-11 shrink-0 items-center border border-foreground bg-foreground px-3 font-medium text-card transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {tr(S.sellerDashboard)}
+              </Link>
+            ) : signedIn === false ? (
+              <Link
+                to="/auth"
+                className="inline-flex min-h-11 shrink-0 items-center border border-foreground bg-foreground px-3 font-medium text-card transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {tr(S.signIn)}
+              </Link>
+            ) : null}
+          </nav>
+        </PublicContainer>
       </div>
       {marketplaceAudience ? <MarketplaceNavigation audience={marketplaceAudience} /> : null}
     </header>
@@ -100,19 +108,11 @@ function TopNav({ marketplaceAudience }: { marketplaceAudience?: PublicAudience 
 function Footer() {
   return (
     <footer className="mt-16 border-t border-border/60 bg-background">
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+      <PublicContainer className="flex flex-col gap-2 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <div>
           © {new Date().getFullYear()} Bazoria. {tr(S.footerTagline)}
         </div>
-        <div className="flex gap-4">
-          <Link to="/demo/marketplace" className="hover:text-foreground">
-            {tr(S.designPreview)}
-          </Link>
-          <Link to="/demo/kesar-textiles" className="hover:text-foreground">
-            {tr(S.sampleStorefront)}
-          </Link>
-        </div>
-      </div>
+      </PublicContainer>
     </footer>
   );
 }

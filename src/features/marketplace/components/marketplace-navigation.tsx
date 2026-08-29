@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { PublicContainer } from "@/components/layout/public-container";
 import { t, tr, useLang } from "@/lib/i18n";
 
 import { PUBLIC_AUDIENCES, type PublicAudience } from "../public-audience";
@@ -130,7 +131,7 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
     <nav
       ref={navigationRef}
       aria-label={tr(N.navigation)}
-      className="border-t border-border/60 bg-background/95"
+      className="relative bg-card"
       onPointerLeave={(event) => {
         if (event.pointerType === "mouse") setOpenPanel(null);
       }}
@@ -140,48 +141,56 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
         }
       }}
     >
-      <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="flex flex-col gap-2 py-2 lg:gap-0 lg:py-0">
+      <div className="border-b border-border bg-background">
+        <PublicContainer>
           <div
             data-testid="marketplace-audience-row"
-            className="-mx-4 flex min-w-0 items-center gap-1 overflow-x-auto border-b border-border/60 bg-secondary/30 px-4 sm:-mx-6 sm:px-6 lg:min-h-12"
-            role="group"
-            aria-label={tr(N.audience)}
+            className="flex min-h-12 min-w-0 items-center gap-2"
           >
-            {PUBLIC_AUDIENCES.map((item) => {
-              const selected = item === audience;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => changeAudience(item)}
-                  className={
-                    "min-h-11 shrink-0 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 " +
-                    (selected
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground")
-                  }
-                  aria-pressed={selected}
-                >
-                  {tr(audienceLabels[item])}
-                </button>
-              );
-            })}
+            <div
+              className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+              role="group"
+              aria-label={tr(N.audience)}
+            >
+              {PUBLIC_AUDIENCES.map((item) => {
+                const selected = item === audience;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => changeAudience(item)}
+                    className={
+                      "min-h-11 shrink-0 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 " +
+                      (selected
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground")
+                    }
+                    aria-pressed={selected}
+                  >
+                    {tr(audienceLabels[item])}
+                  </button>
+                );
+              })}
+            </div>
             <Link
               to="/join"
               search={(previous) => ({ ...previous, audience })}
               onFocus={() => setOpenPanel(null)}
               onPointerEnter={() => setOpenPanel(null)}
               onClick={() => setOpenPanel(null)}
-              className="ml-auto inline-flex min-h-11 shrink-0 items-center justify-center border border-primary/50 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 data-[status=active]:bg-primary/10 data-[status=active]:text-foreground"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center border border-primary px-3 text-sm font-medium text-primary transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 data-[status=active]:bg-accent data-[status=active]:text-accent-foreground"
             >
               {tr(N.joinUs)}
             </Link>
           </div>
+        </PublicContainer>
+      </div>
 
+      <div className="relative border-b border-border bg-card">
+        <PublicContainer className="relative">
           <div
             data-testid="marketplace-section-row"
-            className="grid grid-cols-2 gap-2 lg:flex lg:min-h-12 lg:items-center lg:justify-start"
+            className="grid min-h-12 grid-cols-2 gap-2 py-1 lg:flex lg:items-center lg:justify-start lg:gap-0 lg:py-0"
             aria-label={tr(N.navigation)}
           >
             <NavigationTrigger
@@ -209,64 +218,64 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
               onClick={(trigger) => handleTriggerClick("sellers", trigger)}
             />
           </div>
-        </div>
 
-        {openPanel === "clothing" ? (
-          <div
-            id={clothingPanelId}
-            role="region"
-            aria-labelledby={clothingTriggerId}
-            className="border-t border-border bg-background p-4 shadow-xl lg:absolute lg:left-6 lg:right-6 lg:top-full lg:z-50 lg:border"
-          >
-            {data.categories.length === 0 ? (
-              <NavigationEmptyState>{tr(N.clothingEmpty)}</NavigationEmptyState>
-            ) : (
-              <div className="grid max-h-72 gap-1 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
-                {data.categories.map((category) => (
-                  <Link
-                    key={category.id}
-                    to="/c/$category"
-                    params={{ category: category.slug }}
-                    search={(previous) => ({ ...previous, audience })}
-                    onClick={() => setOpenPanel(null)}
-                    className="min-h-11 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    {getPublicCategoryLabel(category.slug, category.name, language)}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
+          {openPanel === "clothing" ? (
+            <div
+              id={clothingPanelId}
+              role="region"
+              aria-labelledby={clothingTriggerId}
+              className="border-t border-border bg-card p-4 shadow-xl lg:absolute lg:left-8 lg:right-8 lg:top-full lg:z-50 lg:border"
+            >
+              {data.categories.length === 0 ? (
+                <NavigationEmptyState>{tr(N.clothingEmpty)}</NavigationEmptyState>
+              ) : (
+                <div className="grid max-h-72 gap-1 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+                  {data.categories.map((category) => (
+                    <Link
+                      key={category.id}
+                      to="/c/$category"
+                      params={{ category: category.slug }}
+                      search={(previous) => ({ ...previous, audience })}
+                      onClick={() => setOpenPanel(null)}
+                      className="min-h-11 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      {getPublicCategoryLabel(category.slug, category.name, language)}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
 
-        {openPanel === "sellers" ? (
-          <div
-            id={sellersPanelId}
-            role="region"
-            aria-labelledby={sellersTriggerId}
-            className="border-t border-border bg-background p-4 shadow-xl lg:absolute lg:left-6 lg:right-6 lg:top-full lg:z-50 lg:border"
-          >
-            {data.sellers.length === 0 ? (
-              <NavigationEmptyState>{tr(N.sellersEmpty)}</NavigationEmptyState>
-            ) : (
-              <div className="grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2 lg:grid-cols-4">
-                {data.sellers.map((seller) => (
-                  <Link
-                    key={seller.id}
-                    to="/s/$sellerSlug"
-                    params={{ sellerSlug: seller.slug }}
-                    search={(previous) => ({ ...previous, audience })}
-                    onClick={() => setOpenPanel(null)}
-                    className="flex min-h-14 items-center gap-3 border border-border/60 p-2 transition-colors hover:border-primary/60 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    <SellerNavigationLogo name={seller.name} logoUrl={seller.logoUrl} />
-                    <span className="min-w-0 truncate text-sm font-medium">{seller.name}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
+          {openPanel === "sellers" ? (
+            <div
+              id={sellersPanelId}
+              role="region"
+              aria-labelledby={sellersTriggerId}
+              className="border-t border-border bg-card p-4 shadow-xl lg:absolute lg:left-8 lg:right-8 lg:top-full lg:z-50 lg:border"
+            >
+              {data.sellers.length === 0 ? (
+                <NavigationEmptyState>{tr(N.sellersEmpty)}</NavigationEmptyState>
+              ) : (
+                <div className="grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2 lg:grid-cols-4">
+                  {data.sellers.map((seller) => (
+                    <Link
+                      key={seller.id}
+                      to="/s/$sellerSlug"
+                      params={{ sellerSlug: seller.slug }}
+                      search={(previous) => ({ ...previous, audience })}
+                      onClick={() => setOpenPanel(null)}
+                      className="flex min-h-14 items-center gap-3 border border-border/60 p-2 transition-colors hover:border-primary/60 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <SellerNavigationLogo name={seller.name} logoUrl={seller.logoUrl} />
+                      <span className="min-w-0 truncate text-sm font-medium">{seller.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </PublicContainer>
       </div>
     </nav>
   );

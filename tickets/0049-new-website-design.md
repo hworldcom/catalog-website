@@ -1,1054 +1,498 @@
-# Bazoria Homepage & Join Page — UI Implementation Brief
+# Ticket 0049: Public Homepage and Join Page Redesign
+
+## Status
 
-## 1. Objective
+Approved parent design brief as of 2026-08-28. This ticket defines the shared
+direction and must be split into small implementation tickets before code work
+starts.
+
+## Goal
+
+Redesign the existing Bazoria marketplace homepage and Join page with a casual,
+editorial fashion-marketplace presentation while preserving the application's
+real data, routes, translations, accessibility, and business behavior.
+
+The result should feel approachable and product-led rather than like a software
+marketing page. It should use warm neutral surfaces, strong black typography,
+restrained orange accents, generous whitespace, and image-led hierarchy.
 
-Update the existing **Bazoria homepage** and **Join Us page** to match the visual direction of the approved mockup:
+## Design Reference
 
-* editorial / premium marketplace aesthetic
-* warm ivory background
-* strong black typography
-* restrained orange accents
-* large product and supplier photography
-* significantly more whitespace
-* simplified navigation
-* fashion-focused imagery
-* **bazoria.** lowercase wordmark
+The approved mockup is a visual reference, not a page specification to copy
+one-to-one.
 
-The implementation should be a **visual redesign of the existing application**, not a separate static landing page.
+Use it to guide:
 
-Existing routes, language handling, product links, seller links and application behavior should continue working.
+- overall composition and visual hierarchy;
+- header proportions and restraint;
+- warm ivory, black, white, and orange balance;
+- editorial image placement;
+- section spacing;
+- minimalist product and category presentation;
+- soft borders and limited corner rounding.
 
-The current homepage already contains marketplace navigation, product cards, supplier cards, a “How it works” section and seller CTA.
+Do not copy illustrative content or unsupported behavior from the mockup. The
+application's terminology, live data, routes, and existing feature semantics
+take precedence.
 
-The Join page already contains seller and buyer benefits, onboarding steps, “How it works”, trust messaging and final CTAs.
+Specifically, do not copy:
+
+- fake products, prices, suppliers, or testimonials;
+- Home and Living products or categories;
+- the ceramic vase or other home-decor imagery;
+- favorite or wishlist controls;
+- buyer registration behavior that does not exist;
+- mockup wording that conflicts with the current translated product language;
+- a shortened Join page that removes approved Bazoria content.
 
----
+## Scope
 
-# 2. General Design Direction
+- Shared public header and marketplace navigation visual treatment.
+- Marketplace homepage layout and presentation.
+- Homepage hero and generated editorial imagery.
+- Homepage product, category, supplier, process, and seller-call-to-action
+  sections.
+- Join page layout and presentation.
+- Responsive behavior for the affected public surfaces.
+- Focused data-contract additions required by visible homepage metadata.
 
-## Brand
+## Non-Goals
 
-Use:
+- Redesigning seller storefronts, product detail pages, category pages, seller
+  dashboards, or administrator panels.
+- Adding checkout, payments, buyer accounts, favorites, popularity analytics, or
+  a supplier-directory route.
+- Implementing `New this week`; that work belongs to ticket 0050.
+- Adding category-image management to the database or administrator panel.
+- Replacing existing authentication, audience filtering, or navigation logic.
 
-**bazoria.**
+## Brand and Typography
 
-not:
+- Use the full lowercase `bazoria.` wordmark in the desktop header.
+- Keep the supplied square `b.` artwork for the favicon and other genuinely
+  constrained icon contexts.
+- Do not restore the boxed `B` logo.
+- Use Bodoni Moda for display headings through the existing `font-display`
+  token.
+- Use Inter for body copy, navigation, buttons, forms, metadata, and other
+  interface text through the existing `font-sans` token.
+- Do not apply the display serif indiscriminately to compact interface controls.
 
-**Bazoria**
+## Color and Surface Direction
 
-The desktop logo should be the full wordmark.
+Use the existing public semantic design tokens and express any adjusted values
+in OKLCH in `src/styles.css`.
 
-The small **b.** mark should only be used where there is insufficient space, for example:
+The target visual relationship is:
 
-* favicon
-* mobile icon
-* PWA/app icon
-* very small responsive states
+- warm ivory page background;
+- white primary surfaces;
+- subtle warm secondary surfaces;
+- near-black primary text;
+- quiet warm-gray secondary text and borders;
+- orange primary actions, links, small labels, and selected accents.
 
-Do not use the existing boxed `B` logo in the desktop header.
+Orange is an accent, not a section background. Avoid large saturated orange
+areas and avoid adding one-off hexadecimal colors inside components.
 
-### Suggested typography
+Cards should generally use 6px to 8px corner radii. Do not make the interface
+excessively rounded and do not place cards inside cards.
 
-For implementation consistency:
+## Public Layout
 
-**Display / headings / logo**
+- Increase the affected public-page content width to a maximum of approximately
+  1320px.
+- Use responsive horizontal padding equivalent to 20px on mobile, 24px on
+  tablet, and 32px on wide screens.
+- Use approximately 72px to 96px between major desktop sections, 56px to 72px
+  on tablet, and 40px to 56px on mobile.
+- Keep fixed-format image regions stable with explicit aspect ratios to avoid
+  layout movement.
 
-* Bodoni Moda
-* fallback: Georgia, serif
+## Shared Header
 
-**UI / body text**
+### Desktop
 
-* Inter
-* fallback: system sans-serif
+Use three restrained horizontal bands:
 
-Example:
+1. Full wordmark on the left; language choices and Sign in on the right.
+2. All, Women, Men, and Kids audience controls on the left; Join Us on the
+   right.
+3. Clothing and Sellers navigation triggers.
 
-```css
---font-display: "Bodoni Moda", Georgia, serif;
---font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-```
+Preserve:
 
-Do not use the display serif for every UI element.
+- sticky positioning;
+- language search parameters;
+- All, Women, Men, and Kids audience state;
+- Clothing and Sellers panel data;
+- keyboard and pointer interaction;
+- Join and authentication destinations.
 
-Use it primarily for:
+Visual treatment:
 
-* logo
-* H1
-* H2
-* selected editorial headings
+- warm ivory or white background;
+- subtle separators;
+- black Sign in action with white text;
+- orange-outlined Join Us action;
+- selected language with black background and white text;
+- quiet unselected languages;
+- minimum 44px interaction targets.
 
-Navigation, buttons, product metadata and body copy should remain sans-serif.
+### Mobile
 
----
+Retain and restyle the current responsive navigation rows for the first redesign
+slice. Do not introduce a new drawer or hamburger interaction in ticket 0049.
 
-# 3. Color System
+A compact mobile drawer requires a separate design and implementation ticket
+covering its contents, open state, focus containment, Escape behavior, outside
+click behavior, route-change closing, and body scroll locking.
 
-Use a restrained neutral palette.
+## Homepage Hero
 
-```css
---background: #fbf9f5;
---surface: #ffffff;
---surface-soft: #f6f1ea;
+### Layout
 
---text: #171512;
---text-muted: #716b63;
+Desktop uses an approximately 48/52 two-column composition:
 
---border: #e7e1d8;
+- left: eyebrow, headline, description, two actions, and three trust points;
+- right: a stable three-image editorial composition.
 
---orange: #e94b0c;
---orange-hover: #d64108;
+Tablet may retain two columns where the content remains readable. Mobile stacks
+copy, actions, imagery, and trust points in that order.
 
---orange-soft: #fff0e8;
-```
+### Copy and Actions
 
-Orange is an **accent**, not the dominant page color.
+Retain the existing translated Bazoria message and direct-contact business
+positioning. Do not imply checkout or marketplace-managed transactions.
 
-Use orange for:
+Use exactly two hero actions:
 
-* primary buttons
-* links / arrows
-* small section labels
-* selected navigation indicators
-* subtle icon backgrounds
+1. `Browse products`, linking to the fashion catalog while preserving language
+   and audience state.
+2. `Join the network`, linking to the Join page while preserving language and
+   audience state.
 
-Avoid large orange blocks.
+The seller-specific account action remains available in the later seller call
+to action.
 
----
+### Trust Points
 
-# 4. Global Layout
+Add three compact, unframed trust points beneath the hero actions:
 
-Increase the visual width slightly from the current `max-w-6xl`.
+- Real suppliers;
+- Direct contact;
+- Global reach.
 
-Recommended:
+Each uses a small Lucide icon, a short heading, and one supporting line. Add
+translations for all supported languages. Do not render them as cards.
 
-```tsx
-max-w-[1320px] mx-auto px-5 sm:px-6 lg:px-8
-```
+## Generated Editorial Imagery
 
-Target desktop content width:
+Generate equivalent fashion-focused assets rather than copying or extracting
+images from the mockup.
 
-**1280–1320 px**
+### Hero Set
 
-Section spacing:
+Generate three coordinated images:
 
-```text
-desktop: 72–96px
-tablet: 56–72px
-mobile: 40–56px
-```
+1. Casual wholesale clothing rack or approachable showroom, wide composition.
+2. Adult woman in casual contemporary clothing, vertical composition.
+3. Casual fashion accessory such as a handbag, shoes, or garment detail,
+   vertical composition.
 
-Avoid excessive borders around every component.
+### Style
 
-Prefer:
+- casual and approachable rather than luxury runway fashion;
+- contemporary European wholesale-market context;
+- natural daylight and warm neutral tones;
+- simple real-world styling;
+- commercially usable editorial composition;
+- no visible trademarks, brand marks, watermarks, or embedded text;
+- no home decor, ceramics, furniture, or unrelated lifestyle objects;
+- no dark atmospheric treatment that obscures the subject.
 
-* whitespace
-* subtle `#e7e1d8` borders
-* image hierarchy
-* typography
+The three hero images should feel like one photographic set. They may be treated
+as decorative when the adjacent text already conveys the content.
 
-Cards should generally have:
+### Asset Handling
 
-```css
-border-radius: 6px;
-```
+- Store final optimized assets under `public/assets/marketplace/`.
+- Prefer WebP output at suitable desktop resolution.
+- Preserve stable aspect ratios in markup.
+- Load hero images eagerly and assign high fetch priority only to the primary
+  above-the-fold image.
+- Lazy-load category imagery and content below the fold.
 
-or at most `8px`.
+## Homepage Product Section
 
-Do not make the design excessively rounded.
+Keep the current `Trending this week` section and current trending feed during
+ticket 0049. Do not relabel the manually curated trending feed as new products.
+Ticket 0050 owns a future `New this week` feed.
 
----
+Requirements:
 
-# 5. Header
+- Use live database products only.
+- Preserve product detail links, images, prices, quote state, currency, minimum
+  order quantity, pack size, and stock state.
+- Extend the public homepage product feed with `seller_name` and `seller_slug`.
+- Display the seller name below the product name.
+- Do not add a favorite or heart control.
+- Use an editorial homepage variant of the shared product card so category and
+  seller pages are not silently redesigned by this ticket.
+- Make the image dominant with a stable 4:5 or agreed source-compatible aspect
+  ratio and subtle image scaling on hover.
+- Remove heavy card framing.
 
-The current application has a top header and two navigation rows.
+Present all returned products in a responsive, keyboard-accessible horizontal
+scroll-snap rail:
 
-Keep the existing functionality but simplify the visual treatment.
+- approximately five visible cards on wide desktop;
+- approximately three visible cards on tablet;
+- approximately two visible cards on mobile;
+- no automatic movement;
+- accessible previous and next controls where controls are shown.
 
-## Desktop
+`View all` may link to the fashion catalog while preserving language and
+audience state.
 
-Row 1:
+## Homepage Categories
 
-```text
-bazoria.                                    EN PL DE VI   Sign in
-```
+Add an `Explore categories` section after the product rail.
 
-Row 2:
+The initial presentation set is:
 
-```text
-All    Women    Men    Kids                         Join Us
+- Women;
+- Men;
+- Kids;
+- Dresses, when present in the supported taxonomy;
+- Sportswear, when present in the supported taxonomy.
 
-Clothing ▾    Sellers ▾
-```
+Behavior:
 
-The existing audience and marketplace navigation behaviors should remain intact.
+- Women, Men, and Kids update the marketplace audience selection.
+- Dresses and Sportswear link to their actual category routes and preserve the
+  current audience and language.
+- Do not render a category route that is absent from the live supported
+  navigation data.
+- Do not add Home and Living or unsupported categories.
 
-### Important
+Use generated casual fashion imagery stored as versioned static assets and map
+those assets to the approved audience/category slugs in presentation code. Do
+not add a category image column or administrator workflow in this ticket.
 
-There is **no Home & Living section**.
+Category images should use stable aspect ratios, a subtle readability overlay,
+and lower-left white labels. They must not imply fake products or suppliers.
 
-Do not introduce:
+## Homepage Suppliers
 
-* Home & Living navigation
-* Home & Living category tiles
-* home décor examples
-* ceramic/vase sample products
+Retain a live-data supplier section titled `Discover suppliers` or the existing
+translated equivalent.
 
-Navigation should reflect the actual marketplace taxonomy.
+- Use dynamically returned seller data.
+- Show cover image, seller name, location, primary category when available, and
+  existing verification state.
+- Preserve seller storefront links, language, and audience state.
+- Do not display product counts in the initial redesign.
+- Do not add a `View all suppliers` link because no supplier-directory route
+  currently exists.
+- Use image-led cards with restrained framing and no nested cards.
 
-### Header styling
+## Homepage Process Section
 
-* warm ivory / white background
-* black wordmark
-* subtle bottom border
-* sticky behavior can remain
-* approximately 64–68 px first-row height
-* no boxed logo
+Retain the existing three-step Browse, Inquire, and Deal behavior, but present it
+as one wide soft-background section rather than three heavy cards.
 
-`Sign in` can remain black:
+The copy must continue to explain that buyers browse catalogs, meet suppliers,
+and contact them directly. Do not imply Bazoria checkout.
 
-```text
-black background
-white text
-```
+## Homepage Seller Call To Action
 
-`Join Us` should be orange outlined.
+Retain the seller call to action near the bottom of the homepage.
 
-### Language selector
+- Use a soft peach or orange-tinted neutral surface.
+- Keep the existing translated seller message.
+- Keep the real seller account destination.
+- Do not use a dark software-marketing banner.
 
-Keep:
+## Join Page
 
-```text
-EN PL DE VI
-```
-
-Selected language:
-
-* black background
-* white text
-
-Unselected languages:
-
-* transparent background
-* muted text
-
-Do not make the language selector visually dominant.
-
----
-
-# 6. Homepage
-
-The homepage should immediately feel like a **marketplace**, not primarily like a SaaS landing page.
-
-The current homepage already has live product and seller sections.
-
-Use those actual data sources.
-
----
-
-# 7. Homepage Hero
-
-Desktop structure:
-
-```text
-┌─────────────────────────────┬────────────────────────────┐
-│                             │       LARGE IMAGE          │
-│  LABEL                      │                            │
-│                             ├────────────┬───────────────┤
-│  HEADLINE                   │ WOMEN      │ PRODUCT /     │
-│                             │ FASHION    │ ACCESSORY     │
-│  DESCRIPTION                │ IMAGE      │ IMAGE         │
-│                             │            │               │
-│  CTA CTA                    │            │               │
-│                             │            │               │
-│  TRUST POINTS               │            │               │
-└─────────────────────────────┴────────────┴───────────────┘
-```
-
-Approximately:
-
-```text
-left: 48%
-right: 52%
-```
-
-### Hero copy
-
-The existing message is strong and can remain close to:
-
-**Find wholesale products
-from real suppliers.**
-
-The current homepage describes Bazoria as a place where retailers, online sellers and market vendors browse wholesale catalogs and contact suppliers directly.
-
-Do not add unnecessary marketing copy.
-
-### Eyebrow
-
-Example:
-
-```text
-BRINGING EUROPE'S TRADITIONAL WHOLESALE MARKETS ONLINE.
-```
-
-Small uppercase sans-serif, orange.
-
-### CTAs
-
-Primary:
-
-**Browse products**
-
-Secondary:
-
-**Sell on Bazoria**
-
-or:
-
-**Join the network**
-
-Prefer **two CTAs**, not three competing primary actions.
-
-Primary button:
-
-```css
-background: var(--orange);
-color: white;
-```
-
-Secondary:
-
-```css
-background: transparent;
-border: 1px solid var(--orange);
-color: var(--orange);
-```
-
----
-
-# 8. Hero Photography
-
-Use a 3-image editorial composition.
-
-Example:
-
-```text
-┌─────────────────────┐
-│ Clothing rack       │
-│ / wholesale fashion │
-├──────────┬──────────┤
-│ Women's  │ Fashion  │
-│ fashion  │ product  │
-└──────────┴──────────┘
-```
-
-### Important change
-
-The lower-left image should show **women's fashion**, not a vase or interior object.
-
-Suitable examples:
-
-* female model wearing wholesale clothing
-* blouse / dress / jacket
-* garment detail
-* styled fashion editorial
-
-The third image can be:
-
-* handbag
-* shoes
-* another clothing category
-* fashion accessory
-
-The hero must remain clearly associated with **fashion wholesale**.
-
-Use:
-
-```css
-object-fit: cover;
-```
-
-and consistent neutral photography.
-
----
-
-# 9. Hero Trust Points
-
-Below the hero CTAs add three compact trust points:
-
-```text
-Real suppliers        Direct contact        Global reach
-```
-
-Each consists of:
-
-* small simple line icon
-* short heading
-* one-line supporting statement
-
-Example:
-
-**Real suppliers**
-Wholesale businesses across Europe.
-
-**Direct contact**
-Inquire and negotiate directly.
-
-**Global reach**
-Discover suppliers beyond your existing network.
-
-Do not make these full cards.
-
----
-
-# 10. Product Section
-
-Rename the current:
-
-**Trending this week**
-
-to preferably:
-
-**New this week**
-
-unless the backend genuinely calculates trending popularity.
-
-Current product cards already expose:
-
-* product image
-* name
-* price / quote state
-* inventory status
-* MOQ metadata
-* product detail route
-
-Preserve this functionality.
-
-## Desktop layout
-
-Prefer:
-
-```text
-5 cards visible
-```
-
-with horizontal continuation/carousel if necessary.
-
-Example:
-
-```text
-New this week                                  View all →
-
-[ product ][ product ][ product ][ product ][ product ]
-```
-
-### Product card
-
-Image should dominate.
-
-Structure:
-
-```text
-IMAGE
-
-Product name
-Supplier
-Price
-MOQ / stock where relevant
-```
-
-Remove heavy borders.
-
-Suggested:
-
-```css
-background: transparent;
-border: none;
-```
-
-Image:
-
-```css
-aspect-ratio: 4 / 5;
-border-radius: 5px;
-```
-
-or square if required by current product photography.
-
-Hover:
-
-```css
-transform: scale(1.025);
-transition: 250ms ease;
-```
-
-Do not use fake product information from the mockup.
-
-Use actual API/database values already feeding the current cards.
-
----
-
-# 11. Category Section
-
-Add a visual category section after products.
-
-Title:
-
-**Explore categories**
-
-Categories must come from the **actual fashion taxonomy**.
-
-At minimum the top audience segmentation can correspond to:
-
-```text
-Women
-Men
-Kids
-```
-
-Additional category cards should only be shown if supported by the application taxonomy, for example:
-
-```text
-Dresses
-Sportswear
-Jackets
-Trousers
-```
-
-Do **not** hardcode unsupported categories simply because they appeared in a mockup.
-
-Specifically:
-
-**No Home & Living.**
-
-Category tile structure:
-
-```text
-┌──────────────────┐
-│                  │
-│    IMAGE         │
-│                  │
-│ Women's fashion  │
-└──────────────────┘
-```
-
-Text overlays the lower-left of the image.
-
-Use a subtle dark gradient so the white category name remains readable.
-
----
-
-# 12. Featured Suppliers
-
-The existing homepage already shows:
-
-* Luna Atelier
-* tiger muay thai
-* Warsaw Runners
-
-from current seller data.
-
-Do not hardcode these names as part of the design.
-
-Continue rendering the seller data dynamically.
-
-Rename section to:
-
-**Discover suppliers**
-
-or retain:
-
-**Featured suppliers**
-
-Preferred layout:
-
-```text
-Discover suppliers                            View all →
-
-[ supplier ][ supplier ][ supplier ][ supplier ]
-```
-
-Supplier card:
-
-```text
-COVER IMAGE
-
-Supplier name
-Location
-Category if available
-Product count if available
-
-View storefront →
-```
-
-The seller storefront remains one of the central marketplace concepts.
-
-Supplier photography should be prominent.
-
----
-
-# 13. Homepage “How It Works”
-
-The existing homepage explains:
-
-1. Browse
-2. Inquire
-3. Deal
-
-Restyle this as one wide soft-background section.
-
-Example:
-
-```text
-Wholesale from businesses you can actually reach.
-
-01 Discover        02 Meet the supplier        03 Contact directly
-```
-
-Suggested wording can continue to communicate the existing behavior:
-
-### 01 Discover
-
-Browse wholesale products and suppliers.
-
-### 02 Meet the supplier
-
-Open their Bazoria storefront and catalogue.
-
-### 03 Contact directly
-
-Send an inquiry or continue through WhatsApp / direct contact.
-
-Do not imply Bazoria currently provides checkout if it does not.
-
-The current site explicitly describes direct inquiry and off-platform negotiation.
-
----
-
-# 14. Seller CTA
-
-Retain the existing seller CTA near the bottom of the homepage.
-
-Restyle to:
-
-```text
-soft peach / orange-tinted background
-
-Sell wholesale on Bazoria
-
-Create a digital catalogue, showcase your products and
-reach professional buyers.
-
-                         [ Create seller account ]
-```
-
-Do not use a dark SaaS-style banner.
-
----
-
-# 15. Join Page
-
-Keep the **same global header** as the marketplace homepage.
-
-The current Join page already distinguishes sellers and buyers and contains detailed benefits for both sides.
-
-The redesign should improve visual hierarchy without throwing away this content.
-
----
-
-# 16. Join Page Hero
-
-Recommended:
-
-```text
-                JOIN THE WHOLESALE NETWORK
-
-                   Join Bazoria
-
-        More visibility for sellers.
-           Easier sourcing for buyers.
-
-Bazoria connects wholesalers and professional buyers
-across Europe while keeping direct business relationships.
-
-              [ I'm a seller ] [ I'm a buyer ]
-```
-
-Use a very subtle peach radial or linear background.
-
-Do not use a giant solid orange section.
-
----
-
-# 17. Seller / Buyer Choice
-
-Immediately below the hero provide two large audience cards:
-
-```text
-┌────────────────────────┐ ┌────────────────────────┐
-│ FOR BUYERS             │ │ FOR SELLERS            │
-│                        │ │                        │
-│ Discover suppliers     │ │ Create your catalogue  │
-│ Browse catalogues      │ │ Share products         │
-│ Contact directly       │ │ Reach new buyers       │
-│ Source across Europe   │ │ Keep direct sales      │
-│                        │ │                        │
-│ Browse products        │ │ Create seller account  │
-└────────────────────────┘ └────────────────────────┘
-```
-
-Use the application's existing terminology:
-
-**buyers** and **sellers**.
-
-Do not introduce a separate user type called “retailer” if that changes application semantics.
-
-Retailers can still be described as part of the buyer audience.
-
----
-
-# 18. Seller Benefits
-
-Retain the existing seller message:
-
-**Show more. Send less. Reach further.**
-
-and:
-
-**Upload once. Share everywhere.**
-
-The existing five seller benefits should remain:
-
-1. Create your digital catalogue
-2. Share products anywhere
-3. Open the rest of your range
-4. Reach new professional buyers
-5. Keep selling your way
-
-Visually present these with:
-
-* simple icons
-* generous whitespace
-* 2-column desktop grid
-* no heavy card borders
-
----
-
-# 19. Seller Onboarding
+The mockup provides visual direction for the Join page but does not replace the
+approved content architecture.
 
 Retain:
 
-**Start selling in three steps**
+- seller and buyer positioning;
+- seller benefits;
+- seller onboarding steps;
+- buyer benefits;
+- direct-connection process;
+- independent-business trust messaging;
+- final seller and catalog actions.
 
-Existing flow:
+Use `buyers` and `sellers` as application concepts. Retailers may be described
+as members of the buyer audience, but do not introduce a new retailer account
+type.
 
-1. Create your account
-2. Set up your seller profile
-3. Build your catalogue
+### Join Hero
 
-Render this as a horizontal step component on desktop.
+- Use a centered editorial composition inspired by the reference.
+- Use a very subtle warm-peach background treatment.
+- Keep the translated seller/buyer network message.
+- Provide seller and buyer jump actions with valid 44px targets.
+- Do not use a large solid orange hero.
 
-Example:
+### Audience Panels
 
-```text
-01 ---------------- 02 ---------------- 03
+Introduce two prominent panels immediately after the hero:
 
-Create account      Seller profile       Build catalogue
-```
+- For buyers: discover suppliers, browse catalogs, and contact directly.
+- For sellers: create a catalog, share products, reach buyers, and retain direct
+  relationships.
 
-Mobile:
+Buyer action: `Browse products`.
 
-stack vertically.
+Seller action: `Create seller account`.
 
-Primary CTA underneath:
+Do not use `Join as Retailer`, because a buyer account is not currently
+required.
 
-**Create seller account**
+### Remaining Join Sections
 
----
+Restyle the existing detailed sections using the same whitespace, typography,
+soft surfaces, and limited borders as the homepage. Preserve all real links and
+translated content.
 
-# 20. Buyer Benefits
+Do not remove existing seller benefits, buyer benefits, onboarding, connection,
+or trust content merely because the desktop mockup is shorter.
 
-Retain the current buyer section:
+## Data Contract Decisions
 
-**Discover more. Search faster. Source closer.**
+### Required For 0049
 
-Existing benefits:
+Extend the public homepage product read model with:
 
-1. Discover new wholesalers
-2. Browse current catalogues
-3. Browse before travelling
-4. Source closer to home
+- `seller_name`;
+- `seller_slug`.
 
-Use similar visual treatment to the seller benefits.
-
-Alternate background slightly:
-
-```css
-background: #f8f4ee;
-```
-
-to create separation.
-
----
-
-# 21. Join Page “How It Works”
-
-Retain the existing business logic:
-
-```text
-01 Seller publishes
-02 Buyer discovers
-03 Both sides connect
-```
-
-The current page correctly describes Bazoria as connecting the parties through inquiry, WhatsApp or a physical showroom rather than forcing the transaction through the platform.
-
-This is important messaging and should remain.
-
-Use three large horizontal steps.
-
----
-
-# 22. Trust Section
-
-Keep:
-
-**One Network. Independent Businesses.**
-
-Two panels:
-
-### Sellers stay in control
-
-Identity, catalogue, prices, customers and relationships remain theirs.
-
-### Buyers gain a clearer view
-
-They can discover published products and contact sellers directly.
-
-Use very subtle cards.
-
-No icons required.
-
----
-
-# 23. Final CTA
-
-Use a soft peach container.
-
-Example:
-
-```text
-Ready to get started?
-
-Create your seller presence or start discovering
-wholesale suppliers.
-
-[ Sell on Bazoria ]    [ Browse products ]
-```
-
-Preserve the actual links currently used by the application.
-
----
-
-# 24. Responsive Behaviour
-
-## Desktop ≥ 1024px
-
-* full navigation
-* 2-column hero
-* 5 product cards where screen width permits
-* horizontal supplier cards
-* 2-column benefits
-* 3-column process steps
-
-## Tablet 768–1023px
-
-* hero remains 2-column where viable
-* product grid 3 columns
-* categories 3 columns
-* seller/buyer benefits 2 columns
-
-## Mobile < 768px
-
-Header:
-
-```text
-bazoria.                      menu / sign in
-```
-
-Hero:
-
-```text
-copy
-CTAs
-images
-trust points
-```
-
-Product cards:
-
-```text
-2 columns
-```
-
-or horizontal snap carousel.
-
-Category cards:
-
-```text
-2 columns
-```
-
-Join page audience cards:
-
-```text
-1 column
-```
-
-All tap targets:
-
-minimum `44 × 44 px`.
-
----
-
-# 25. Image Handling
-
-Use existing product and seller image infrastructure.
-
-For data-driven images:
-
-```tsx
-<img
-  loading="lazy"
-  className="h-full w-full object-cover"
-/>
-```
-
-Hero images may load eagerly:
-
-```tsx
-loading="eager"
-fetchPriority="high"
-```
-
-Avoid CLS by always defining aspect ratios.
-
-Suggested image treatment:
-
-```css
-background: #f1ede6;
-```
-
-while loading.
-
----
-
-# 26. Components
-
-Recommended component structure:
-
-```text
-components/
-  layout/
-    Header
-    MarketplaceNavigation
-    Footer
-
-  homepage/
-    MarketplaceHero
-    TrustHighlights
-    ProductRail
-    ProductCard
-    CategoryGrid
-    CategoryCard
-    SupplierRail
-    SupplierCard
-    HowItWorks
-    SellerCTA
-
-  join/
-    JoinHero
-    AudienceCards
-    SellerBenefits
-    SellerOnboarding
-    BuyerBenefits
-    ConnectionSteps
-    TrustSection
-    JoinFinalCTA
-```
-
-Do not duplicate the header/navigation between the homepage and Join page.
-
----
-
-# 27. Preserve Existing Behaviour
-
-The redesign must not break:
-
-* `?lang=EN`
-* audience query handling
-* All / Women / Men / Kids selection
-* Clothing dropdown
-* Sellers dropdown
-* product detail routes
-* seller storefront routes
-* Join route
-* authentication route
-* seller signup CTA
-* responsive behavior
-* keyboard navigation
-* focus states
-
-## These behaviors are already present in the current HTML.
-
-# 28. Do Not Hardcode Mockup Content
-
-The visual mockups contain illustrative products and sellers.
-
-They are **design references only**.
-
-Engineers should:
-
-* bind product cards to existing marketplace product data
-* bind supplier cards to existing seller data
-* derive categories from the supported taxonomy
-* preserve translations
-* preserve backend-driven prices, currency, MOQ and stock
-* avoid introducing fake supplier/product records
-
----
-
-# 29. Specific Content Corrections
-
-These should be treated as explicit requirements:
-
-* Use **bazoria.** lowercase as the visual brand.
-* Remove the existing boxed `B` desktop logo.
-* Do not add a **Home & Living** section.
-* Do not add a Home & Living category card.
-* Do not use a vase / home décor image in the homepage hero.
-* Use a **women's fashion image** in that position instead.
-* Keep the overall marketplace focused on the supported fashion categories.
-* Keep orange as an accent rather than the dominant brand color.
-
----
-
-# 30. Acceptance Criteria
-
-The implementation is complete when:
-
-* [ ] desktop header uses the `bazoria.` wordmark
-* [ ] no Home & Living section appears
-* [ ] hero has an editorial two-column design
-* [ ] hero imagery is fashion-focused
-* [ ] lower-left hero image uses women's fashion
-* [ ] homepage product section uses live product data
-* [ ] marketplace product cards match the new minimalist visual system
-* [ ] category section uses supported marketplace categories
-* [ ] suppliers remain dynamically loaded
-* [ ] Join page visually matches the homepage
-* [ ] seller and buyer benefits remain intact
-* [ ] existing authentication and navigation behavior is preserved
-* [ ] responsive mobile design is implemented
-* [ ] language switching still works
-* [ ] keyboard and focus accessibility remain functional
-* [ ] no mock/fake products are hardcoded into production
+Implement this through the existing public database-read boundary with a
+migration, generated Supabase type updates, and focused permission/filtering
+tests. Do not infer seller names from the featured-seller response because that
+response may not contain every product seller.
+
+### Explicitly Deferred
+
+- Newest-products feed: ticket 0050.
+- Supplier product counts.
+- Category image database fields or management.
+- Supplier directory and `View all suppliers` destination.
+- Favorites or wishlist persistence.
+- Mobile navigation drawer.
+
+## Internationalization
+
+- Preserve `?lang=EN`, PL, DE, and VI behavior.
+- Add translations whenever visible copy changes.
+- Keep language and audience search parameters on all new or restyled links.
+- Do not hardcode English-only public copy in components.
+
+## Accessibility
+
+- Preserve semantic heading order.
+- Preserve keyboard behavior for audience, Clothing, and Sellers navigation.
+- Provide visible focus states.
+- Keep all controls at least 44px by 44px where practical.
+- Provide accessible names for icon-only carousel controls.
+- Use empty alternative text for genuinely decorative editorial imagery.
+- Provide meaningful alternative text for data-driven product and seller images.
+- Do not communicate stock, verification, or selection through color alone.
+
+## Responsive Behavior
+
+### Desktop, 1024px And Above
+
+- three-band header;
+- two-column hero;
+- approximately five product cards visible in the rail;
+- five category tiles where space permits;
+- image-led supplier presentation;
+- two-column benefit layouts;
+- horizontal three-step processes.
+
+### Tablet, 768px To 1023px
+
+- two-column hero only while copy and images remain readable;
+- approximately three product cards visible;
+- three category columns;
+- two-column audience and benefit layouts where viable.
+
+### Mobile, Below 768px
+
+- retain the existing responsive navigation model without a new drawer;
+- stack hero copy, actions, images, and trust points;
+- approximately two product cards visible in the horizontal rail;
+- two category columns;
+- one-column Join audience panels and benefits;
+- vertical process steps;
+- no horizontal page overflow outside intentional scroll rails.
+
+## Implementation Slices
+
+Implementation is split into these child tickets:
+
+1. `0049a-public-design-foundations-and-header.md`
+2. `0049b-casual-fashion-homepage-hero.md`
+3. `0049c-homepage-product-seller-metadata.md`
+4. `0049d-editorial-homepage-product-rail.md`
+5. `0049e-homepage-categories-and-suppliers.md`
+6. `0049f-homepage-process-and-seller-cta.md`
+7. `0049g-join-page-redesign.md`
+8. `0049h-public-redesign-responsive-accessibility-qa.md`
+
+Recommended sequence:
+
+`0049a -> 0049b -> 0049c -> 0049d -> 0049e/0049f -> 0049g -> 0049h`
+
+`0049c` may be prepared in parallel with `0049b` because it owns an isolated
+database read-model change. `0049e` and `0049f` may be implemented in parallel
+after the shared foundation is stable.
+
+Do not implement all slices in one change.
+
+## Acceptance Criteria
+
+- [ ] The mockup is used as visual direction rather than copied content.
+- [ ] The desktop header uses the full lowercase wordmark and three restrained
+      bands.
+- [ ] Existing navigation, language, audience, authentication, and Join behavior
+      still work.
+- [ ] Mobile navigation remains functional without introducing an undefined
+      drawer.
+- [ ] The homepage hero uses three coordinated, casual fashion-focused generated
+      images.
+- [ ] No home-decor or unsupported category imagery appears.
+- [ ] The homepage uses live product and seller data.
+- [ ] The current Trending feed remains honestly labeled during ticket 0049.
+- [ ] Product cards can display their actual seller name.
+- [ ] No fake favorite control is introduced.
+- [ ] Category tiles use approved audience links and supported category routes.
+- [ ] Supplier product counts and `View all suppliers` are omitted.
+- [ ] The existing direct-contact, no-checkout behavior remains accurate.
+- [ ] The Join page retains approved seller, buyer, onboarding, connection, and
+      trust content.
+- [ ] Buyer actions do not imply that buyer registration is required.
+- [ ] All changed public copy supports EN, PL, DE, and VI.
+- [ ] Mobile, tablet, and desktop layouts have no incoherent overlap or overflow.
+- [ ] Keyboard navigation and visible focus states remain functional.
+
+## Validation
+
+- Add focused component tests for each implementation slice.
+- Add migration and server-function tests for product seller metadata.
+- Run the full relevant test suite, `npm run lint`, and `npm run build` after each
+  slice.
+- Inspect the affected pages at representative mobile, tablet, 13-inch laptop,
+  and wide-desktop viewports.
+- Verify generated image rendering, aspect ratios, lazy/eager loading behavior,
+  and layout stability.
+- Verify all four languages, all audience states, keyboard navigation, empty
+  data, partial image data, and image-load failure states.

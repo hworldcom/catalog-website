@@ -128,16 +128,30 @@ describe("MarketplaceNavigation", () => {
     const joinUs = within(audienceRow).getByRole("link", { name: "Join Us" });
     const all = within(audienceRow).getByRole("button", { name: "All" });
     const women = within(audienceRow).getByRole("button", { name: "Women" });
+    const audienceOptions = all.parentElement;
+    const audienceContainer = audienceRow.parentElement;
+    const sectionContainer = sectionRow.parentElement;
+    const audienceBand = audienceContainer?.parentElement;
+    const sectionBand = sectionContainer?.parentElement;
 
-    expect(audienceRow.nextElementSibling).toBe(sectionRow);
-    expect(audienceRow).toHaveClass("border-b", "border-border/60", "bg-secondary/30");
+    expect(audienceBand?.nextElementSibling).toBe(sectionBand);
+    expect(audienceBand).toHaveClass("border-b", "border-border", "bg-background");
+    expect(sectionBand).toHaveClass("border-b", "border-border", "bg-card");
+    expect(audienceContainer).toHaveClass("max-w-[1320px]", "px-5", "lg:px-8");
+    expect(sectionContainer).toHaveClass("max-w-[1320px]", "px-5", "lg:px-8");
     expect(sectionRow).toHaveClass("lg:justify-start");
-    expect(sectionRow).not.toHaveClass("bg-secondary/30");
     expect(all.nextElementSibling).toBe(women);
     expect(within(sectionRow).getByRole("button", { name: "Clothing" })).toBeVisible();
     expect(within(sectionRow).getByRole("button", { name: "Sellers" })).toBeVisible();
-    expect(kids.nextElementSibling).toBe(joinUs);
-    expect(joinUs).toHaveClass("ml-auto", "min-h-11", "shrink-0");
+    expect(kids.parentElement).toBe(audienceOptions);
+    expect(audienceOptions?.nextElementSibling).toBe(joinUs);
+    expect(joinUs).toHaveClass(
+      "min-h-11",
+      "shrink-0",
+      "border-primary",
+      "text-primary",
+      "hover:bg-accent",
+    );
     expect(within(sectionRow).queryByRole("link", { name: "Join Us" })).not.toBeInTheDocument();
   });
 

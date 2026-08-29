@@ -9,6 +9,8 @@ import {
 } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
+import { cn } from "@/lib/utils";
+
 export const languages = ["EN", "PL", "DE", "VI"] as const;
 export type Lang = (typeof languages)[number];
 
@@ -128,13 +130,22 @@ export function LangProvider({ children }: { children: ReactNode }) {
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
 }
 
-export function LanguageSwitcher({ className }: { className?: string }) {
+export function LanguageSwitcher({
+  appearance = "default",
+  className,
+}: {
+  appearance?: "default" | "publicHeader";
+  className?: string;
+}) {
   const { lang, setLang } = useContext(LangContext);
+  const publicHeader = appearance === "publicHeader";
   return (
     <div
-      className={
-        "inline-flex items-center gap-0.5 border border-border px-1 py-0.5 " + (className ?? "")
-      }
+      className={cn(
+        "inline-flex items-center border border-border",
+        publicHeader ? "bg-card" : "gap-0.5 px-1 py-0.5",
+        className,
+      )}
       role="group"
       aria-label="Language"
     >
@@ -143,12 +154,15 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           key={l}
           type="button"
           onClick={() => setLang(l)}
-          className={
-            "px-1.5 py-0.5 text-[11px] font-medium tracking-wide transition-colors " +
-            (lang === l
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground")
-          }
+          className={cn(
+            "text-[11px] font-medium tracking-wide transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+            publicHeader ? "min-h-8 min-w-8 px-2" : "px-1.5 py-0.5",
+            lang === l
+              ? publicHeader
+                ? "bg-foreground text-card"
+                : "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
           aria-pressed={lang === l}
         >
           {l}

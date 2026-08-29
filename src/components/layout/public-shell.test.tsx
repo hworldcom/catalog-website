@@ -1,6 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const authMocks = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  onAuthStateChange: vi.fn(),
+  unsubscribe: vi.fn(),
+}));
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -34,7 +40,9 @@ vi.mock("@/features/marketplace/components/marketplace-navigation", () => ({
 }));
 
 vi.mock("@/lib/i18n", () => ({
-  LanguageSwitcher: () => <div data-testid="language-switcher" />,
+  LanguageSwitcher: ({ appearance }: { appearance?: string }) => (
+    <div data-testid="language-switcher" data-appearance={appearance} />
+  ),
   t: (EN: string, PL: string, DE: string, VI: string) => ({ EN, PL, DE, VI }),
   tr: (value: { EN: string }) => value.EN,
 }));
@@ -42,10 +50,8 @@ vi.mock("@/lib/i18n", () => ({
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
     auth: {
-      getUser: async () => ({ data: { user: null } }),
-      onAuthStateChange: () => ({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      }),
+      getUser: authMocks.getUser,
+      onAuthStateChange: authMocks.onAuthStateChange,
     },
   },
 }));
@@ -53,6 +59,16 @@ vi.mock("@/lib/supabase/client", () => ({
 import { PublicShell } from "./public-shell";
 
 describe("PublicShell marketplace navigation", () => {
+  beforeEach(() => {
+    authMocks.getUser.mockReset();
+    authMocks.getUser.mockResolvedValue({ data: { user: null } });
+    authMocks.onAuthStateChange.mockReset();
+    authMocks.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: authMocks.unsubscribe } },
+    });
+    authMocks.unsubscribe.mockReset();
+  });
+
   it("renders audience navigation on marketplace surfaces", () => {
     render(
       <PublicShell marketplaceAudience="kids">
@@ -73,7 +89,22 @@ describe("PublicShell marketplace navigation", () => {
     expect(screen.queryByTestId("marketplace-navigation")).not.toBeInTheDocument();
   });
 
-  it("renders the signed-out navigation action as a prominent orange button", async () => {
+  it("uses the isolated public theme and public-header language appearance", () => {
+    const { container } = render(
+      <PublicShell>
+        <p>Public content</p>
+      </PublicShell>,
+    );
+
+    expect(container.firstElementChild).toHaveClass("public-marketplace");
+    expect(container.firstElementChild).not.toHaveClass("storefront-dark");
+    expect(screen.getByTestId("language-switcher")).toHaveAttribute(
+      "data-appearance",
+      "publicHeader",
+    );
+  });
+
+  it("renders the signed-out navigation action with the black action treatment", async () => {
     render(
       <PublicShell marketplaceAudience="women">
         <p>Marketplace content</p>
@@ -82,11 +113,36 @@ describe("PublicShell marketplace navigation", () => {
 
     const signIn = await screen.findByRole("link", { name: "Sign in" });
     expect(signIn).toHaveAttribute("href", "/auth");
-    expect(signIn).toHaveClass("bg-orange-600", "border-orange-600", "text-white");
+    expect(signIn).toHaveClass("min-h-11", "border-foreground", "bg-foreground", "text-card");
   });
 
-  it("resets the logo and Home destinations to All while preserving language", () => {
+  it("renders the signed-in seller action with the same black treatment", async () => {
+    authMocks.getUser.mockResolvedValue({ data: { user: { id: "seller-1" } } });
     render(
+      <PublicShell>
+        <p>Seller content</p>
+      </PublicShell>,
+    );
+
+    const dashboard = await screen.findByRole("link", { name: "Seller dashboard" });
+    expect(dashboard).toHaveAttribute("href", "/seller");
+    expect(dashboard).toHaveClass("min-h-11", "border-foreground", "bg-foreground", "text-card");
+  });
+
+  it("renders no authentication action while the initial session is unresolved", () => {
+    authMocks.getUser.mockReturnValue(new Promise(() => {}));
+    render(
+      <PublicShell>
+        <p>Loading content</p>
+      </PublicShell>,
+    );
+
+    expect(screen.queryByRole("link", { name: "Sign in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Seller dashboard" })).not.toBeInTheDocument();
+  });
+
+  it("uses the logo as the only home destination and resets All while preserving language", () => {
+    const { container } = render(
       <PublicShell marketplaceAudience="kids">
         <p>Marketplace content</p>
       </PublicShell>,
@@ -95,13 +151,16 @@ describe("PublicShell marketplace navigation", () => {
     const expected = JSON.stringify({ lang: "DE", audience: "all" });
     const logoLink = screen.getByRole("link", { name: "Bazoria" });
     expect(logoLink).toHaveAttribute("data-route-search", expected);
-    expect(screen.getByRole("img", { name: "Bazoria" })).toHaveAttribute(
-      "src",
-      "/assets/brand/bazoria-logo.svg",
-    );
-    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute(
-      "data-route-search",
-      expected,
-    );
+    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+
+    const mobileLogo = container.querySelector('img[src="/favicon.svg"]');
+    const desktopLogo = container.querySelector('img[src="/assets/brand/bazoria-logo.svg"]');
+    expect(mobileLogo).toHaveAttribute("alt", "");
+    expect(mobileLogo).toHaveAttribute("aria-hidden", "true");
+    expect(mobileLogo).toHaveClass("sm:hidden");
+    expect(desktopLogo).toHaveAttribute("alt", "");
+    expect(desktopLogo).toHaveAttribute("aria-hidden", "true");
+    expect(desktopLogo).toHaveClass("hidden", "sm:block");
   });
 });
