@@ -8,7 +8,7 @@ import {
   readPublicProductDescription,
   toDatabaseDescriptionLanguage,
 } from "./public-product-description";
-import { publicAudienceSchema } from "./public-audience";
+import { publicAudienceSchema, type PublicAudience } from "./public-audience";
 import { resolvePublicSiteOrigin } from "./public-site-origin";
 
 function publicClient() {
@@ -24,6 +24,8 @@ function publicClient() {
 export type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 export type SellerRow = Database["public"]["Tables"]["sellers"]["Row"];
 export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
+export type PublicTrendingProduct =
+  Database["public"]["Functions"]["list_public_trending_products"]["Returns"][number];
 
 export type PublicClothingCategory = {
   id: string;
@@ -72,27 +74,42 @@ export const getAudienceNavigation = createServerFn({ method: "GET" })
     };
   });
 
+type ListMarketplaceDependencies = {
+  createPublicClient: typeof publicClient;
+};
+
+const listMarketplaceDependencies: ListMarketplaceDependencies = {
+  createPublicClient: publicClient,
+};
+
+export async function handleListMarketplace(
+  data: { audience: PublicAudience },
+  dependencies: ListMarketplaceDependencies = listMarketplaceDependencies,
+) {
+  const sb = dependencies.createPublicClient();
+  const [trending, sellers] = await Promise.all([
+    sb.rpc("list_public_trending_products", {
+      p_audience: data.audience,
+      p_limit: 8,
+    }),
+    sb.rpc("list_public_featured_sellers", {
+      p_audience: data.audience,
+      p_limit: 6,
+    }),
+  ]);
+  if (trending.error) throw trending.error;
+  if (sellers.error) throw sellers.error;
+
+  const trendingProducts: PublicTrendingProduct[] = trending.data ?? [];
+  return {
+    trending: trendingProducts,
+    sellers: sellers.data ?? [],
+  };
+}
+
 export const listMarketplace = createServerFn({ method: "GET" })
   .validator((input) => z.object({ audience: publicAudienceSchema }).parse(input))
-  .handler(async ({ data }) => {
-    const sb = publicClient();
-    const [trending, sellers] = await Promise.all([
-      sb.rpc("list_public_trending_products", {
-        p_audience: data.audience,
-        p_limit: 8,
-      }),
-      sb.rpc("list_public_featured_sellers", {
-        p_audience: data.audience,
-        p_limit: 6,
-      }),
-    ]);
-    if (trending.error) throw trending.error;
-    if (sellers.error) throw sellers.error;
-    return {
-      trending: trending.data ?? [],
-      sellers: sellers.data ?? [],
-    };
-  });
+  .handler(({ data }) => handleListMarketplace(data));
 
 export const getCategoryPage = createServerFn({ method: "GET" })
   .validator((input) =>

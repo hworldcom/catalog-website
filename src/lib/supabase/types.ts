@@ -3442,6 +3442,8 @@ export type Database = {
           pack_size: string;
           price: number;
           seller_id: string;
+          seller_name: string;
+          seller_slug: string;
           stock: Database["public"]["Enums"]["stock_status"];
           title: string;
         }[];
