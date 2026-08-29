@@ -132,7 +132,7 @@ export function MarketplaceHomeHero({ audience }: { audience: PublicAudience }) 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,48fr)_minmax(0,52fr)] lg:grid-rows-[1fr_auto] lg:items-center lg:gap-x-10 lg:gap-y-7">
           <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:self-end">
             <div className="text-xs font-semibold uppercase text-primary">{tr(HERO.kicker)}</div>
-            <h1 className="mt-4 font-display text-[2.5rem] font-semibold leading-[1.08] sm:text-5xl lg:text-[2.5rem] xl:text-[3.25rem]">
+            <h1 className="mt-4 break-words font-display text-[2.5rem] font-semibold leading-[1.08] sm:text-5xl lg:text-[2.5rem] xl:text-[3.25rem]">
               {tr(HERO.titleA)} <span className="block text-primary">{tr(HERO.titleB)}</span>
             </h1>
             <p className="mt-6 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">

@@ -47,7 +47,7 @@ describe("MarketplaceHomeHero", () => {
 
     expect(
       screen.getByRole("heading", { name: "Find wholesale products from real suppliers." }),
-    ).toBeVisible();
+    ).toHaveClass("break-words");
     expect(screen.getByText("Independent wholesalers with real catalogs.")).toBeVisible();
     expect(screen.getByText("Inquire and negotiate with sellers directly.")).toBeVisible();
     expect(screen.getByText("Discover products across markets.")).toBeVisible();

@@ -64,8 +64,20 @@ vi.mock("@/components/layout/public-shell", () => ({
   PublicShell: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/components/product/product-card", () => ({
-  ProductCard: ({ product }: { product: { title: string } }) => <div>{product.title}</div>,
+vi.mock("../components/marketplace-product-rail", () => ({
+  MarketplaceProductRail: ({
+    audience,
+    products,
+  }: {
+    audience: string;
+    products: Array<{ id: string; title: string }>;
+  }) => (
+    <section data-testid="marketplace-product-rail" data-audience={audience}>
+      {products.map((product) => (
+        <div key={product.id}>{product.title}</div>
+      ))}
+    </section>
+  ),
 }));
 
 vi.mock("@/lib/i18n", () => ({
@@ -108,6 +120,7 @@ describe("MarketplaceHomeScreen", () => {
     render(<MarketplaceHomeScreen audience="kids" />);
 
     expect(screen.getByText("Cotton dress")).toBeVisible();
+    expect(screen.getByTestId("marketplace-product-rail")).toHaveAttribute("data-audience", "kids");
     expect(screen.getByRole("link", { name: /Atelier One/ })).toBeVisible();
     const join = screen.getByRole("link", { name: "Join the network" });
     expect(join).toHaveAttribute("data-route", "/join");

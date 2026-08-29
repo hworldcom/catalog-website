@@ -3,33 +3,15 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { PublicShell } from "@/components/layout/public-shell";
-import { ProductCard } from "@/components/product/product-card";
 import { t, tr, useLang } from "@/lib/i18n";
 
 import { MarketplaceHomeHero } from "../components/marketplace-home-hero";
+import { MarketplaceProductRail } from "../components/marketplace-product-rail";
 import type { PublicAudience } from "../public-audience";
 import { getPublicCategoryLabel } from "../public-category-labels";
 import { audienceNavigationQueryOptions, marketplaceQueryOptions } from "../queries";
 
 const H = {
-  trendingTitle: t(
-    "Trending this week",
-    "Popularne w tym tygodniu",
-    "Diese Woche im Trend",
-    "Xu hướng tuần này",
-  ),
-  trendingSub: t(
-    "Popular with buyers",
-    "Popularne wśród kupujących",
-    "Beliebt bei Käufern",
-    "Được người mua ưa chuộng",
-  ),
-  trendingEmpty: t(
-    "No trending products yet. Check back soon.",
-    "Brak popularnych produktów. Zajrzyj później.",
-    "Noch keine Trendprodukte. Bald wieder vorbeischauen.",
-    "Chưa có sản phẩm xu hướng. Hãy quay lại sau.",
-  ),
   suppliersTitle: t(
     "Featured suppliers",
     "Wyróżnieni dostawcy",
@@ -112,17 +94,7 @@ export function MarketplaceHomeScreen({ audience }: { audience: PublicAudience }
     <PublicShell marketplaceAudience={audience}>
       <MarketplaceHomeHero audience={audience} />
 
-      <Section id="products" title={tr(H.trendingTitle)} subtitle={tr(H.trendingSub)}>
-        {data.trending.length === 0 ? (
-          <EmptyBox>{tr(H.trendingEmpty)}</EmptyBox>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {data.trending.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        )}
-      </Section>
+      <MarketplaceProductRail audience={audience} products={data.trending} />
 
       <Section title={tr(H.suppliersTitle)} subtitle={tr(H.suppliersSub)}>
         {data.sellers.length === 0 ? (
