@@ -109,22 +109,17 @@ describe("MarketplaceHomeScreen", () => {
 
     expect(screen.getByText("Cotton dress")).toBeVisible();
     expect(screen.getByRole("link", { name: /Atelier One/ })).toBeVisible();
-    const sell = screen.getByRole("link", { name: "Sell on Bazoria" });
-    expect(sell).toHaveAttribute("data-route", "/join");
-    expect(sell).toHaveAttribute("data-route-hash", "for-sellers");
-    expect(sell).toHaveAttribute(
-      "data-route-search",
-      JSON.stringify({ lang: "DE", audience: "kids" }),
-    );
     const join = screen.getByRole("link", { name: "Join the network" });
     expect(join).toHaveAttribute("data-route", "/join");
     expect(join).toHaveAttribute(
       "data-route-search",
       JSON.stringify({ lang: "DE", audience: "kids" }),
     );
-    expect(sell.nextElementSibling).toBe(join);
+    expect(screen.queryByRole("link", { name: "Sell on Bazoria" })).not.toBeInTheDocument();
     expect(screen.queryByText("Are you a wholesaler?")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "How it works" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Sell wholesale on Bazoria" })).toBeVisible();
+    const sellerAccount = screen.getByRole("link", { name: "Create seller account" });
+    expect(sellerAccount).toHaveAttribute("data-route", "/auth");
   });
 });

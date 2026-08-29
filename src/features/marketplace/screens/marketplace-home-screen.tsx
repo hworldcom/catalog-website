@@ -6,35 +6,12 @@ import { PublicShell } from "@/components/layout/public-shell";
 import { ProductCard } from "@/components/product/product-card";
 import { t, tr, useLang } from "@/lib/i18n";
 
+import { MarketplaceHomeHero } from "../components/marketplace-home-hero";
 import type { PublicAudience } from "../public-audience";
 import { getPublicCategoryLabel } from "../public-category-labels";
 import { audienceNavigationQueryOptions, marketplaceQueryOptions } from "../queries";
 
 const H = {
-  kicker: t(
-    "B2B Wholesale Discovery",
-    "B2B Odkrywanie hurtu",
-    "B2B Großhandel entdecken",
-    "Khám phá bán buôn B2B",
-  ),
-  titleA: t(
-    "Find wholesale products",
-    "Znajdź produkty hurtowe",
-    "Großhandelsprodukte finden",
-    "Tìm sản phẩm bán buôn",
-  ),
-  titleB: t(
-    "from real suppliers.",
-    "od prawdziwych dostawców.",
-    "von echten Lieferanten.",
-    "từ nhà cung cấp thật.",
-  ),
-  lead: t(
-    "Bazoria is where retailers, online sellers and market vendors discover wholesale catalogs. Browse products, open a supplier's storefront, and inquire directly — no checkout, no middlemen.",
-    "Bazoria to miejsce, gdzie sklepy, sprzedawcy online i handlarze bazarowi odkrywają katalogi hurtowe. Przeglądaj produkty, wejdź do sklepu dostawcy i zapytaj bezpośrednio — bez koszyka, bez pośredników.",
-    "Bazoria ist der Ort, an dem Händler, Online-Verkäufer und Marktverkäufer Großhandelskataloge entdecken. Produkte durchsuchen, den Shop eines Lieferanten öffnen und direkt anfragen — kein Checkout, keine Mittelsmänner.",
-    "Bazoria là nơi nhà bán lẻ, người bán online và tiểu thương chợ khám phá danh mục bán buôn. Duyệt sản phẩm, mở gian hàng nhà cung cấp và hỏi trực tiếp — không thanh toán, không trung gian.",
-  ),
   trendingTitle: t(
     "Trending this week",
     "Popularne w tym tygodniu",
@@ -100,14 +77,6 @@ const H = {
     "Preis, MBM und Versand außerhalb der Plattform aushandeln.",
     "Thương lượng giá, SL tối thiểu và vận chuyển ngoài nền tảng.",
   ),
-  browseCta: t("Browse products", "Przeglądaj produkty", "Produkte durchsuchen", "Xem sản phẩm"),
-  sellCta: t(
-    "Sell on Bazoria",
-    "Sprzedawaj na Bazoria",
-    "Auf Bazoria verkaufen",
-    "Bán hàng trên Bazoria",
-  ),
-  joinCta: t("Join the network", "Dołącz do sieci", "Netzwerk beitreten", "Tham gia mạng lưới"),
   sellerBannerTitle: t(
     "Sell wholesale on Bazoria",
     "Sprzedawaj hurtowo na Bazoria",
@@ -141,43 +110,7 @@ export function MarketplaceHomeScreen({ audience }: { audience: PublicAudience }
 
   return (
     <PublicShell marketplaceAudience={audience}>
-      {/* Hero */}
-      <section className="border-b border-border/60 bg-gradient-to-b from-primary/10 to-transparent">
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
-          <div className="text-xs uppercase tracking-widest text-primary/80">{tr(H.kicker)}</div>
-          <h1 className="mt-3 font-display text-4xl font-semibold leading-[1.12] tracking-tight sm:text-5xl">
-            {tr(H.titleA)}
-            <br />
-            <span className="text-primary">{tr(H.titleB)}</span>
-          </h1>
-          <p className="mt-5 max-w-2xl text-sm text-muted-foreground sm:text-base">{tr(H.lead)}</p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link
-              to="/c/$category"
-              params={{ category: "fashion" }}
-              search={(previous) => ({ ...previous, audience })}
-              className="inline-flex items-center bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              {tr(H.browseCta)}
-            </Link>
-            <Link
-              to="/join"
-              hash="for-sellers"
-              search={(previous) => ({ ...previous, audience })}
-              className="inline-flex items-center border border-primary/60 px-5 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
-            >
-              {tr(H.sellCta)}
-            </Link>
-            <Link
-              to="/join"
-              search={(previous) => ({ ...previous, audience })}
-              className="inline-flex items-center border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:border-primary hover:bg-primary/10"
-            >
-              {tr(H.joinCta)}
-            </Link>
-          </div>
-        </div>
-      </section>
+      <MarketplaceHomeHero audience={audience} />
 
       <Section id="products" title={tr(H.trendingTitle)} subtitle={tr(H.trendingSub)}>
         {data.trending.length === 0 ? (
