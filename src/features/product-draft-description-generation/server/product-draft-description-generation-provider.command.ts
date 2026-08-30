@@ -14,7 +14,7 @@ async function main() {
   const provider = new OpenAIProductDescriptionGenerationProvider(config);
   const controller = new AbortController();
   const coverBytes = await readFile(
-    new URL("../../../../public/assets/kesar/product-1.jpg", import.meta.url),
+    new URL("../../../../public/assets/marketplace/category-womenswear.jpg", import.meta.url),
   );
   const result = await provider.generate(
     {

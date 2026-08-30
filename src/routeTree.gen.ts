@@ -15,8 +15,6 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SSellerSlugRouteImport } from './routes/s.$sellerSlug'
 import { Route as PProductIdRouteImport } from './routes/p.$productId'
-import { Route as DemoMarketplaceRouteImport } from './routes/demo.marketplace'
-import { Route as DemoKesarTextilesRouteImport } from './routes/demo.kesar-textiles'
 import { Route as CCategoryRouteImport } from './routes/c.$category'
 import { Route as AuthenticatedSellerRouteImport } from './routes/_authenticated/seller'
 import { Route as AuthenticatedSellerIndexRouteImport } from './routes/_authenticated/seller.index'
@@ -79,16 +77,6 @@ const SSellerSlugRoute = SSellerSlugRouteImport.update({
 const PProductIdRoute = PProductIdRouteImport.update({
   id: '/p/$productId',
   path: '/p/$productId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoMarketplaceRoute = DemoMarketplaceRouteImport.update({
-  id: '/demo/marketplace',
-  path: '/demo/marketplace',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoKesarTextilesRoute = DemoKesarTextilesRouteImport.update({
-  id: '/demo/kesar-textiles',
-  path: '/demo/kesar-textiles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CCategoryRoute = CCategoryRouteImport.update({
@@ -302,8 +290,6 @@ export interface FileRoutesByFullPath {
   '/join': typeof JoinRoute
   '/seller': typeof AuthenticatedSellerRouteWithChildren
   '/c/$category': typeof CCategoryRoute
-  '/demo/kesar-textiles': typeof DemoKesarTextilesRoute
-  '/demo/marketplace': typeof DemoMarketplaceRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
   '/admin/classifier-imports': typeof AuthenticatedAdminClassifierImportsRoute
@@ -344,8 +330,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/join': typeof JoinRoute
   '/c/$category': typeof CCategoryRoute
-  '/demo/kesar-textiles': typeof DemoKesarTextilesRoute
-  '/demo/marketplace': typeof DemoMarketplaceRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
   '/admin/classifier-imports': typeof AuthenticatedAdminClassifierImportsRoute
@@ -389,8 +373,6 @@ export interface FileRoutesById {
   '/join': typeof JoinRoute
   '/_authenticated/seller': typeof AuthenticatedSellerRouteWithChildren
   '/c/$category': typeof CCategoryRoute
-  '/demo/kesar-textiles': typeof DemoKesarTextilesRoute
-  '/demo/marketplace': typeof DemoMarketplaceRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
   '/_authenticated/admin/classifier-imports': typeof AuthenticatedAdminClassifierImportsRoute
@@ -434,8 +416,6 @@ export interface FileRouteTypes {
     | '/join'
     | '/seller'
     | '/c/$category'
-    | '/demo/kesar-textiles'
-    | '/demo/marketplace'
     | '/p/$productId'
     | '/s/$sellerSlug'
     | '/admin/classifier-imports'
@@ -476,8 +456,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/join'
     | '/c/$category'
-    | '/demo/kesar-textiles'
-    | '/demo/marketplace'
     | '/p/$productId'
     | '/s/$sellerSlug'
     | '/admin/classifier-imports'
@@ -520,8 +498,6 @@ export interface FileRouteTypes {
     | '/join'
     | '/_authenticated/seller'
     | '/c/$category'
-    | '/demo/kesar-textiles'
-    | '/demo/marketplace'
     | '/p/$productId'
     | '/s/$sellerSlug'
     | '/_authenticated/admin/classifier-imports'
@@ -564,8 +540,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   JoinRoute: typeof JoinRoute
   CCategoryRoute: typeof CCategoryRoute
-  DemoKesarTextilesRoute: typeof DemoKesarTextilesRoute
-  DemoMarketplaceRoute: typeof DemoMarketplaceRoute
   PProductIdRoute: typeof PProductIdRoute
   SSellerSlugRoute: typeof SSellerSlugRoute
   V1SellerProfileAssetsAssetIdRoute: typeof V1SellerProfileAssetsAssetIdRoute
@@ -617,20 +591,6 @@ declare module '@tanstack/react-router' {
       path: '/p/$productId'
       fullPath: '/p/$productId'
       preLoaderRoute: typeof PProductIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo/marketplace': {
-      id: '/demo/marketplace'
-      path: '/demo/marketplace'
-      fullPath: '/demo/marketplace'
-      preLoaderRoute: typeof DemoMarketplaceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo/kesar-textiles': {
-      id: '/demo/kesar-textiles'
-      path: '/demo/kesar-textiles'
-      fullPath: '/demo/kesar-textiles'
-      preLoaderRoute: typeof DemoKesarTextilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/c/$category': {
@@ -997,8 +957,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   JoinRoute: JoinRoute,
   CCategoryRoute: CCategoryRoute,
-  DemoKesarTextilesRoute: DemoKesarTextilesRoute,
-  DemoMarketplaceRoute: DemoMarketplaceRoute,
   PProductIdRoute: PProductIdRoute,
   SSellerSlugRoute: SSellerSlugRoute,
   V1SellerProfileAssetsAssetIdRoute: V1SellerProfileAssetsAssetIdRoute,
