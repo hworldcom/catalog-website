@@ -72,15 +72,19 @@ describe("JoinNetworkScreen", () => {
     expect(document.getElementById("for-sellers")).toHaveClass("scroll-mt-48", "focus:ring-2");
     expect(document.getElementById("for-buyers")).toHaveClass("scroll-mt-48", "focus:ring-2");
     const sellerSection = within(document.getElementById("for-sellers")!);
+    const onboardingSection = within(screen.getByTestId("join-seller-onboarding"));
     expect(
-      sellerSection.getByRole("heading", { name: "Start selling in three steps" }),
+      sellerSection.getByRole("heading", { name: "Show more. Send less. Reach further." }),
     ).toBeVisible();
-    expect(sellerSection.getByRole("heading", { name: "Create your account" })).toBeVisible();
     expect(
-      sellerSection.getByRole("heading", { name: "Set up your seller profile" }),
+      onboardingSection.getByRole("heading", { name: "Start selling in three steps" }),
     ).toBeVisible();
-    expect(sellerSection.getByRole("heading", { name: "Build your catalogue" })).toBeVisible();
-    expect(sellerSection.getByRole("link", { name: "Create seller account" })).toHaveAttribute(
+    expect(onboardingSection.getByRole("heading", { name: "Create your account" })).toBeVisible();
+    expect(
+      onboardingSection.getByRole("heading", { name: "Set up your seller profile" }),
+    ).toBeVisible();
+    expect(onboardingSection.getByRole("heading", { name: "Build your catalogue" })).toBeVisible();
+    expect(onboardingSection.getByRole("link", { name: "Create seller account" })).toHaveAttribute(
       "data-route",
       "/auth",
     );
