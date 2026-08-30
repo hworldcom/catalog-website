@@ -22,7 +22,7 @@ vi.mock("@tanstack/react-router", () => ({
       data-route={to}
       data-route-params={params ? JSON.stringify(params) : undefined}
       data-route-search={
-        search ? JSON.stringify(search({ lang: "DE", audience: "women" })) : undefined
+        search ? JSON.stringify(search({ lang: "DE", audience: "women", ref: "join" })) : undefined
       }
     >
       {children}
@@ -56,6 +56,21 @@ describe("JoinNetworkScreen", () => {
     render(<JoinNetworkScreen audience="kids" />);
 
     expect(screen.getByTestId("public-shell")).toHaveAttribute("data-audience", "kids");
+    const orderedSections = [
+      screen.getByTestId("join-page-hero"),
+      screen.getByTestId("join-audience-panels"),
+      screen.getByTestId("join-seller-details"),
+      screen.getByTestId("join-seller-onboarding"),
+      screen.getByTestId("join-buyer-details"),
+      screen.getByTestId("join-connection-section"),
+      screen.getByTestId("join-trust-section"),
+      screen.getByTestId("join-final-cta"),
+    ];
+    for (let index = 0; index < orderedSections.length - 1; index += 1) {
+      expect(orderedSections[index].compareDocumentPosition(orderedSections[index + 1])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }
     expect(
       screen.getByRole("heading", { level: 1, name: "Join the Wholesale Network" }),
     ).toBeVisible();
@@ -106,13 +121,6 @@ describe("JoinNetworkScreen", () => {
   it("sends sellers to authentication and buyers to the selected audience catalogue", () => {
     render(<JoinNetworkScreen audience="kids" />);
 
-    const sell = screen.getByRole("link", { name: "Sell on Bazoria" });
-    expect(sell).toHaveAttribute("data-route", "/auth");
-    expect(sell).toHaveAttribute(
-      "data-route-search",
-      JSON.stringify({ lang: "DE", audience: "women" }),
-    );
-
     const browseActions = screen.getAllByRole("link", { name: "Browse products" });
     expect(browseActions).toHaveLength(2);
     for (const browse of browseActions) {
@@ -120,19 +128,20 @@ describe("JoinNetworkScreen", () => {
       expect(browse).toHaveAttribute("data-route-params", JSON.stringify({ category: "fashion" }));
       expect(browse).toHaveAttribute(
         "data-route-search",
-        JSON.stringify({ lang: "DE", audience: "kids" }),
+        JSON.stringify({ lang: "DE", audience: "kids", ref: "join" }),
       );
     }
 
     const sellerAccounts = screen.getAllByRole("link", { name: "Create seller account" });
-    expect(sellerAccounts).toHaveLength(2);
+    expect(sellerAccounts).toHaveLength(3);
     for (const action of sellerAccounts) {
       expect(action).toHaveAttribute("data-route", "/auth");
       expect(action).toHaveAttribute(
         "data-route-search",
-        JSON.stringify({ lang: "DE", audience: "women" }),
+        JSON.stringify({ lang: "DE", audience: "women", ref: "join" }),
       );
     }
+    expect(screen.queryByRole("link", { name: "Sell on Bazoria" })).not.toBeInTheDocument();
   });
 
   it("does not advertise unsupported buyer or transaction features", () => {
