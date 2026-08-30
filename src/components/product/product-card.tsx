@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import type { PublicAudience } from "@/features/marketplace/public-audience";
+import { hasImageLoadFailed } from "@/lib/image-failure";
 import { t, tr } from "@/lib/i18n";
 
 import { formatPrice, getStockClass, getStockLabel, type ProductStock } from "./product-format";
@@ -115,6 +116,9 @@ function EditorialProductCard({
               alt={product.title}
               loading="lazy"
               className="h-full w-full object-cover transition-transform duration-300 group-hover/product:scale-[1.025]"
+              ref={(image) => {
+                if (hasImageLoadFailed(image)) setImageFailed(true);
+              }}
               onError={() => setImageFailed(true)}
             />
           ) : null}

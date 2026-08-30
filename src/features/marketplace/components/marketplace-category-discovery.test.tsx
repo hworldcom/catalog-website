@@ -111,6 +111,17 @@ describe("MarketplaceCategoryDiscovery", () => {
     expect(within(tile).getByText("Kids")).toBeVisible();
   });
 
+  it("removes a decorative image that failed before hydration", () => {
+    const { rerender } = render(<MarketplaceCategoryDiscovery audience="kids" categories={[]} />);
+    const tile = screen.getByTestId("category-tile-Kids");
+    markImageAsAlreadyFailed(within(tile).getByAltText(""));
+
+    rerender(<MarketplaceCategoryDiscovery audience="kids" categories={[]} />);
+
+    expect(within(tile).queryByAltText("")).not.toBeInTheDocument();
+    expect(within(tile).getByText("Kids")).toBeVisible();
+  });
+
   it.each([
     ["EN", "Explore categories", "Women", "Dresses"],
     ["PL", "Odkrywaj kategorie", "Kobiety", "Sukienki"],
@@ -133,4 +144,11 @@ describe("MarketplaceCategoryDiscovery", () => {
 
 function category(slug: string, name: string, sortOrder: number) {
   return { id: `category-${slug}`, slug, name, sortOrder };
+}
+
+function markImageAsAlreadyFailed(image: HTMLElement) {
+  Object.defineProperties(image, {
+    complete: { configurable: true, value: true },
+    naturalWidth: { configurable: true, value: 0 },
+  });
 }

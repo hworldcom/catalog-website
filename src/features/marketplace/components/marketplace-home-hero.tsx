@@ -3,6 +3,7 @@ import { Globe2, MessageCircle, Store, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 
 import { PublicContainer } from "@/components/layout/public-container";
+import { hasImageLoadFailed } from "@/lib/image-failure";
 import { t, tr } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -118,6 +119,9 @@ function HeroImage({ className, eager = false, height, name, src, width }: HeroI
           fetchPriority={eager ? "high" : undefined}
           decoding="async"
           className="block h-full w-full max-w-full object-cover"
+          ref={(image) => {
+            if (hasImageLoadFailed(image)) setFailed(true);
+          }}
           onError={() => setFailed(true)}
         />
       )}

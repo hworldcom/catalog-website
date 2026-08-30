@@ -61,7 +61,7 @@ function TopNav({ marketplaceAudience }: { marketplaceAudience?: PublicAudience 
             to="/"
             search={marketplaceHomeSearch}
             aria-label="Bazoria"
-            className="flex min-h-11 shrink-0 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:justify-start"
           >
             <img
               src="/favicon.svg"

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { PublicContainer } from "@/components/layout/public-container";
+import { hasImageLoadFailed } from "@/lib/image-failure";
 import { t, tr, useLang, type T } from "@/lib/i18n";
 
 import type { PublicClothingCategory } from "../catalog.functions";
@@ -121,6 +122,9 @@ function CategoryTileImage({ imageSrc, label }: { imageSrc: string; label: strin
           loading="lazy"
           decoding="async"
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
+          ref={(image) => {
+            if (hasImageLoadFailed(image)) setFailed(true);
+          }}
           onError={() => setFailed(true)}
         />
       ) : null}

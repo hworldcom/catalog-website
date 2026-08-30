@@ -55,6 +55,7 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
   const { data } = useSuspenseQuery(audienceNavigationQueryOptions(audience));
   const [openPanel, setOpenPanel] = useState<PanelName | null>(null);
   const navigationRef = useRef<HTMLElement>(null);
+  const selectedAudienceRef = useRef<HTMLButtonElement>(null);
   const activeTriggerRef = useRef<HTMLButtonElement | null>(null);
   const pointerToggleRef = useRef<{
     panel: PanelName;
@@ -65,6 +66,10 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
   const sellersTriggerId = `marketplace-sellers-trigger-${useId()}`;
   const clothingPanelId = `marketplace-clothing-panel-${useId()}`;
   const sellersPanelId = `marketplace-sellers-panel-${useId()}`;
+
+  useEffect(() => {
+    selectedAudienceRef.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [audience]);
 
   useEffect(() => {
     if (!openPanel) return;
@@ -157,10 +162,11 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
                 return (
                   <button
                     key={item}
+                    ref={selected ? selectedAudienceRef : undefined}
                     type="button"
                     onClick={() => changeAudience(item)}
                     className={
-                      "min-h-11 shrink-0 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 " +
+                      "min-h-11 min-w-11 shrink-0 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 " +
                       (selected
                         ? "border-primary text-foreground"
                         : "border-transparent text-muted-foreground hover:text-foreground")

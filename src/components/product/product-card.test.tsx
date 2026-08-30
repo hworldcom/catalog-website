@@ -104,4 +104,23 @@ describe("ProductCard", () => {
     expect(screen.queryByAltText("Cotton shirt")).not.toBeInTheDocument();
     expect(screen.getByTestId("editorial-product-image")).toHaveClass("bg-muted", "aspect-[4/5]");
   });
+
+  it("reserves the editorial image slot when the image failed before hydration", () => {
+    const { rerender } = render(
+      <ProductCard appearance="editorial" audience="all" product={editorialProduct} />,
+    );
+    markImageAsAlreadyFailed(screen.getByAltText("Cotton shirt"));
+
+    rerender(<ProductCard appearance="editorial" audience="all" product={editorialProduct} />);
+
+    expect(screen.queryByAltText("Cotton shirt")).not.toBeInTheDocument();
+    expect(screen.getByTestId("editorial-product-image")).toHaveClass("bg-muted", "aspect-[4/5]");
+  });
 });
+
+function markImageAsAlreadyFailed(image: HTMLElement) {
+  Object.defineProperties(image, {
+    complete: { configurable: true, value: true },
+    naturalWidth: { configurable: true, value: 0 },
+  });
+}

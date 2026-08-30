@@ -101,6 +101,21 @@ describe("MarketplaceSupplierGrid", () => {
     expect(media).toHaveClass("aspect-video", "bg-muted");
   });
 
+  it("advances through media that failed before hydration", () => {
+    const { rerender } = render(<MarketplaceSupplierGrid audience="all" sellers={[seller()]} />);
+    const media = screen.getByTestId("supplier-media-atelier-one");
+    markImageAsAlreadyFailed(within(media).getByAltText(""));
+
+    rerender(<MarketplaceSupplierGrid audience="all" sellers={[seller()]} />);
+
+    expect(media).toHaveAttribute("data-media", "logo");
+    markImageAsAlreadyFailed(within(media).getByAltText(""));
+    rerender(<MarketplaceSupplierGrid audience="all" sellers={[seller()]} />);
+
+    expect(media).toHaveAttribute("data-media", "empty");
+    expect(within(media).queryByAltText("")).not.toBeInTheDocument();
+  });
+
   it("uses the logo directly when no cover exists and omits absent metadata", () => {
     render(
       <MarketplaceSupplierGrid
@@ -165,4 +180,11 @@ function seller(overrides: Partial<PublicFeaturedSeller> = {}): PublicFeaturedSe
     primary_category_name: "Fashion & Apparel",
     ...overrides,
   };
+}
+
+function markImageAsAlreadyFailed(image: HTMLElement) {
+  Object.defineProperties(image, {
+    complete: { configurable: true, value: true },
+    naturalWidth: { configurable: true, value: 0 },
+  });
 }

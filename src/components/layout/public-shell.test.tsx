@@ -151,6 +151,7 @@ describe("PublicShell marketplace navigation", () => {
     const expected = JSON.stringify({ lang: "DE", audience: "all" });
     const logoLink = screen.getByRole("link", { name: "Bazoria" });
     expect(logoLink).toHaveAttribute("data-route-search", expected);
+    expect(logoLink).toHaveClass("min-h-11", "min-w-11");
     expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
 

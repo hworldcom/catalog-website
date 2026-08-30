@@ -141,6 +141,7 @@ describe("MarketplaceNavigation", () => {
     expect(sectionContainer).toHaveClass("max-w-[1320px]", "px-5", "lg:px-8");
     expect(sectionRow).toHaveClass("lg:justify-start");
     expect(all.nextElementSibling).toBe(women);
+    expect(all).toHaveClass("min-h-11", "min-w-11");
     expect(within(sectionRow).getByRole("button", { name: "Clothing" })).toBeVisible();
     expect(within(sectionRow).getByRole("button", { name: "Sellers" })).toBeVisible();
     expect(kids.parentElement).toBe(audienceOptions);
@@ -160,6 +161,21 @@ describe("MarketplaceNavigation", () => {
 
     expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Women" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("brings a newly selected audience back into the visible rail", () => {
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    const { rerender } = render(<MarketplaceNavigation audience="kids" />);
+    scrollIntoView.mockClear();
+    rerender(<MarketplaceNavigation audience="all" />);
+
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   it("closes an open disclosure when focus moves to the Join Us link", () => {

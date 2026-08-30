@@ -99,6 +99,18 @@ describe("MarketplaceHomeHero", () => {
     expect(screen.getByTestId("marketplace-hero-collage")).toHaveClass("h-[280px]");
   });
 
+  it("removes an image that failed before hydration attached its error handler", () => {
+    const { rerender } = render(<MarketplaceHomeHero audience="all" />);
+    const rackTile = screen.getByTestId("hero-image-rack");
+    const rack = within(rackTile).getByAltText("");
+    markImageAsAlreadyFailed(rack);
+
+    rerender(<MarketplaceHomeHero audience="all" />);
+
+    expect(within(rackTile).queryByAltText("")).not.toBeInTheDocument();
+    expect(rackTile).toHaveClass("bg-muted", "col-span-2");
+  });
+
   it.each([
     ["EN", "Browse products", "Join the network", "Real suppliers"],
     ["PL", "Przeglądaj produkty", "Dołącz do sieci", "Prawdziwi dostawcy"],
@@ -113,3 +125,10 @@ describe("MarketplaceHomeHero", () => {
     expect(screen.getByText(trust)).toBeVisible();
   });
 });
+
+function markImageAsAlreadyFailed(image: HTMLElement) {
+  Object.defineProperties(image, {
+    complete: { configurable: true, value: true },
+    naturalWidth: { configurable: true, value: 0 },
+  });
+}

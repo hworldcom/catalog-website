@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { PublicContainer } from "@/components/layout/public-container";
+import { hasImageLoadFailed } from "@/lib/image-failure";
 import { t, tr, useLang } from "@/lib/i18n";
 
 import type { PublicFeaturedSeller } from "../catalog.functions";
@@ -102,6 +103,8 @@ function SupplierMedia({ seller }: { seller: PublicFeaturedSeller }) {
   const [media, setMedia] = useState<"cover" | "logo" | "empty">(
     seller.cover_image_url ? "cover" : seller.logo_url ? "logo" : "empty",
   );
+  const handleCoverFailure = () => setMedia(seller.logo_url ? "logo" : "empty");
+  const handleLogoFailure = () => setMedia("empty");
 
   return (
     <div
@@ -118,7 +121,10 @@ function SupplierMedia({ seller }: { seller: PublicFeaturedSeller }) {
           loading="lazy"
           decoding="async"
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
-          onError={() => setMedia(seller.logo_url ? "logo" : "empty")}
+          ref={(image) => {
+            if (hasImageLoadFailed(image)) handleCoverFailure();
+          }}
+          onError={handleCoverFailure}
         />
       ) : null}
       {media === "logo" ? (
@@ -130,7 +136,10 @@ function SupplierMedia({ seller }: { seller: PublicFeaturedSeller }) {
           loading="lazy"
           decoding="async"
           className="max-h-[56%] max-w-[56%] object-contain"
-          onError={() => setMedia("empty")}
+          ref={(image) => {
+            if (hasImageLoadFailed(image)) handleLogoFailure();
+          }}
+          onError={handleLogoFailure}
         />
       ) : null}
     </div>
