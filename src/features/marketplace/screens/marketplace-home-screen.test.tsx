@@ -115,6 +115,18 @@ vi.mock("../components/marketplace-supplier-grid", () => ({
   ),
 }));
 
+vi.mock("../components/marketplace-process-section", () => ({
+  MarketplaceProcessSection: () => (
+    <section data-testid="marketplace-process">How it works</section>
+  ),
+}));
+
+vi.mock("../components/marketplace-seller-cta", () => ({
+  MarketplaceSellerCta: () => (
+    <section data-testid="marketplace-seller-cta">Sell wholesale on Bazoria</section>
+  ),
+}));
+
 vi.mock("@/lib/i18n", () => ({
   t: (EN: string, PL: string, DE: string, VI: string) => ({ EN, PL, DE, VI }),
   tr: (value: { EN: string }) => value.EN,
@@ -157,6 +169,8 @@ describe("MarketplaceHomeScreen", () => {
     const products = screen.getByTestId("marketplace-product-rail");
     const categories = screen.getByTestId("marketplace-category-discovery");
     const suppliers = screen.getByTestId("marketplace-supplier-grid");
+    const process = screen.getByTestId("marketplace-process");
+    const sellerCta = screen.getByTestId("marketplace-seller-cta");
     expect(products).toHaveAttribute("data-audience", "kids");
     expect(categories).toHaveAttribute("data-audience", "kids");
     expect(suppliers).toHaveAttribute("data-audience", "kids");
@@ -167,6 +181,12 @@ describe("MarketplaceHomeScreen", () => {
     expect(categories.compareDocumentPosition(suppliers) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+    expect(suppliers.compareDocumentPosition(process) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(process.compareDocumentPosition(sellerCta) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
     const join = screen.getByRole("link", { name: "Join the network" });
     expect(join).toHaveAttribute("data-route", "/join");
     expect(join).toHaveAttribute(
@@ -175,9 +195,7 @@ describe("MarketplaceHomeScreen", () => {
     );
     expect(screen.queryByRole("link", { name: "Sell on Bazoria" })).not.toBeInTheDocument();
     expect(screen.queryByText("Are you a wholesaler?")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "How it works" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Sell wholesale on Bazoria" })).toBeVisible();
-    const sellerAccount = screen.getByRole("link", { name: "Create seller account" });
-    expect(sellerAccount).toHaveAttribute("data-route", "/auth");
+    expect(process).toHaveTextContent("How it works");
+    expect(sellerCta).toHaveTextContent("Sell wholesale on Bazoria");
   });
 });
