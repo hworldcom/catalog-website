@@ -3,34 +3,16 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { PublicShell } from "@/components/layout/public-shell";
-import { t, tr, useLang } from "@/lib/i18n";
+import { t, tr } from "@/lib/i18n";
 
+import { MarketplaceCategoryDiscovery } from "../components/marketplace-category-discovery";
 import { MarketplaceHomeHero } from "../components/marketplace-home-hero";
 import { MarketplaceProductRail } from "../components/marketplace-product-rail";
+import { MarketplaceSupplierGrid } from "../components/marketplace-supplier-grid";
 import type { PublicAudience } from "../public-audience";
-import { getPublicCategoryLabel } from "../public-category-labels";
 import { audienceNavigationQueryOptions, marketplaceQueryOptions } from "../queries";
 
 const H = {
-  suppliersTitle: t(
-    "Featured suppliers",
-    "Wyróżnieni dostawcy",
-    "Ausgewählte Lieferanten",
-    "Nhà cung cấp nổi bật",
-  ),
-  suppliersSub: t(
-    "Real catalogs, direct contact",
-    "Prawdziwe katalogi, bezpośredni kontakt",
-    "Echte Kataloge, direkter Kontakt",
-    "Danh mục thật, liên hệ trực tiếp",
-  ),
-  suppliersEmpty: t(
-    "No sellers listed yet.",
-    "Brak dostawców.",
-    "Noch keine Verkäufer.",
-    "Chưa có nhà bán.",
-  ),
-  verified: t("Verified", "Zweryfikowany", "Verifiziert", "Đã xác minh"),
   howTitle: t("How it works", "Jak to działa", "So funktioniert's", "Cách hoạt động"),
   howSub: t(
     "Three steps, zero fees to browse",
@@ -80,15 +62,8 @@ const H = {
 };
 
 export function MarketplaceHomeScreen({ audience }: { audience: PublicAudience }) {
-  const language = useLang();
   const { data } = useSuspenseQuery(marketplaceQueryOptions(audience));
   const { data: navigation } = useSuspenseQuery(audienceNavigationQueryOptions(audience));
-  const catBySeller = new Map(
-    navigation.categories.map((category) => [
-      category.id,
-      getPublicCategoryLabel(category.slug, category.name, language),
-    ]),
-  );
 
   return (
     <PublicShell marketplaceAudience={audience}>
@@ -96,52 +71,9 @@ export function MarketplaceHomeScreen({ audience }: { audience: PublicAudience }
 
       <MarketplaceProductRail audience={audience} products={data.trending} />
 
-      <Section title={tr(H.suppliersTitle)} subtitle={tr(H.suppliersSub)}>
-        {data.sellers.length === 0 ? (
-          <EmptyBox>{tr(H.suppliersEmpty)}</EmptyBox>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.sellers.map((s) => {
-              const categoryName = s.primary_category_id
-                ? catBySeller.get(s.primary_category_id)
-                : null;
-              return (
-                <Link
-                  key={s.id}
-                  to="/s/$sellerSlug"
-                  params={{ sellerSlug: s.slug }}
-                  className="group overflow-hidden border border-border/60 bg-card/40 transition-colors hover:border-primary/70"
-                >
-                  <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-                    {s.cover_image_url ? (
-                      <img
-                        src={s.cover_image_url}
-                        alt={s.name}
-                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="font-display text-base font-semibold">{s.name}</div>
-                      {s.verified ? (
-                        <span className="border border-primary/60 px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-primary">
-                          {tr(H.verified)}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {[s.city, s.country].filter(Boolean).join(", ")}
-                      {categoryName ? ` · ${categoryName}` : ""}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </Section>
+      <MarketplaceCategoryDiscovery audience={audience} categories={navigation.categories} />
+
+      <MarketplaceSupplierGrid audience={audience} sellers={data.sellers} />
 
       <Section title={tr(H.howTitle)} subtitle={tr(H.howSub)}>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -205,13 +137,5 @@ function Section({
       </div>
       {children}
     </section>
-  );
-}
-
-function EmptyBox({ children }: { children: ReactNode }) {
-  return (
-    <div className="border border-dashed border-border/60 bg-card/20 p-8 text-center text-sm text-muted-foreground">
-      {children}
-    </div>
   );
 }

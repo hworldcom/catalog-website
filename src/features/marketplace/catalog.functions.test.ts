@@ -1,6 +1,10 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import { handleListMarketplace, type PublicTrendingProduct } from "./catalog.functions";
+import {
+  handleListMarketplace,
+  type PublicFeaturedSeller,
+  type PublicTrendingProduct,
+} from "./catalog.functions";
 
 describe("handleListMarketplace", () => {
   it("returns seller metadata from the trending RPC without another seller request", async () => {
@@ -18,7 +22,7 @@ describe("handleListMarketplace", () => {
       seller_name: "Atelier One",
       seller_slug: "atelier-one",
     };
-    const featuredSeller = {
+    const featuredSeller: PublicFeaturedSeller = {
       id: "00000000-0000-4000-8000-000000000020",
       slug: "featured-seller",
       name: "Featured Seller",
@@ -28,6 +32,8 @@ describe("handleListMarketplace", () => {
       cover_image_url: "https://example.test/cover.webp",
       logo_url: "https://example.test/logo.webp",
       primary_category_id: "00000000-0000-4000-8000-000000000030",
+      primary_category_slug: "fashion",
+      primary_category_name: "Fashion & Apparel",
     };
     const rpc = vi.fn(async (name: string) => {
       if (name === "list_public_trending_products") {
@@ -48,6 +54,10 @@ describe("handleListMarketplace", () => {
       seller_name: "Atelier One",
       seller_slug: "atelier-one",
     });
+    expect(result.sellers[0]).toMatchObject({
+      primary_category_slug: "fashion",
+      primary_category_name: "Fashion & Apparel",
+    });
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc).toHaveBeenNthCalledWith(1, "list_public_trending_products", {
       p_audience: "women",
@@ -62,5 +72,10 @@ describe("handleListMarketplace", () => {
   it("requires seller identity in the exported trending-product contract", () => {
     expectTypeOf<PublicTrendingProduct["seller_name"]>().toEqualTypeOf<string>();
     expectTypeOf<PublicTrendingProduct["seller_slug"]>().toEqualTypeOf<string>();
+  });
+
+  it("requires category identity in the exported featured-seller contract", () => {
+    expectTypeOf<PublicFeaturedSeller["primary_category_slug"]>().toEqualTypeOf<string>();
+    expectTypeOf<PublicFeaturedSeller["primary_category_name"]>().toEqualTypeOf<string>();
   });
 });

@@ -2,11 +2,7 @@
 
 ## Status
 
-Specification ready as of 2026-08-29. Implementation may begin after the
-verified 0049d changes are committed. The section order, navigation behavior,
-live-data rules, supplier data contract, image fallbacks, asset contract,
-component boundaries, responsive layout, and validation responsibilities are
-resolved below.
+Implemented and verified on 2026-08-29.
 
 ## Parent
 
@@ -216,26 +212,26 @@ redesign.
 
 ## Acceptance Criteria
 
-- [ ] Women, Men, and Kids tiles open `/c/fashion` with the selected audience
+- [x] Women, Men, and Kids tiles open `/c/fashion` with the selected audience
       while preserving language and compatible search state.
-- [ ] No duplicate All image tile appears; the header remains the All filter
+- [x] No duplicate All image tile appears; the header remains the All filter
       control.
-- [ ] Dresses and Sportswear tiles render only when their exact slugs are in the
+- [x] Dresses and Sportswear tiles render only when their exact slugs are in the
       current live navigation response.
-- [ ] No Home and Living, home-decor, or other unapproved category content
+- [x] No Home and Living, home-decor, or other unapproved category content
       appears.
-- [ ] Category imagery forms one optimized casual-fashion set and remains
+- [x] Category imagery forms one optimized casual-fashion set and remains
       stable when an image fails.
-- [ ] Supplier cards use only the live featured-seller response and valid
+- [x] Supplier cards use only the live featured-seller response and valid
       storefront links with preserved language and audience state.
-- [ ] Supplier cover, logo, and empty-media fallback states preserve the media
+- [x] Supplier cover, logo, and empty-media fallback states preserve the media
       dimensions without broken-image UI.
-- [ ] Live seller name, location, translated primary category, and positive
+- [x] Live seller name, location, translated primary category, and positive
       verification state render accurately for present and absent values.
-- [ ] No supplier product counts or unsupported View all link appear.
-- [ ] Category and supplier sections use the approved public container and
+- [x] No supplier product counts or unsupported View all link appear.
+- [x] Category and supplier sections use the approved public container and
       remain stable at mobile, tablet, laptop, and wide-desktop widths.
-- [ ] No database-managed category-image field or administrator workflow is
+- [x] No database-managed category-image field or administrator workflow is
       introduced.
 
 ## Validation
@@ -266,3 +262,42 @@ redesign.
   horizontal overflow.
 - Run focused tests, the complete application test suite, lint, and production
   build.
+
+## Implementation Notes
+
+- Added homepage-owned `MarketplaceCategoryDiscovery` and
+  `MarketplaceSupplierGrid` components and replaced only the previous inline
+  supplier presentation in `MarketplaceHomeScreen`.
+- Generated five coordinated category images with the built-in image-generation
+  workflow and optimized them to 1024x1280 WebP assets under
+  `public/assets/marketplace/categories/`. Final sizes are approximately 43KB
+  to 158KB.
+- Added migration `20260829212000_homepage_featured_seller_category_metadata.sql`
+  to append primary-category slug/name values to the existing featured-seller
+  response without changing its selection behavior.
+- Applied the migration to hosted UAT. Anonymous publishable-key calls return
+  `fashion` and `Fashion & Apparel` for the three UAT sellers that have a
+  primary category.
+- Generated hosted public-schema TypeScript output and compared the function
+  contract. The two confirmed fields were added to the repository's existing
+  generated-file format without accepting unrelated generator-version churn.
+- No category-image table field, administrator workflow, supplier-directory
+  route, product count, or fake marketplace record was added.
+
+## Verification Results
+
+- Focused 0049e tests: 5 files and 25 tests passed.
+- Complete test suite: 222 files and 1,462 tests passed.
+- Lint: passed with 13 existing Fast Refresh warnings and no errors.
+- Production build: passed with Node 22.13.0.
+- Asset inspection: all five files are 1024x1280 WebP images and remain below
+  the approximately 180KB target.
+- Browser inspection: no page, category-tile, or supplier-card horizontal
+  overflow at 390x844, 768x1024, 1440x900, or 1920x1080 in EN, PL, DE, or VI.
+- Audience inspection: All and Women render Women, Men, Kids, and live Dresses;
+  Men and Kids render only the three audience tiles; Sportswear remains hidden
+  because it is absent from live navigation.
+- Live supplier inspection: All/Women/Men/Kids return 3/3/2/0 supplier cards;
+  Kids renders the translated empty state. The two available covers load, the
+  seller without media keeps a stable muted region, and focused tests cover
+  cover-to-logo and logo-to-empty failure transitions.

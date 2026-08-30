@@ -15,6 +15,9 @@ const mocks = vi.hoisted(() => ({
         verified: true,
         city: "Berlin",
         country: "Germany",
+        logo_url: null,
+        primary_category_slug: "fashion",
+        primary_category_name: "Fashion & Apparel",
       },
     ],
   },
@@ -80,14 +83,42 @@ vi.mock("../components/marketplace-product-rail", () => ({
   ),
 }));
 
+vi.mock("../components/marketplace-category-discovery", () => ({
+  MarketplaceCategoryDiscovery: ({
+    audience,
+    categories,
+  }: {
+    audience: string;
+    categories: Array<{ id: string; name: string }>;
+  }) => (
+    <section data-testid="marketplace-category-discovery" data-audience={audience}>
+      {categories.map((category) => (
+        <div key={category.id}>{category.name}</div>
+      ))}
+    </section>
+  ),
+}));
+
+vi.mock("../components/marketplace-supplier-grid", () => ({
+  MarketplaceSupplierGrid: ({
+    audience,
+    sellers,
+  }: {
+    audience: string;
+    sellers: Array<{ id: string; name: string }>;
+  }) => (
+    <section data-testid="marketplace-supplier-grid" data-audience={audience}>
+      {sellers.map((seller) => (
+        <div key={seller.id}>{seller.name}</div>
+      ))}
+    </section>
+  ),
+}));
+
 vi.mock("@/lib/i18n", () => ({
   t: (EN: string, PL: string, DE: string, VI: string) => ({ EN, PL, DE, VI }),
   tr: (value: { EN: string }) => value.EN,
   useLang: () => "EN",
-}));
-
-vi.mock("../public-category-labels", () => ({
-  getPublicCategoryLabel: (_slug: string, name: string) => name,
 }));
 
 vi.mock("../queries", () => ({
@@ -102,7 +133,7 @@ vi.mock("../queries", () => ({
 import { MarketplaceHomeScreen } from "./marketplace-home-screen";
 
 describe("MarketplaceHomeScreen", () => {
-  it("uses the audience catalog as the primary discovery action without category cards", () => {
+  it("uses the audience catalog as the primary discovery action and category source", () => {
     render(<MarketplaceHomeScreen audience="kids" />);
 
     const browse = screen.getByRole("link", { name: "Browse products" });
@@ -112,16 +143,30 @@ describe("MarketplaceHomeScreen", () => {
       "data-route-search",
       JSON.stringify({ lang: "DE", audience: "kids" }),
     );
-    expect(screen.queryByRole("heading", { name: "Browse by category" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Canonical dresses" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("marketplace-category-discovery")).toHaveAttribute(
+      "data-audience",
+      "kids",
+    );
+    expect(screen.getByText("Canonical dresses")).toBeVisible();
   });
 
-  it("keeps the remaining homepage discovery sections", () => {
+  it("keeps live sections in the approved order without changing later content", () => {
     render(<MarketplaceHomeScreen audience="kids" />);
 
     expect(screen.getByText("Cotton dress")).toBeVisible();
-    expect(screen.getByTestId("marketplace-product-rail")).toHaveAttribute("data-audience", "kids");
-    expect(screen.getByRole("link", { name: /Atelier One/ })).toBeVisible();
+    const products = screen.getByTestId("marketplace-product-rail");
+    const categories = screen.getByTestId("marketplace-category-discovery");
+    const suppliers = screen.getByTestId("marketplace-supplier-grid");
+    expect(products).toHaveAttribute("data-audience", "kids");
+    expect(categories).toHaveAttribute("data-audience", "kids");
+    expect(suppliers).toHaveAttribute("data-audience", "kids");
+    expect(screen.getByText("Atelier One")).toBeVisible();
+    expect(products.compareDocumentPosition(categories) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(categories.compareDocumentPosition(suppliers) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
     const join = screen.getByRole("link", { name: "Join the network" });
     expect(join).toHaveAttribute("data-route", "/join");
     expect(join).toHaveAttribute(

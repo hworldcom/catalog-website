@@ -3410,6 +3410,8 @@ export type Database = {
           logo_url: string;
           name: string;
           primary_category_id: string;
+          primary_category_name: string;
+          primary_category_slug: string;
           slug: string;
           verified: boolean;
         }[];

@@ -26,6 +26,26 @@ export type SellerRow = Database["public"]["Tables"]["sellers"]["Row"];
 export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 export type PublicTrendingProduct =
   Database["public"]["Functions"]["list_public_trending_products"]["Returns"][number];
+type PublicFeaturedSellerRow =
+  Database["public"]["Functions"]["list_public_featured_sellers"]["Returns"][number];
+export type PublicFeaturedSeller = Omit<
+  PublicFeaturedSellerRow,
+  | "city"
+  | "country"
+  | "cover_image_url"
+  | "logo_url"
+  | "primary_category_id"
+  | "primary_category_name"
+  | "primary_category_slug"
+> & {
+  city: string | null;
+  country: string | null;
+  cover_image_url: string | null;
+  logo_url: string | null;
+  primary_category_id: string | null;
+  primary_category_name: string | null;
+  primary_category_slug: string | null;
+};
 
 export type PublicClothingCategory = {
   id: string;
@@ -101,9 +121,10 @@ export async function handleListMarketplace(
   if (sellers.error) throw sellers.error;
 
   const trendingProducts: PublicTrendingProduct[] = trending.data ?? [];
+  const featuredSellers: PublicFeaturedSeller[] = sellers.data ?? [];
   return {
     trending: trendingProducts,
-    sellers: sellers.data ?? [],
+    sellers: featuredSellers,
   };
 }
 
