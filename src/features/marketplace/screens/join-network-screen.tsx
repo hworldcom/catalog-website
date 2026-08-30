@@ -4,6 +4,9 @@ import type { ReactNode } from "react";
 import { PublicShell } from "@/components/layout/public-shell";
 import { t, tr, type T } from "@/lib/i18n";
 
+import { JoinAudiencePanels } from "../components/join-audience-panels";
+import { JoinPageHero } from "../components/join-page-hero";
+import { joinAudienceCopy } from "../join-audience-copy";
 import type { PublicAudience } from "../public-audience";
 
 type Benefit = {
@@ -13,56 +16,17 @@ type Benefit = {
 };
 
 const J = {
-  kicker: t(
-    "Bringing Europe's traditional wholesale centres online.",
-    "Przenosimy tradycyjne europejskie centra hurtowe do internetu.",
-    "Wir bringen Europas traditionelle Großhandelszentren online.",
-    "Đưa các trung tâm bán buôn truyền thống của châu Âu lên trực tuyến.",
-  ),
-  title: t(
-    "Join the Wholesale Network",
-    "Dołącz do sieci hurtowej",
-    "Werden Sie Teil des Großhandelsnetzwerks",
-    "Tham gia mạng lưới bán buôn",
-  ),
-  lead: t(
-    "More visibility for sellers. Easier sourcing for buyers.",
-    "Większa widoczność sprzedawców. Łatwiejsze zaopatrzenie dla kupujących.",
-    "Mehr Sichtbarkeit für Verkäufer. Einfachere Beschaffung für Einkäufer.",
-    "Người bán được biết đến nhiều hơn. Người mua tìm nguồn hàng dễ dàng hơn.",
-  ),
-  introduction: t(
-    "Bazoria connects wholesalers and professional buyers across Europe while supporting the relationships and ways of trading they already trust.",
-    "Bazoria łączy hurtowników i profesjonalnych kupujących w całej Europie, wspierając relacje i sposoby handlu, którym już ufają.",
-    "Bazoria verbindet Großhändler und professionelle Einkäufer in ganz Europa und unterstützt dabei bewährte Geschäftsbeziehungen und Handelswege.",
-    "Bazoria kết nối nhà bán buôn và người mua chuyên nghiệp trên khắp châu Âu, đồng thời hỗ trợ các mối quan hệ và cách giao dịch mà họ đã tin dùng.",
-  ),
-  sellerJump: t("I'm a seller", "Jestem sprzedawcą", "Ich verkaufe", "Tôi là người bán"),
-  buyerJump: t("I'm a buyer", "Jestem kupującym", "Ich kaufe ein", "Tôi là người mua"),
-  sellerEyebrow: t("For sellers", "Dla sprzedawców", "Für Verkäufer", "Dành cho người bán"),
   sellerTitle: t(
     "Show more. Send less. Reach further.",
     "Pokaż więcej. Wysyłaj mniej. Docieraj dalej.",
     "Mehr zeigen. Weniger senden. Weiter reichen.",
     "Trưng bày nhiều hơn. Gửi ít hơn. Vươn xa hơn.",
   ),
-  sellerLead: t(
-    "Build one clear catalogue that helps existing customers buy more easily and introduces your business to buyers you have not met yet.",
-    "Zbuduj jeden przejrzysty katalog, który ułatwi zakupy obecnym klientom i pokaże Twoją firmę kupującym, których jeszcze nie znasz.",
-    "Erstellen Sie einen übersichtlichen Katalog, der bestehenden Kunden den Einkauf erleichtert und Ihr Unternehmen neuen Einkäufern vorstellt.",
-    "Tạo một danh mục rõ ràng giúp khách hàng hiện tại mua hàng dễ hơn và giới thiệu doanh nghiệp của bạn đến những người mua mới.",
-  ),
   sellerPromise: t(
     "Upload once. Share everywhere.",
     "Dodaj raz. Udostępniaj wszędzie.",
     "Einmal hochladen. Überall teilen.",
     "Tải lên một lần. Chia sẻ mọi nơi.",
-  ),
-  createSellerAccount: t(
-    "Create seller account",
-    "Utwórz konto sprzedawcy",
-    "Verkäuferkonto erstellen",
-    "Tạo tài khoản người bán",
   ),
   sellerStartEyebrow: t(
     "Simple setup",
@@ -76,18 +40,11 @@ const J = {
     "In drei Schritten mit dem Verkauf starten",
     "Bắt đầu bán hàng trong ba bước",
   ),
-  buyerEyebrow: t("For buyers", "Dla kupujących", "Für Einkäufer", "Dành cho người mua"),
   buyerTitle: t(
     "Discover more. Search faster. Source closer.",
     "Odkrywaj więcej. Szukaj szybciej. Kupuj bliżej.",
     "Mehr entdecken. Schneller suchen. Näher beschaffen.",
     "Khám phá nhiều hơn. Tìm nhanh hơn. Lấy hàng gần hơn.",
-  ),
-  buyerLead: t(
-    "Explore published wholesale catalogues before you travel, then contact suppliers directly when you find the right products.",
-    "Przeglądaj opublikowane katalogi hurtowe przed podróżą i kontaktuj się bezpośrednio z dostawcami, gdy znajdziesz odpowiednie produkty.",
-    "Durchsuchen Sie veröffentlichte Großhandelskataloge vor der Reise und kontaktieren Sie passende Lieferanten direkt.",
-    "Xem các danh mục bán buôn đã công bố trước khi đi và liên hệ trực tiếp với nhà cung cấp khi tìm thấy sản phẩm phù hợp.",
   ),
   howEyebrow: t("How it works", "Jak to działa", "So funktioniert es", "Cách hoạt động"),
   howTitle: t(
@@ -157,18 +114,12 @@ const J = {
     "Auf Bazoria verkaufen",
     "Bán hàng trên Bazoria",
   ),
-  browseAction: t("Browse products", "Przeglądaj produkty", "Produkte durchsuchen", "Xem sản phẩm"),
 };
 
 const sellerBenefits: Benefit[] = [
   {
     number: "01",
-    title: t(
-      "Create your digital catalogue",
-      "Utwórz cyfrowy katalog",
-      "Erstellen Sie Ihren digitalen Katalog",
-      "Tạo danh mục kỹ thuật số",
-    ),
+    title: joinAudienceCopy.seller.benefitTitles.createCatalogue,
     description: t(
       "Present published products and images in one branded wholesale storefront.",
       "Prezentuj opublikowane produkty i zdjęcia w jednym markowym sklepie hurtowym.",
@@ -178,12 +129,7 @@ const sellerBenefits: Benefit[] = [
   },
   {
     number: "02",
-    title: t(
-      "Share products anywhere",
-      "Udostępniaj produkty wszędzie",
-      "Produkte überall teilen",
-      "Chia sẻ sản phẩm ở mọi nơi",
-    ),
+    title: joinAudienceCopy.seller.benefitTitles.shareAnywhere,
     description: t(
       "Send a catalogue or product link through WhatsApp, social media, email or any channel your customers use.",
       "Wysyłaj link do katalogu lub produktu przez WhatsApp, media społecznościowe, e-mail lub inny kanał używany przez klientów.",
@@ -208,12 +154,7 @@ const sellerBenefits: Benefit[] = [
   },
   {
     number: "04",
-    title: t(
-      "Reach new professional buyers",
-      "Docieraj do nowych profesjonalnych kupujących",
-      "Erreichen Sie neue professionelle Einkäufer",
-      "Tiếp cận người mua chuyên nghiệp mới",
-    ),
+    title: joinAudienceCopy.seller.benefitTitles.reachBuyers,
     description: t(
       "Become discoverable beyond the customers and social audiences you already know.",
       "Daj się znaleźć poza gronem klientów i odbiorców społecznościowych, których już znasz.",
@@ -223,12 +164,7 @@ const sellerBenefits: Benefit[] = [
   },
   {
     number: "05",
-    title: t(
-      "Keep selling your way",
-      "Sprzedawaj po swojemu",
-      "Verkaufen Sie auf Ihre Weise",
-      "Tiếp tục bán hàng theo cách của bạn",
-    ),
+    title: joinAudienceCopy.seller.benefitTitles.keepSelling,
     description: t(
       "Keep WhatsApp, direct inquiries and showroom visits. Bazoria makes those relationships easier to start.",
       "Korzystaj dalej z WhatsApp, bezpośrednich zapytań i wizyt w showroomie. Bazoria ułatwia rozpoczęcie tych relacji.",
@@ -241,12 +177,7 @@ const sellerBenefits: Benefit[] = [
 const buyerBenefits: Benefit[] = [
   {
     number: "01",
-    title: t(
-      "Discover new wholesalers",
-      "Odkrywaj nowych hurtowników",
-      "Neue Großhändler entdecken",
-      "Khám phá nhà bán buôn mới",
-    ),
+    title: joinAudienceCopy.buyer.benefitTitles.discoverWholesalers,
     description: t(
       "Look beyond existing contacts and explore suppliers across the network.",
       "Wyjdź poza dotychczasowe kontakty i odkrywaj dostawców w całej sieci.",
@@ -256,12 +187,7 @@ const buyerBenefits: Benefit[] = [
   },
   {
     number: "02",
-    title: t(
-      "Browse current catalogues",
-      "Przeglądaj aktualne katalogi",
-      "Aktuelle Kataloge durchsuchen",
-      "Xem các danh mục hiện tại",
-    ),
+    title: joinAudienceCopy.buyer.benefitTitles.browseCatalogues,
     description: t(
       "See the products sellers have published without collecting separate photos and messages.",
       "Zobacz produkty opublikowane przez sprzedawców bez zbierania osobnych zdjęć i wiadomości.",
@@ -271,12 +197,7 @@ const buyerBenefits: Benefit[] = [
   },
   {
     number: "03",
-    title: t(
-      "Browse before travelling",
-      "Przeglądaj przed podróżą",
-      "Vor der Reise stöbern",
-      "Xem hàng trước khi đi",
-    ),
+    title: joinAudienceCopy.buyer.benefitTitles.browseBeforeTravel,
     description: t(
       "Review a seller's range online, then ask questions or plan a showroom visit.",
       "Sprawdź ofertę sprzedawcy online, a potem zadaj pytania lub zaplanuj wizytę w showroomie.",
@@ -286,12 +207,7 @@ const buyerBenefits: Benefit[] = [
   },
   {
     number: "04",
-    title: t(
-      "Source closer to home",
-      "Kupuj bliżej swojego rynku",
-      "Näher am eigenen Markt beschaffen",
-      "Tìm nguồn hàng gần thị trường của bạn",
-    ),
+    title: joinAudienceCopy.buyer.benefitTitles.sourceCloser,
     description: t(
       "Find European wholesalers who may offer shorter lead times, easier replenishment or local pickup.",
       "Znajdź europejskich hurtowników, którzy mogą oferować krótszy czas dostawy, łatwiejsze uzupełnianie zapasów lub odbiór osobisty.",
@@ -390,40 +306,15 @@ const networkSteps: Benefit[] = [
 export function JoinNetworkScreen({ audience }: { audience: PublicAudience }) {
   return (
     <PublicShell marketplaceAudience={audience}>
-      <section className="border-b border-border/60 bg-gradient-to-b from-primary/10 to-transparent">
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
-          <p className="text-xs uppercase tracking-[0.2em] text-primary/80">{tr(J.kicker)}</p>
-          <h1 className="mt-4 max-w-4xl break-words font-display text-3xl font-semibold tracking-tight sm:text-6xl">
-            {tr(J.title)}
-          </h1>
-          <p className="mt-5 max-w-3xl font-display text-xl text-foreground sm:text-2xl">
-            {tr(J.lead)}
-          </p>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-            {tr(J.introduction)}
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a
-              href="#for-sellers"
-              className="inline-flex min-h-11 items-center justify-center bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              {tr(J.sellerJump)}
-            </a>
-            <a
-              href="#for-buyers"
-              className="inline-flex min-h-11 items-center justify-center border border-primary/60 px-5 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              {tr(J.buyerJump)}
-            </a>
-          </div>
-        </div>
-      </section>
+      <JoinPageHero />
+
+      <JoinAudiencePanels audience={audience} />
 
       <BenefitSection
         id="for-sellers"
-        eyebrow={tr(J.sellerEyebrow)}
+        eyebrow={tr(joinAudienceCopy.seller.label)}
         title={tr(J.sellerTitle)}
-        lead={tr(J.sellerLead)}
+        lead={tr(joinAudienceCopy.seller.lead)}
         promise={tr(J.sellerPromise)}
         benefits={sellerBenefits}
         action={<SellerGettingStarted />}
@@ -431,9 +322,9 @@ export function JoinNetworkScreen({ audience }: { audience: PublicAudience }) {
 
       <BenefitSection
         id="for-buyers"
-        eyebrow={tr(J.buyerEyebrow)}
+        eyebrow={tr(joinAudienceCopy.buyer.label)}
         title={tr(J.buyerTitle)}
-        lead={tr(J.buyerLead)}
+        lead={tr(joinAudienceCopy.buyer.lead)}
         benefits={buyerBenefits}
         muted
       />
@@ -489,7 +380,7 @@ export function JoinNetworkScreen({ audience }: { audience: PublicAudience }) {
               search={(previous) => ({ ...previous, audience })}
               className="inline-flex min-h-11 items-center justify-center border border-primary/60 px-5 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              {tr(J.browseAction)}
+              {tr(joinAudienceCopy.actions.browseProducts)}
             </Link>
           </div>
         </div>
@@ -521,7 +412,7 @@ function BenefitSection({
     <section
       id={id}
       tabIndex={-1}
-      className={`scroll-mt-48 focus:outline-none ${muted ? "bg-card/20" : "bg-background"}`}
+      className={`scroll-mt-48 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-inset ${muted ? "bg-card/20" : "bg-background"}`}
     >
       <div className="mx-auto max-w-6xl px-6 py-14 sm:py-20">
         <SectionHeading eyebrow={eyebrow} title={title} lead={lead} />
@@ -605,7 +496,7 @@ function SellerGettingStarted() {
         search={(previous) => ({ ...previous })}
         className="mt-8 inline-flex min-h-11 items-center justify-center bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
-        {tr(J.createSellerAccount)}
+        {tr(joinAudienceCopy.actions.createSellerAccount)}
       </Link>
     </div>
   );

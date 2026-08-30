@@ -69,6 +69,8 @@ describe("JoinNetworkScreen", () => {
     );
     expect(document.getElementById("for-sellers")).toHaveAttribute("tabindex", "-1");
     expect(document.getElementById("for-buyers")).toHaveAttribute("tabindex", "-1");
+    expect(document.getElementById("for-sellers")).toHaveClass("scroll-mt-48", "focus:ring-2");
+    expect(document.getElementById("for-buyers")).toHaveClass("scroll-mt-48", "focus:ring-2");
     const sellerSection = within(document.getElementById("for-sellers")!);
     expect(
       sellerSection.getByRole("heading", { name: "Start selling in three steps" }),
@@ -82,6 +84,19 @@ describe("JoinNetworkScreen", () => {
       "data-route",
       "/auth",
     );
+    expect(
+      screen.getByRole("heading", { name: "Discover more. Search faster. Source closer." }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "One simple path from catalogue to conversation." }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "One Network. Independent Businesses." }),
+    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Take the next step with Bazoria." })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Seller publishes" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Sellers stay in control" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Buyers gain a clearer view" })).toBeVisible();
   });
 
   it("sends sellers to authentication and buyers to the selected audience catalogue", () => {
@@ -94,13 +109,26 @@ describe("JoinNetworkScreen", () => {
       JSON.stringify({ lang: "DE", audience: "women" }),
     );
 
-    const browse = screen.getByRole("link", { name: "Browse products" });
-    expect(browse).toHaveAttribute("data-route", "/c/$category");
-    expect(browse).toHaveAttribute("data-route-params", JSON.stringify({ category: "fashion" }));
-    expect(browse).toHaveAttribute(
-      "data-route-search",
-      JSON.stringify({ lang: "DE", audience: "kids" }),
-    );
+    const browseActions = screen.getAllByRole("link", { name: "Browse products" });
+    expect(browseActions).toHaveLength(2);
+    for (const browse of browseActions) {
+      expect(browse).toHaveAttribute("data-route", "/c/$category");
+      expect(browse).toHaveAttribute("data-route-params", JSON.stringify({ category: "fashion" }));
+      expect(browse).toHaveAttribute(
+        "data-route-search",
+        JSON.stringify({ lang: "DE", audience: "kids" }),
+      );
+    }
+
+    const sellerAccounts = screen.getAllByRole("link", { name: "Create seller account" });
+    expect(sellerAccounts).toHaveLength(2);
+    for (const action of sellerAccounts) {
+      expect(action).toHaveAttribute("data-route", "/auth");
+      expect(action).toHaveAttribute(
+        "data-route-search",
+        JSON.stringify({ lang: "DE", audience: "women" }),
+      );
+    }
   });
 
   it("does not advertise unsupported buyer or transaction features", () => {
@@ -110,6 +138,6 @@ describe("JoinNetworkScreen", () => {
     expect(screen.queryByText(/new-arrival notifications/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/seller analytics/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/checkout/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/no buyer account required/i)).toBeVisible();
+    expect(screen.getAllByText(/no buyer account required/i)).toHaveLength(2);
   });
 });
