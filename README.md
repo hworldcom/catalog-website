@@ -290,6 +290,54 @@ be redirected by stale local link state. Applying hosted migrations remains a
 manually approved release operation; ordinary tests mock all hosted command
 boundaries.
 
+### Deployment Foundation Verification
+
+Ticket `0038c2` adds a second gate after migration. Extend each ignored
+environment file with its matching publishable and server-only service-role
+keys:
+
+```text
+SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+The checked-in non-secret inventory under `deployment/environments` must match
+the database host and migration-user form from the configured connection. Run
+the read-only verification first:
+
+```bash
+npm run db:environment:verify -- --environment uat
+npm run db:environment:verify -- --environment production
+```
+
+It validates both keys against the selected project, repeats the guarded
+preflight, compares a normalized hosted `public` schema catalog with the clean
+local database, and verifies the exact reference-data manifest. A local
+Supabase stack is therefore required even though the selected hosted operation
+is read-only.
+
+Storage verification is a separate write operation. It creates only unique
+`deployment-smoke` objects, verifies private signed upload/read behavior,
+public delivery, signed-read expiry, and publishable-key write denial, then
+removes and rechecks every object:
+
+```bash
+npm run db:environment:storage-smoke -- \
+  --environment uat \
+  --confirm-project <uat-project-reference>
+
+npm run db:environment:storage-smoke -- \
+  --environment production \
+  --confirm-project <production-project-reference>
+```
+
+Confirmation is checked before key validation or storage access. A cleanup
+failure blocks bootstrap completion and reports the affected environment,
+bucket, and temporary object key. Bootstrap UAT completely before running any
+production migration or storage command. Authentication settings, email
+delivery, plan capabilities, and administrator-account creation remain guided
+dashboard checkpoints and are never inferred from application credentials.
+
 ## UAT Marketplace Fixtures
 
 The earlier fixture command targets a retired disposable project and must not be

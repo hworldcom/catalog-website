@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "rootCategory": {
+    "slug": "fashion",
+    "productCodePrefix": "F"
+  },
+  "leafCategories": [
+    { "slug": "blazers", "productCodePrefix": "BLZ" },
+    { "slug": "cardigans", "productCodePrefix": "CRD" },
+    { "slug": "coats", "productCodePrefix": "COA" },
+    { "slug": "dresses", "productCodePrefix": "DRS" },
+    { "slug": "hoodies", "productCodePrefix": "HOD" },
+    { "slug": "jackets", "productCodePrefix": "JKT" },
+    { "slug": "jeans", "productCodePrefix": "JNS" },
+    { "slug": "leggings", "productCodePrefix": "LEG" },
+    { "slug": "shorts", "productCodePrefix": "SHT" },
+    { "slug": "skirts", "productCodePrefix": "SKT" },
+    { "slug": "sportswear", "productCodePrefix": "SPW" },
+    { "slug": "sweaters", "productCodePrefix": "SWE" },
+    { "slug": "sweatpants", "productCodePrefix": "SWP" },
+    { "slug": "sweatshirts", "productCodePrefix": "SWS" },
+    { "slug": "t-shirts", "productCodePrefix": "TSH" },
+    { "slug": "tracksuit-sets", "productCodePrefix": "TSS" },
+    { "slug": "trousers", "productCodePrefix": "TRO" },
+    { "slug": "vests", "productCodePrefix": "VST" }
+  ],
+  "productAudiences": ["women", "men", "kids"]
+}

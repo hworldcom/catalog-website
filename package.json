@@ -63,6 +63,8 @@
     "db:types:check": "node ./scripts/supabase/types-command.mjs check",
     "db:environment:preflight": "node ./scripts/supabase/environment-command.mjs preflight",
     "db:environment:migrate": "node ./scripts/supabase/environment-command.mjs migrate",
+    "db:environment:verify": "node ./scripts/supabase/deployment-command.mjs verify",
+    "db:environment:storage-smoke": "node ./scripts/supabase/deployment-command.mjs storage-smoke",
     "format": "prettier --write ."
   },
   "dependencies": {

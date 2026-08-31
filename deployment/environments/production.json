@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "environment": "production",
+  "supabase": {
+    "projectRef": "njtgjrctfmtvackjmlww",
+    "organizationId": "kafkpdajdiqbclppbcws",
+    "region": "eu-central-1",
+    "projectUrl": "https://njtgjrctfmtvackjmlww.supabase.co",
+    "database": {
+      "host": "aws-0-eu-central-1.pooler.supabase.com",
+      "name": "postgres",
+      "migrationUserForm": "postgres.njtgjrctfmtvackjmlww"
+    },
+    "plan": "free",
+    "backups": {
+      "managed": false,
+      "retention": "none",
+      "pointInTimeRecovery": false
+    }
+  },
+  "application": {
+    "canonicalOrigin": "https://bazoria.pl"
+  },
+  "authentication": {
+    "siteUrl": "https://bazoria.pl",
+    "redirectUrls": [
+      "https://bazoria.pl/auth",
+      "https://bazoria.pl/auth/recovery"
+    ],
+    "googleCallbackUrl": "https://njtgjrctfmtvackjmlww.supabase.co/auth/v1/callback"
+  },
+  "storage": {
+    "requiredBuckets": [
+      {
+        "id": "product-draft-images",
+        "public": false,
+        "fileSizeLimitBytes": 20971520,
+        "allowedMimeTypes": ["image/jpeg", "image/png", "image/webp"]
+      },
+      {
+        "id": "product-images",
+        "public": true,
+        "fileSizeLimitBytes": 20971520,
+        "allowedMimeTypes": ["image/jpeg", "image/png", "image/webp"]
+      },
+      {
+        "id": "seller-profile-images",
+        "public": false,
+        "fileSizeLimitBytes": 20971520,
+        "allowedMimeTypes": ["image/jpeg", "image/png", "image/webp"]
+      }
+    ]
+  },
+  "ownership": {
+    "administratorAllowlist": [],
+    "externalProviderConfiguration": {
+      "googleEnabled": false
+    }
+  },
+  "bootstrap": {
+    "gitCommit": null,
+    "migrationHead": null,
+    "verifiedAt": null
+  }
+}

@@ -9,6 +9,7 @@ import {
   runEnvironmentMigration,
   runEnvironmentPreflight,
 } from "./database-tooling.mjs";
+import { assertEnvironmentBootstrapMayProceed } from "./deployment-inventory.mjs";
 
 try {
   assertSupportedRuntime();
@@ -21,8 +22,10 @@ try {
     write,
   });
   const target = loadEnvironmentTarget(environment);
-  if (write) await runEnvironmentMigration(target, confirmProject);
-  else {
+  if (write) {
+    assertEnvironmentBootstrapMayProceed(environment);
+    await runEnvironmentMigration(target, confirmProject);
+  } else {
     const result = await runEnvironmentPreflight(target);
     assertPreflightMayMigrate(result.state);
   }
