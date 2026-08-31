@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getCurrentSellerId } from "@/features/seller/server/current-seller.service";
+import { requireClassifierAssistedUpload } from "@/features/classifier-release/classifier-assisted-upload.middleware";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import type { Database } from "@/lib/supabase/types";
 
@@ -15,7 +16,7 @@ type AuthenticatedContext = {
 };
 
 export const approveMyClassifierBatchAndCreateDrafts = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierImportInput)
   .handler(async ({ data, context }) =>
     withImportService(context as AuthenticatedContext, (service, sellerId, userId) =>
@@ -24,7 +25,7 @@ export const approveMyClassifierBatchAndCreateDrafts = createServerFn({ method: 
   );
 
 export const getMyClassifierDraftImport = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierImportInput)
   .handler(async ({ data, context }) =>
     withImportService(context as AuthenticatedContext, (service, sellerId) =>
@@ -33,7 +34,7 @@ export const getMyClassifierDraftImport = createServerFn({ method: "GET" })
   );
 
 export const retryMyClassifierDraftImport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierImportInput)
   .handler(async ({ data, context }) =>
     withImportService(context as AuthenticatedContext, (service, sellerId) =>

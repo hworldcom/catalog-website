@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { SellerClassifierImportScreen } from "@/features/seller-classifier/screens/seller-classifier-import-screen";
+import { guardSellerClassifierRoute } from "@/features/classifier-release/classifier-assisted-upload.navigation";
 import { parseSellerClassifierImportSearch } from "@/features/seller-classifier/seller-classifier-import.navigation";
 import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute(
   "/_authenticated/seller/classifier-batches_/$workflowId/import",
 )({
+  beforeLoad: ({ search }) => guardSellerClassifierRoute(search),
   head: () => ({ meta: [{ title: "Product draft creation · Bazoria" }] }),
   validateSearch: parseSellerClassifierImportSearch,
   component: SellerClassifierImportRoute,

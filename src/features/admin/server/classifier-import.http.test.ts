@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   classifierImportApiErrorResponse,
@@ -13,11 +13,35 @@ const sellerId = "00000000-0000-0000-0000-000000000005";
 const authorized = async (): Promise<PrototypeAdministratorRequestContext> =>
   ({ prototypeAdministrator: true }) as PrototypeAdministratorRequestContext;
 
+beforeEach(enableClassifierIntegration);
+afterEach(() => vi.unstubAllEnvs());
+
 function request(path = "/v1/admin/classifier-imports", init?: RequestInit): Request {
   return new Request(`http://example.test${path}`, init);
 }
 
 describe("handleDispatchClassifierImport", () => {
+  it("returns the exact disabled response before authentication or dispatch", async () => {
+    vi.stubEnv("BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED", "false");
+    const dispatch = vi.fn();
+    const authenticate = vi.fn();
+    const response = await handleDispatchClassifierImport(
+      request(`/v1/admin/classifier-imports/${importId}/dispatch`, { method: "POST" }),
+      importId,
+      { dispatch },
+      authenticate,
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({
+      code: "classifier_assisted_upload_disabled",
+      message: "Classifier-assisted uploads are unavailable in this environment.",
+    });
+    expect(authenticate).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
   it("dispatches one existing import without a request body", async () => {
     const response = await handleDispatchClassifierImport(
       request(`/v1/admin/classifier-imports/${importId}/dispatch`, { method: "POST" }),
@@ -75,6 +99,11 @@ describe("handleDispatchClassifierImport", () => {
     });
   });
 });
+
+function enableClassifierIntegration(): void {
+  vi.stubEnv("BAZORIA_DEPLOYMENT_ENVIRONMENT", "local");
+  vi.stubEnv("BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED", "true");
+}
 
 describe("classifierImportApiErrorResponse", () => {
   it("includes the existing import identifier for dispatch errors", async () => {

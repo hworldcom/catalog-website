@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { SellerClassifierProcessingScreen } from "@/features/seller-classifier/screens/seller-classifier-processing-screen";
+import { guardSellerClassifierRoute } from "@/features/classifier-release/classifier-assisted-upload.navigation";
 
 export const Route = createFileRoute(
   "/_authenticated/seller/classifier-batches_/$workflowId/processing",
 )({
+  beforeLoad: ({ search }) => guardSellerClassifierRoute(search),
   head: () => ({ meta: [{ title: "Classifier processing · Bazoria" }] }),
   component: SellerClassifierProcessingRoute,
 });

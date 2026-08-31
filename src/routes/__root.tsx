@@ -21,6 +21,7 @@ import {
 } from "@/features/marketplace/public-audience";
 import { LangProvider } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase/client";
+import { UatEnvironmentBadge } from "@/features/classifier-release/classifier-release-ui";
 
 const rootSearchSchema = z.object({
   lang: fallback(z.string(), "EN").default("EN"),
@@ -168,6 +169,7 @@ function RootComponent() {
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         <Toaster />
+        <UatEnvironmentBadge />
       </LangProvider>
     </QueryClientProvider>
   );

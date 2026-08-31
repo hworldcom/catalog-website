@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import type { Database } from "@/lib/supabase/types";
+import { requireClassifierAssistedUpload } from "@/features/classifier-release/classifier-assisted-upload.middleware";
 
 import { getCurrentSellerId } from "@/features/seller/server/current-seller.service";
 import {
@@ -27,7 +28,7 @@ type AuthenticatedContext = {
 };
 
 export const createMyClassifierBatch = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseCreateSellerClassifierBatchInput)
   .handler(async ({ data, context }) =>
     withOwnedService(
@@ -43,7 +44,7 @@ export const createMyClassifierBatch = createServerFn({ method: "POST" })
   );
 
 export const getMyClassifierBatch = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierWorkflowInput)
   .handler(async ({ data, context }) =>
     withOwnedService(context as AuthenticatedContext, getOwnershipService, (service, sellerId) =>
@@ -52,7 +53,7 @@ export const getMyClassifierBatch = createServerFn({ method: "GET" })
   );
 
 export const retryMyClassifierBatchProvisioning = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierWorkflowInput)
   .handler(async ({ data, context }) =>
     withOwnedService(context as AuthenticatedContext, getProvisioningService, (service, sellerId) =>
@@ -61,7 +62,7 @@ export const retryMyClassifierBatchProvisioning = createServerFn({ method: "POST
   );
 
 export const registerMyClassifierUploads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseRegisterSellerClassifierUploadsInput)
   .handler(async ({ data, context }) =>
     withOwnedService(context as AuthenticatedContext, getWorkflowService, (service, sellerId) =>
@@ -70,7 +71,7 @@ export const registerMyClassifierUploads = createServerFn({ method: "POST" })
   );
 
 export const retryMyClassifierUploads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseRetrySellerClassifierUploadsInput)
   .handler(async ({ data, context }) =>
     withOwnedService(context as AuthenticatedContext, getWorkflowService, (service, sellerId) =>
@@ -79,7 +80,7 @@ export const retryMyClassifierUploads = createServerFn({ method: "POST" })
   );
 
 export const getMyClassifierUploads = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierCommandInput)
   .handler(async ({ data, context }) =>
     withOwnedService(context as AuthenticatedContext, getWorkflowService, (service, sellerId) =>
@@ -88,7 +89,7 @@ export const getMyClassifierUploads = createServerFn({ method: "GET" })
   );
 
 export const finalizeMyClassifierUploads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierCommandInput)
   .handler(async ({ data, context }) =>
     withOwnedService(context as AuthenticatedContext, getWorkflowService, (service, sellerId) =>
@@ -97,7 +98,7 @@ export const finalizeMyClassifierUploads = createServerFn({ method: "POST" })
   );
 
 export const startMyClassifierProcessing = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierCommandInput)
   .handler(async ({ data, context }) =>
     withOwnedService(context as AuthenticatedContext, getWorkflowService, (service, sellerId) =>
@@ -106,7 +107,7 @@ export const startMyClassifierProcessing = createServerFn({ method: "POST" })
   );
 
 export const getMyClassifierProcessing = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierCommandInput)
   .handler(async ({ data, context }) =>
     withOwnedService(context as AuthenticatedContext, getWorkflowService, (service, sellerId) =>

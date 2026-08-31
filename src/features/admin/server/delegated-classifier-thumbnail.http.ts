@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { classifierAssistedUploadGateResponse } from "@/features/classifier-release/server/classifier-assisted-upload-gate";
 
 import {
   DelegatedClassifierContinuationError,
@@ -26,6 +27,8 @@ export async function handleGetDelegatedClassifierThumbnail(
   injectedService?: Pick<DelegatedClassifierReviewImportService, "getThumbnail">,
   authenticate: PrototypeAdministratorRequestAuthenticator = authenticatePrototypeAdministratorRequest,
 ): Promise<Response> {
+  const disabled = classifierAssistedUploadGateResponse();
+  if (disabled) return disabled;
   try {
     const parsedWorkflowId = identifier.parse(workflowId);
     const parsedImageId = identifier.parse(imageId);

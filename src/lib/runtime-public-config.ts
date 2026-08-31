@@ -65,6 +65,10 @@ export function getInitializedRuntimePublicConfig(): RuntimePublicConfig {
   return initializedConfig;
 }
 
+export function getOptionalInitializedRuntimePublicConfig(): RuntimePublicConfig | null {
+  return initializedConfig ?? null;
+}
+
 export function resetRuntimePublicConfigForTests(): void {
   initializedConfig = undefined;
   initializationPromise = undefined;

@@ -5,12 +5,19 @@ import { describe, expect, it, vi } from "vitest";
 import { AdministratorNavigationProvider } from "../administrator-navigation.provider";
 import { ClassifierImportShell } from "./classifier-import-shell";
 
+const mocks = vi.hoisted(() => ({ classifierAssistedUploadEnabled: true }));
+
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
 }));
 
+vi.mock("@/features/classifier-release/classifier-release-runtime", () => ({
+  useClassifierAssistedUploadEnabled: () => mocks.classifierAssistedUploadEnabled,
+}));
+
 describe("ClassifierImportShell moderation navigation", () => {
   it("shows moderation requests only for server-derived prototype administrators", () => {
+    mocks.classifierAssistedUploadEnabled = true;
     const { rerender } = renderShell(false);
     expect(screen.queryByRole("link", { name: "Moderation requests" })).not.toBeInTheDocument();
 
@@ -19,6 +26,17 @@ describe("ClassifierImportShell moderation navigation", () => {
       "href",
       "/admin/moderation",
     );
+  });
+
+  it("hides classifier entry points and uses ProductDrafts as its home when disabled", () => {
+    mocks.classifierAssistedUploadEnabled = false;
+    renderShell(true);
+
+    expect(screen.queryByRole("link", { name: "Upload for seller" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Catalog operations Internal catalog operations/ }),
+    ).toHaveAttribute("href", "/admin/product-drafts");
+    expect(screen.getByRole("link", { name: "ProductDrafts" })).toBeVisible();
   });
 });
 

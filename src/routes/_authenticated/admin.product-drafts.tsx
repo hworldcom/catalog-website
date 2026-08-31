@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { AdminProductDraftIndexScreen } from "@/features/admin/screens/admin-product-draft-index-screen";
+import { CLASSIFIER_ASSISTED_UPLOAD_DISABLED_CODE } from "@/features/classifier-release/classifier-assisted-upload";
 import {
   ADMIN_PRODUCT_DRAFT_INDEX_ALL_STATUS,
   ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_LIMIT,
@@ -18,6 +19,7 @@ const searchSchema = z.object({
     .enum(ADMIN_PRODUCT_DRAFT_INDEX_STATUS_FILTERS)
     .default(ADMIN_PRODUCT_DRAFT_INDEX_DEFAULT_STATUS),
   sellerId: z.string().uuid().optional(),
+  notice: z.literal(CLASSIFIER_ASSISTED_UPLOAD_DISABLED_CODE).optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/admin/product-drafts")({
@@ -39,6 +41,7 @@ function AdminProductDraftIndexRoute() {
   return (
     <AdminProductDraftIndexScreen
       request={request}
+      notice={search.notice}
       onRequestChange={(nextRequest) =>
         void navigate({
           search: (previous) => ({

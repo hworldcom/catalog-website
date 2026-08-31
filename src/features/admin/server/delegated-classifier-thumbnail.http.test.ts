@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { delegatedReviewResourceNotFound } from "../delegated-classifier-review-import.types";
 import { handleGetDelegatedClassifierThumbnail } from "./delegated-classifier-thumbnail.http";
 import { PrototypeAdministratorError } from "./prototype-administrator-access";
+
+beforeEach(() => {
+  vi.stubEnv("BAZORIA_DEPLOYMENT_ENVIRONMENT", "local");
+  vi.stubEnv("BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED", "true");
+});
+afterEach(() => vi.unstubAllEnvs());
 
 describe("handleGetDelegatedClassifierThumbnail", () => {
   it("validates identifiers before authentication", async () => {

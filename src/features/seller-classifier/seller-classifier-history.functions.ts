@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getCurrentSellerId } from "@/features/seller/server/current-seller.service";
+import { requireClassifierAssistedUpload } from "@/features/classifier-release/classifier-assisted-upload.middleware";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import type { Database } from "@/lib/supabase/types";
 
@@ -17,7 +18,7 @@ type AuthenticatedContext = {
 };
 
 export const listMyClassifierBatches = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierHistoryRequest)
   .handler(async ({ data, context }) => {
     try {

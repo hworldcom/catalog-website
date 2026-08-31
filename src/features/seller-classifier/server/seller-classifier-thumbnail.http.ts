@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { getCurrentSellerId } from "@/features/seller/server/current-seller.service";
+import { classifierAssistedUploadGateResponse } from "@/features/classifier-release/server/classifier-assisted-upload-gate";
 import {
   authenticateSupabaseRequest,
   SupabaseAuthenticationError,
@@ -24,6 +25,8 @@ export async function handleGetSellerClassifierThumbnail(
   injectedService?: Pick<SellerClassifierReviewService, "getThumbnail">,
   authenticate: SellerClassifierRequestAuthenticator = authenticateSupabaseRequest,
 ): Promise<Response> {
+  const disabled = classifierAssistedUploadGateResponse();
+  if (disabled) return disabled;
   try {
     const context = await authenticate(request);
     const parsedWorkflowId = identifier.parse(workflowId);

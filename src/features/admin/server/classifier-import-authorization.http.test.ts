@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SupabaseAuthenticationError } from "@/lib/supabase/request-authentication";
 
@@ -12,6 +12,12 @@ import { PrototypeAdministratorError } from "./prototype-administrator-access";
 import type { PrototypeAdministratorRequestAuthenticator } from "./prototype-administrator-auth";
 
 const importId = "00000000-0000-0000-0000-000000000003";
+
+beforeEach(() => {
+  vi.stubEnv("BAZORIA_DEPLOYMENT_ENVIRONMENT", "local");
+  vi.stubEnv("BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED", "true");
+});
+afterEach(() => vi.unstubAllEnvs());
 
 type ProtectedOperation = (
   invoked: ReturnType<typeof vi.fn>,

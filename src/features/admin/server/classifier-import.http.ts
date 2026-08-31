@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 import { SupabaseAuthenticationError } from "@/lib/supabase/request-authentication";
+import { classifierAssistedUploadGateResponse } from "@/features/classifier-release/server/classifier-assisted-upload-gate";
 
 import type { ClassifierImportCoordinator } from "./classifier-import.coordinator";
 import { ClassifierImportApiError } from "./classifier-import.types";
-import { getClassifierImportCoordinator } from "./classifier-import.runtime";
 import { PrototypeAdministratorError } from "./prototype-administrator-access";
 import {
   authenticatePrototypeAdministratorRequest,
@@ -28,8 +28,10 @@ export async function handleGetClassifierImport(
   injectedCoordinator?: Pick<ClassifierImportCoordinator, "getStatus">,
   authenticate: PrototypeAdministratorRequestAuthenticator = authenticatePrototypeAdministratorRequest,
 ): Promise<Response> {
+  const disabled = classifierAssistedUploadGateResponse();
+  if (disabled) return disabled;
   return handleRequest(request, authenticate, async () => {
-    const coordinator = injectedCoordinator ?? (await getClassifierImportCoordinator());
+    const coordinator = injectedCoordinator ?? (await loadClassifierImportCoordinator());
     return json(await coordinator.getStatus(importIdSchema.parse(importId)), 200);
   });
 }
@@ -40,10 +42,12 @@ export async function handleRetryClassifierImport(
   injectedCoordinator?: Pick<ClassifierImportCoordinator, "retry">,
   authenticate: PrototypeAdministratorRequestAuthenticator = authenticatePrototypeAdministratorRequest,
 ): Promise<Response> {
+  const disabled = classifierAssistedUploadGateResponse();
+  if (disabled) return disabled;
   return handleRequest(request, authenticate, async () => {
     const text = await request.text();
     const payload = retryRequestSchema.parse(text.trim() ? JSON.parse(text) : {});
-    const coordinator = injectedCoordinator ?? (await getClassifierImportCoordinator());
+    const coordinator = injectedCoordinator ?? (await loadClassifierImportCoordinator());
     const result = await coordinator.retry(
       importIdSchema.parse(importId),
       payload.includeNonRetryable,
@@ -58,8 +62,10 @@ export async function handleReconcileClassifierImport(
   injectedCoordinator?: Pick<ClassifierImportCoordinator, "reconcile">,
   authenticate: PrototypeAdministratorRequestAuthenticator = authenticatePrototypeAdministratorRequest,
 ): Promise<Response> {
+  const disabled = classifierAssistedUploadGateResponse();
+  if (disabled) return disabled;
   return handleRequest(request, authenticate, async () => {
-    const coordinator = injectedCoordinator ?? (await getClassifierImportCoordinator());
+    const coordinator = injectedCoordinator ?? (await loadClassifierImportCoordinator());
     const result = await coordinator.reconcile(importIdSchema.parse(importId));
     return json(result.body, result.httpStatus);
   });
@@ -71,11 +77,18 @@ export async function handleDispatchClassifierImport(
   injectedCoordinator?: Pick<ClassifierImportCoordinator, "dispatch">,
   authenticate: PrototypeAdministratorRequestAuthenticator = authenticatePrototypeAdministratorRequest,
 ): Promise<Response> {
+  const disabled = classifierAssistedUploadGateResponse();
+  if (disabled) return disabled;
   return handleRequest(request, authenticate, async () => {
-    const coordinator = injectedCoordinator ?? (await getClassifierImportCoordinator());
+    const coordinator = injectedCoordinator ?? (await loadClassifierImportCoordinator());
     const result = await coordinator.dispatch(importIdSchema.parse(importId));
     return json(result.body, result.httpStatus);
   });
+}
+
+async function loadClassifierImportCoordinator(): Promise<ClassifierImportCoordinator> {
+  const { getClassifierImportCoordinator } = await import("./classifier-import.runtime");
+  return getClassifierImportCoordinator();
 }
 
 async function handleRequest(

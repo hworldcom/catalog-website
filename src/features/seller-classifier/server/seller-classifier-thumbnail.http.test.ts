@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SupabaseAuthenticationError } from "@/lib/supabase/request-authentication";
 
 import { SellerClassifierBatchError } from "../seller-classifier-batch.types";
 import { handleGetSellerClassifierThumbnail } from "./seller-classifier-thumbnail.http";
+
+beforeEach(() => {
+  vi.stubEnv("BAZORIA_DEPLOYMENT_ENVIRONMENT", "local");
+  vi.stubEnv("BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED", "true");
+});
+afterEach(() => vi.unstubAllEnvs());
 
 describe("handleGetSellerClassifierThumbnail", () => {
   it("authenticates before invoking the owned thumbnail service", async () => {

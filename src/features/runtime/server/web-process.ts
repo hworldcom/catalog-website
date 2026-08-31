@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readProductActivationConfig } from "@/features/admin/server/product-activation.config";
+import { validateClassifierAssistedUploadStartup } from "@/features/classifier-release/server/classifier-assisted-upload-gate";
 import { readRuntimePublicConfig } from "@/lib/runtime-public-config.server";
 
 import { readRuntimeIdentity, writeRuntimeStartupLog } from "./runtime-identity";
@@ -14,6 +15,7 @@ export type WebProcessDependencies = {
 export async function startWebProcess(dependencies: WebProcessDependencies = {}): Promise<void> {
   const environment = dependencies.environment ?? process.env;
   readRuntimePublicConfig(environment);
+  await validateClassifierAssistedUploadStartup(environment);
   readProductActivationConfig(environment);
 
   await (dependencies.importServer ?? importCompiledNitroServer)();

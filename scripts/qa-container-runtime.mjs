@@ -64,7 +64,7 @@ try {
       environment: "production",
       supabaseUrl: "https://production.supabase.co",
       supabasePublishableKey: "sb_publishable_production-key",
-      classifierAssistedUploadEnabled: true,
+      classifierAssistedUploadEnabled: false,
     },
   });
   if (uat.assetHash !== production.assetHash) {

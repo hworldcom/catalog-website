@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { ProductsScreen } from "@/features/seller/screens/products-screen";
+import { CLASSIFIER_ASSISTED_UPLOAD_DISABLED_CODE } from "@/features/classifier-release/classifier-assisted-upload";
 import {
   SELLER_PRODUCT_LIST_DEFAULT_LIMIT,
   type SellerProductListRequest,
@@ -12,6 +13,7 @@ const searchSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(SELLER_PRODUCT_LIST_DEFAULT_LIMIT),
   cursor: z.string().min(1).optional(),
   status: z.enum(["active", "archived"]).default("active"),
+  notice: z.literal(CLASSIFIER_ASSISTED_UPLOAD_DISABLED_CODE).optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/seller/products")({
@@ -31,6 +33,7 @@ function SellerProductsRoute() {
   return (
     <ProductsScreen
       request={request}
+      notice={search.notice}
       onRequestChange={(nextRequest) =>
         void navigate({
           search: (previous) => ({

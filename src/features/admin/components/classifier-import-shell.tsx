@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { LanguageSwitcher, t, tr } from "@/lib/i18n";
 import { useAdministratorNavigationContext } from "../administrator-navigation.context";
+import { useClassifierAssistedUploadEnabled } from "@/features/classifier-release/classifier-release-runtime";
 
 const S = {
   catalogOperations: t(
@@ -35,21 +36,32 @@ const S = {
 
 export function ClassifierImportShell({ children }: { children: ReactNode }) {
   const { prototypeAdministrator } = useAdministratorNavigationContext();
+  const classifierAssistedUploadEnabled = useClassifierAssistedUploadEnabled();
   return (
     <div className="min-h-screen bg-muted/30 text-foreground">
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link to="/admin/classifier-uploads/new" className="min-w-0">
+          <Link
+            to={
+              classifierAssistedUploadEnabled
+                ? "/admin/classifier-uploads/new"
+                : "/admin/product-drafts"
+            }
+            search={classifierAssistedUploadEnabled ? undefined : { limit: 25 }}
+            className="min-w-0"
+          >
             <div className="font-display text-lg font-semibold">{tr(S.catalogOperations)}</div>
             <div className="text-xs text-muted-foreground">{tr(S.internalOperations)}</div>
           </Link>
           <nav className="flex items-center gap-3 text-sm">
-            <Link
-              to="/admin/classifier-uploads/new"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              {tr(S.delegatedUpload)}
-            </Link>
+            {classifierAssistedUploadEnabled ? (
+              <Link
+                to="/admin/classifier-uploads/new"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {tr(S.delegatedUpload)}
+              </Link>
+            ) : null}
             <Link
               to="/admin/product-drafts"
               search={{ limit: 25 }}

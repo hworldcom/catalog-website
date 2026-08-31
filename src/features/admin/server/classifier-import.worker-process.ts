@@ -1,5 +1,10 @@
-import { readClassifierImportConfig } from "./classifier-import.config";
-import { createClassifierImportWorkerRuntime } from "./classifier-import.runtime";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { ClassifierAssistedUploadDisabledError } from "@/features/classifier-release/classifier-assisted-upload";
+import { assertClassifierAssistedUploadEnabled } from "@/features/classifier-release/server/classifier-assisted-upload-gate";
+
+import type { ClassifierImportConfig } from "./classifier-import.config";
 import {
   createClassifierImportWorkerLogEntry,
   createClassifierImportWorkerLoop,
@@ -10,13 +15,16 @@ import {
 async function main(): Promise<void> {
   let config;
   try {
-    config = readClassifierImportConfig();
-  } catch {
+    config = await loadEnabledClassifierImportWorkerConfig();
+  } catch (error) {
     writeClassifierImportWorkerLog(
       createClassifierImportWorkerLogEntry({
         event: "worker_configuration_invalid",
         severity: "error",
-        errorCode: "classifier_import_worker_configuration_invalid",
+        errorCode:
+          error instanceof ClassifierAssistedUploadDisabledError
+            ? error.code
+            : "classifier_import_worker_configuration_invalid",
       }),
     );
     process.exitCode = 1;
@@ -25,6 +33,7 @@ async function main(): Promise<void> {
 
   let loop;
   try {
+    const { createClassifierImportWorkerRuntime } = await import("./classifier-import.runtime");
     loop = await createClassifierImportWorkerLoop({
       createWorker: () => createClassifierImportWorkerRuntime(undefined, config),
       pollIntervalMs: config.workerPollIntervalMs,
@@ -63,14 +72,32 @@ async function main(): Promise<void> {
   }
 }
 
-void main().catch((error: unknown) => {
-  writeClassifierImportWorkerLog(
-    createClassifierImportWorkerLogEntry({
-      event: "worker_iteration_failed",
-      severity: "error",
-      errorCode: "classifier_import_worker_iteration_failed",
-      exceptionClass: getExceptionClass(error),
-    }),
-  );
-  process.exitCode = 1;
-});
+export async function loadEnabledClassifierImportWorkerConfig(
+  environment: Record<string, string | undefined> = process.env,
+  loadConfigReader: () => Promise<{
+    readClassifierImportConfig(
+      environment: Record<string, string | undefined>,
+    ): ClassifierImportConfig;
+  }> = () => import("./classifier-import.config"),
+): Promise<ClassifierImportConfig> {
+  assertClassifierAssistedUploadEnabled(environment);
+  const { readClassifierImportConfig } = await loadConfigReader();
+  return readClassifierImportConfig(environment);
+}
+
+const entryPath = process.argv[1]
+  ? fileURLToPath(import.meta.url) === resolve(process.argv[1])
+  : false;
+if (entryPath) {
+  void main().catch((error: unknown) => {
+    writeClassifierImportWorkerLog(
+      createClassifierImportWorkerLogEntry({
+        event: "worker_iteration_failed",
+        severity: "error",
+        errorCode: "classifier_import_worker_iteration_failed",
+        exceptionClass: getExceptionClass(error),
+      }),
+    );
+    process.exitCode = 1;
+  });
+}

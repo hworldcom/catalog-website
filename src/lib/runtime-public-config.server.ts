@@ -5,12 +5,15 @@ import {
   RuntimePublicConfigurationError,
   type RuntimePublicConfig,
 } from "./runtime-public-config";
+import {
+  ClassifierAssistedUploadConfigurationError,
+  readClassifierAssistedUploadReleaseState,
+} from "@/features/classifier-release/server/classifier-assisted-upload-gate";
 
 const environmentSchema = z.object({
   BAZORIA_DEPLOYMENT_ENVIRONMENT: z.enum(["local", "uat", "production"]),
   SUPABASE_URL: z.string().trim().min(1),
   SUPABASE_PUBLISHABLE_KEY: z.string().trim().min(1),
-  BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: z.enum(["true", "false"]).optional(),
 });
 
 export function readRuntimePublicConfig(
@@ -19,14 +22,16 @@ export function readRuntimePublicConfig(
   const parsed = environmentSchema.safeParse(environment);
   if (!parsed.success) throw invalidConfiguration(parsed.error.issues);
 
-  const classifierSetting = parsed.data.BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED;
-  if (parsed.data.BAZORIA_DEPLOYMENT_ENVIRONMENT !== "local" && classifierSetting === undefined) {
-    throw invalidConfiguration([
-      {
-        path: ["BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED"],
-        message: "Required",
-      },
-    ]);
+  let classifierAssistedUploadEnabled: boolean;
+  try {
+    classifierAssistedUploadEnabled = readClassifierAssistedUploadReleaseState(environment).enabled;
+  } catch (error) {
+    if (error instanceof ClassifierAssistedUploadConfigurationError) {
+      throw new RuntimePublicConfigurationError(
+        `runtime_public_configuration_invalid: ${error.message}`,
+      );
+    }
+    throw error;
   }
 
   try {
@@ -34,7 +39,7 @@ export function readRuntimePublicConfig(
       environment: parsed.data.BAZORIA_DEPLOYMENT_ENVIRONMENT,
       supabaseUrl: parsed.data.SUPABASE_URL,
       supabasePublishableKey: parsed.data.SUPABASE_PUBLISHABLE_KEY,
-      classifierAssistedUploadEnabled: classifierSetting === "true",
+      classifierAssistedUploadEnabled,
     });
   } catch {
     throw new RuntimePublicConfigurationError(

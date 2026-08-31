@@ -15,7 +15,8 @@ The canonical browser and backend quality-assurance flow is documented in
 - Node.js 22.13.0 or newer, as recorded in `.nvmrc`.
 - npm 10.9.2 or newer.
 - Access to the hosted Bazoria User Acceptance Testing (UAT) Supabase project.
-- A separately running local classifier API for classifier-assisted workflows.
+- A separately running local classifier API only when testing the optional
+  classifier-assisted workflow locally.
 
 The hosted Supabase project with reference `jhkouuxouplqcfecjutd` is UAT. It
 contains no production data. Production must use a separate Supabase project
@@ -61,10 +62,20 @@ The required classifier organization for the prototype is
 `seller_classifier_batches` records; the browser sees only the opaque Bazoria
 workflow identifier.
 
+Classifier-assisted upload is release-gated. User Acceptance Testing and
+production must set `BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED=false` and must
+not configure classifier integration variables. Local development also
+defaults to disabled. Set the flag to `true` locally only when the classifier
+API is running and the classifier values in `.env` are complete; startup then
+validates both the seller workflow and import configuration before accepting
+traffic.
+
 ## Start Bazoria Web
 
-Start the classifier stack first by following the cross-repository guide. Then
-run Bazoria Web in its own terminal:
+For manual product workflows, run Bazoria Web directly. For local
+classifier-assisted testing, first enable the release gate in `.env` and start
+the classifier stack by following the cross-repository guide. Then run Bazoria
+Web in its own terminal:
 
 ```bash
 cd /Users/hoangdeveloper/catalog-website
@@ -77,7 +88,7 @@ packaging does not change either local development path.
 
 Open `http://localhost:8080`. Sign in at `http://localhost:8080/auth`.
 
-Supported classifier routes include:
+When explicitly enabled locally, supported classifier routes include:
 
 ```text
 /seller/classifier-batches
@@ -94,6 +105,14 @@ Administrator routes are currently opened directly. Every administrator
 operation remains server-authorized through the configured prototype
 administrator allowlist.
 
+When classifier-assisted upload is disabled, its seller and administrator
+entry points are hidden, direct browser routes redirect to the normal product
+areas, and direct server operations return the stable
+`classifier_assisted_upload_disabled` outcome. Historical ProductDrafts and
+products imported from classifier workflows remain available through normal
+product routes. UAT renders a persistent `UAT` environment badge; production
+does not.
+
 ## Local Dispatch And Recovery
 
 Normal classifier import authorization schedules the exact import through the
@@ -102,7 +121,8 @@ Bazoria server process. Browser polling only reads progress; it does not start
 work.
 
 The continuous import worker is recovery-only. Run it only when diagnosing or
-recovering durable pending imports:
+recovering durable pending imports while classifier-assisted upload is enabled
+locally:
 
 ```bash
 cd /Users/hoangdeveloper/catalog-website
@@ -111,6 +131,9 @@ source .env
 set +a
 npm run worker:classifier-import
 ```
+
+The command refuses startup with `classifier_assisted_upload_disabled` while
+the release gate is false and does not read classifier integration settings.
 
 The classifier's optional multimodal worker is a separate classifier process;
 see the cross-repository start guide.

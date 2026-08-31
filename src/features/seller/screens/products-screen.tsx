@@ -20,6 +20,8 @@ import type {
   ProductMarketplaceVisibility,
 } from "@/features/seller/product-moderation-status.types";
 import { t, tr } from "@/lib/i18n";
+import { ClassifierAssistedUploadDisabledNotice } from "@/features/classifier-release/classifier-release-ui";
+import { useClassifierAssistedUploadEnabled } from "@/features/classifier-release/classifier-release-runtime";
 
 const S = {
   products: t("Products", "Produkty", "Produkte", "Sản phẩm"),
@@ -253,9 +255,10 @@ const S = {
 export type ProductsScreenProps = {
   request: SellerProductListRequest;
   onRequestChange(request: SellerProductListRequest): void;
+  notice?: string;
 };
 
-export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps) {
+export function ProductsScreen({ request, onRequestChange, notice }: ProductsScreenProps) {
   const listProducts = useServerFn(listMyProducts);
   const archive = useServerFn(archiveMyProduct);
   const restore = useServerFn(restoreMyProduct);
@@ -391,6 +394,7 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
 
   return (
     <div className="flex flex-col gap-6">
+      <ClassifierAssistedUploadDisabledNotice notice={notice} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold">{tr(S.products)}</h1>
@@ -597,6 +601,7 @@ export function ProductsScreen({ request, onRequestChange }: ProductsScreenProps
 }
 
 function ProductEntryActions() {
+  const classifierAssistedUploadEnabled = useClassifierAssistedUploadEnabled();
   return (
     <div className="flex flex-wrap gap-3">
       <Link
@@ -605,12 +610,14 @@ function ProductEntryActions() {
       >
         {tr(S.addManually)}
       </Link>
-      <Link
-        to="/seller/classifier-batches/new"
-        className="border border-border bg-card px-4 py-2 text-sm font-medium hover:border-primary"
-      >
-        {tr(S.automaticGrouping)}
-      </Link>
+      {classifierAssistedUploadEnabled ? (
+        <Link
+          to="/seller/classifier-batches/new"
+          className="border border-border bg-card px-4 py-2 text-sm font-medium hover:border-primary"
+        >
+          {tr(S.automaticGrouping)}
+        </Link>
+      ) : null}
     </div>
   );
 }

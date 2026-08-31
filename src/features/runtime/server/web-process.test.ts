@@ -19,6 +19,23 @@ describe("web process", () => {
     await startWebProcess({ environment: environment(), importServer });
     expect(importServer).toHaveBeenCalledTimes(1);
   });
+
+  it("validates both classifier integrations for an explicit local opt-in", async () => {
+    const importServer = vi.fn(async () => undefined);
+    await expect(
+      startWebProcess({
+        environment: {
+          ...environment(),
+          BAZORIA_DEPLOYMENT_ENVIRONMENT: "local",
+          BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "true",
+          BAZORIA_CLASSIFIER_API_BASE_URL: undefined,
+          BAZORIA_DEFAULT_CLASSIFIER_ORGANIZATION_ID: undefined,
+        },
+        importServer,
+      }),
+    ).rejects.toThrow("seller_classifier_configuration_invalid");
+    expect(importServer).not.toHaveBeenCalled();
+  });
 });
 
 function environment(): Record<string, string | undefined> {

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireClassifierAssistedUpload } from "@/features/classifier-release/classifier-assisted-upload.middleware";
 
 import {
   delegatedUploadUnavailable,
@@ -17,12 +18,12 @@ import {
 } from "./prototype-administrator.middleware";
 
 export const searchDelegatedUploadSellers = createServerFn({ method: "GET" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedUploadSellerSearchRequest)
   .handler(async ({ data }) => runDelegatedOperation((delegated) => delegated.searchSellers(data)));
 
 export const createDelegatedClassifierBatch = createServerFn({ method: "POST" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseCreateDelegatedClassifierBatchInput)
   .handler(async ({ data, context }) =>
     runDelegatedOperation((delegated) =>
@@ -31,52 +32,52 @@ export const createDelegatedClassifierBatch = createServerFn({ method: "POST" })
   );
 
 export const getDelegatedClassifierBatch = createServerFn({ method: "GET" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedClassifierWorkflowInput)
   .handler(async ({ data }) =>
     runDelegatedOperation((delegated) => delegated.get(data.workflowId)),
   );
 
 export const retryDelegatedClassifierBatchProvisioning = createServerFn({ method: "POST" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedClassifierWorkflowInput)
   .handler(async ({ data }) =>
     runDelegatedOperation((delegated) => delegated.retryProvisioning(data.workflowId)),
   );
 
 export const registerDelegatedClassifierUploads = createServerFn({ method: "POST" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedRegisterUploadsInput)
   .handler(async ({ data }) => runDelegatedOperation((delegated) => delegated.register(data)));
 
 export const retryDelegatedClassifierUploads = createServerFn({ method: "POST" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedRetryUploadsInput)
   .handler(async ({ data }) => runDelegatedOperation((delegated) => delegated.retryUploads(data)));
 
 export const getDelegatedClassifierUploads = createServerFn({ method: "GET" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedClassifierCommandInput)
   .handler(async ({ data }) =>
     runDelegatedOperation((delegated) => delegated.getUploads(data.workflowId)),
   );
 
 export const finalizeDelegatedClassifierUploads = createServerFn({ method: "POST" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedClassifierCommandInput)
   .handler(async ({ data }) =>
     runDelegatedOperation((delegated) => delegated.finalize(data.workflowId)),
   );
 
 export const startDelegatedClassifierProcessing = createServerFn({ method: "POST" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedClassifierCommandInput)
   .handler(async ({ data }) =>
     runDelegatedOperation((delegated) => delegated.startProcessing(data.workflowId)),
   );
 
 export const getDelegatedClassifierProcessing = createServerFn({ method: "GET" })
-  .middleware([requirePrototypeAdministrator])
+  .middleware([requirePrototypeAdministrator, requireClassifierAssistedUpload])
   .validator(parseDelegatedClassifierCommandInput)
   .handler(async ({ data }) =>
     runDelegatedOperation((delegated) => delegated.getProcessing(data.workflowId)),

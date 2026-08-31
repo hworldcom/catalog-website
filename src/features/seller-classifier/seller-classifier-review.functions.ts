@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getCurrentSellerId } from "@/features/seller/server/current-seller.service";
+import { requireClassifierAssistedUpload } from "@/features/classifier-release/classifier-assisted-upload.middleware";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import type { Database } from "@/lib/supabase/types";
 
@@ -26,7 +27,7 @@ type AuthenticatedContext = {
 };
 
 export const getMyClassifierReview = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierReviewInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -35,13 +36,13 @@ export const getMyClassifierReview = createServerFn({ method: "GET" })
   );
 
 export const listSellerClassifierCategories = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .handler(async ({ context }) =>
     withReviewService(context as AuthenticatedContext, (service) => service.listCategories()),
   );
 
 export const createMyClassifierGroup = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseCreateSellerClassifierGroupInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -50,7 +51,7 @@ export const createMyClassifierGroup = createServerFn({ method: "POST" })
   );
 
 export const mergeMyClassifierGroups = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseMergeSellerClassifierGroupsInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -59,7 +60,7 @@ export const mergeMyClassifierGroups = createServerFn({ method: "POST" })
   );
 
 export const splitMyClassifierGroup = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSplitSellerClassifierGroupInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -68,7 +69,7 @@ export const splitMyClassifierGroup = createServerFn({ method: "POST" })
   );
 
 export const moveMyClassifierImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseMoveSellerClassifierImageInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -77,7 +78,7 @@ export const moveMyClassifierImage = createServerFn({ method: "POST" })
   );
 
 export const setMyClassifierImageDuplicate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSetSellerClassifierDuplicateInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -86,7 +87,7 @@ export const setMyClassifierImageDuplicate = createServerFn({ method: "POST" })
   );
 
 export const selectMyClassifierGroupCover = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSelectSellerClassifierCoverInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -95,7 +96,7 @@ export const selectMyClassifierGroupCover = createServerFn({ method: "POST" })
   );
 
 export const selectMyClassifierGroupCategory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSelectSellerClassifierCategoryInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -104,7 +105,7 @@ export const selectMyClassifierGroupCategory = createServerFn({ method: "POST" }
   );
 
 export const rejectMyClassifierImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierGroupImageInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -113,7 +114,7 @@ export const rejectMyClassifierImage = createServerFn({ method: "POST" })
   );
 
 export const restoreMyClassifierImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierGroupImageInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>
@@ -122,7 +123,7 @@ export const restoreMyClassifierImage = createServerFn({ method: "POST" })
   );
 
 export const approveMyClassifierGroup = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireClassifierAssistedUpload])
   .validator(parseSellerClassifierGroupInput)
   .handler(async ({ data, context }) =>
     withReviewService(context as AuthenticatedContext, (service, sellerId) =>

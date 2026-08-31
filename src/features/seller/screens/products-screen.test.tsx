@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
+  classifierAssistedUploadEnabled: true,
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -37,11 +38,20 @@ vi.mock("sonner", () => ({
   },
 }));
 
+vi.mock("@/features/classifier-release/classifier-release-ui", () => ({
+  ClassifierAssistedUploadDisabledNotice: () => null,
+}));
+
+vi.mock("@/features/classifier-release/classifier-release-runtime", () => ({
+  useClassifierAssistedUploadEnabled: () => mocks.classifierAssistedUploadEnabled,
+}));
+
 import { ProductsScreen } from "./products-screen";
 
 describe("ProductsScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.classifierAssistedUploadEnabled = true;
     mocks.archive.mockResolvedValue({ productId: uuid(1), productStatus: "archived" });
     mocks.restore.mockResolvedValue({
       productId: uuid(1),
@@ -78,6 +88,18 @@ describe("ProductsScreen", () => {
     expect(
       screen.getAllByRole("link", { name: "Upload photos for automatic grouping" }),
     ).toHaveLength(2);
+  });
+
+  it("keeps manual ingestion and hides automatic grouping when the release gate is disabled", async () => {
+    mocks.classifierAssistedUploadEnabled = false;
+    mocks.list.mockResolvedValue(page());
+    renderScreen();
+
+    await screen.findByText("Cotton shirt");
+    expect(screen.getByRole("link", { name: "Add product manually" })).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: "Upload photos for automatic grouping" }),
+    ).not.toBeInTheDocument();
   });
 
   it("uses the page-bound query key and navigates to the returned next cursor", async () => {

@@ -6,12 +6,19 @@ import { AdministratorNavigationProvider } from "@/features/admin/administrator-
 
 import { SideNav } from "./side-nav";
 
+const mocks = vi.hoisted(() => ({ classifierAssistedUploadEnabled: true }));
+
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
 }));
 
+vi.mock("@/features/classifier-release/classifier-release-runtime", () => ({
+  useClassifierAssistedUploadEnabled: () => mocks.classifierAssistedUploadEnabled,
+}));
+
 describe("SideNav administrator navigation", () => {
   it("shows moderation requests only to server-derived prototype administrators", () => {
+    mocks.classifierAssistedUploadEnabled = true;
     const { rerender } = renderSideNav(false);
     expect(screen.queryByRole("link", { name: "Moderation requests" })).not.toBeInTheDocument();
 
@@ -20,6 +27,14 @@ describe("SideNav administrator navigation", () => {
       "href",
       "/admin/moderation",
     );
+  });
+
+  it("hides classifier upload navigation when the release gate is disabled", () => {
+    mocks.classifierAssistedUploadEnabled = false;
+    renderSideNav(false);
+
+    expect(screen.queryByRole("link", { name: "Classifier uploads" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Products" })).toBeVisible();
   });
 });
 

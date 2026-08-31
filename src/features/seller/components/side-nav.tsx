@@ -2,9 +2,11 @@ import { Link } from "@tanstack/react-router";
 
 import { useAdministratorNavigationContext } from "@/features/admin/administrator-navigation.context";
 import { t, tr } from "@/lib/i18n";
+import { useClassifierAssistedUploadEnabled } from "@/features/classifier-release/classifier-release-runtime";
 
 export function SideNav({ sellerSlug }: { sellerSlug: string }) {
   const { prototypeAdministrator } = useAdministratorNavigationContext();
+  const classifierAssistedUploadEnabled = useClassifierAssistedUploadEnabled();
   const link =
     "block border border-transparent px-3 py-2 text-sm text-muted-foreground hover:border-border hover:text-foreground";
   const active = "border-border bg-card text-foreground";
@@ -29,20 +31,22 @@ export function SideNav({ sellerSlug }: { sellerSlug: string }) {
       <Link to="/seller/products" className={link} activeProps={{ className: `${link} ${active}` }}>
         Products
       </Link>
-      <Link
-        to="/seller/classifier-batches"
-        className={link}
-        activeProps={{ className: `${link} ${active}` }}
-      >
-        {tr(
-          t(
-            "Classifier uploads",
-            "Przesyłanie z klasyfikatorem",
-            "Klassifikator-Uploads",
-            "Tải lên bằng bộ phân loại",
-          ),
-        )}
-      </Link>
+      {classifierAssistedUploadEnabled ? (
+        <Link
+          to="/seller/classifier-batches"
+          className={link}
+          activeProps={{ className: `${link} ${active}` }}
+        >
+          {tr(
+            t(
+              "Classifier uploads",
+              "Przesyłanie z klasyfikatorem",
+              "Klassifikator-Uploads",
+              "Tải lên bằng bộ phân loại",
+            ),
+          )}
+        </Link>
+      ) : null}
       <Link to="/seller/leads" className={link} activeProps={{ className: `${link} ${active}` }}>
         Leads
       </Link>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { t, tr, useLang, type Lang, type T } from "@/lib/i18n";
 import { productCodeCopy } from "@/features/product-code/product-code.copy";
+import { ClassifierAssistedUploadDisabledNotice } from "@/features/classifier-release/classifier-release-ui";
 
 import { listAdminProductDrafts } from "../admin-product-draft-index.functions";
 import { buildAdminProductDraftReviewHref } from "../admin-product-draft-index.navigation";
@@ -28,6 +29,7 @@ export type AdminProductDraftIndexScreenProps = {
   request: AdminProductDraftIndexRequest;
   onRequestChange(request: AdminProductDraftIndexRequest): void;
   client?: AdminProductDraftIndexClient;
+  notice?: string;
 };
 
 const S = {
@@ -170,7 +172,8 @@ export function AdminProductDraftIndexScreenView({
   request,
   onRequestChange,
   client,
-}: Required<AdminProductDraftIndexScreenProps>) {
+  notice,
+}: AdminProductDraftIndexScreenProps & { client: AdminProductDraftIndexClient }) {
   const lang = useLang();
   const { cursor, limit, sellerId, status } = request;
   const stableRequest = useMemo(
@@ -310,6 +313,7 @@ export function AdminProductDraftIndexScreenView({
   return (
     <ClassifierImportShell>
       <div className="space-y-6">
+        <ClassifierAssistedUploadDisabledNotice notice={notice} />
         <header>
           <h1 className="font-display text-2xl font-semibold">{tr(S.title)}</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{tr(S.description)}</p>
