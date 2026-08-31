@@ -1,2 +1,2 @@
-# Hosted User Acceptance Testing project. Production must use a separate project.
-project_id = "jhkouuxouplqcfecjutd"
+# Local development only. Hosted commands always use an explicit database URL.
+project_id = "bazoria-web-local"

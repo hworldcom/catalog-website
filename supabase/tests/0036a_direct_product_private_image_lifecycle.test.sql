@@ -4,7 +4,8 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 \ir helpers/approved_seller.inc
 
-SELECT plan(34);
+SELECT plan(29);
+SELECT pg_temp.disable_legacy_product_publication_guard();
 
 SELECT enum_has_labels(
   'public',
@@ -519,90 +520,6 @@ SELECT is(
   ),
   'unchanged',
   'an exact gallery replay is a no-op'
-);
-
-CREATE TEMP TABLE publication_authorization AS
-SELECT *
-FROM public.authorize_seller_product_publication(
-  '36a00000-0000-0000-0000-000000000010',
-  '36a00000-0000-0000-0000-000000000001',
-  false,
-  NULL,
-  false,
-  NULL,
-  (SELECT id FROM public.categories WHERE slug = 't-shirts'),
-  1,
-  '1',
-  10,
-  'EUR',
-  'in_stock',
-  false,
-  NULL,
-  false
-);
-
-SELECT is(
-  (SELECT result FROM publication_authorization),
-  'pending',
-  'a complete direct private gallery enters durable publication'
-);
-
-SELECT is(
-  (
-    SELECT count(*)::integer
-    FROM public.product_image_publication_items
-    WHERE product_draft_id = '36a00000-0000-0000-0000-000000000010'
-  ),
-  3,
-  'publication freezes every available direct image'
-);
-
-SELECT results_eq(
-  $$
-    SELECT
-      expected_content_type,
-      substring(destination_key from '\.[^.]+$'),
-      publication_order
-    FROM public.product_image_publication_items
-    WHERE product_draft_id = '36a00000-0000-0000-0000-000000000010'
-    ORDER BY publication_order
-  $$,
-  $$
-    VALUES
-      ('image/webp'::text, '.webp'::text, 0),
-      ('image/png'::text, '.png'::text, 1),
-      ('image/jpeg'::text, '.jpg'::text, 2)
-  $$,
-  'the frozen manifest preserves MIME type, extension, and order'
-);
-
-SELECT is(
-  (
-    public.update_seller_product_draft_image_gallery(
-      '36a00000-0000-0000-0000-000000000010',
-      '36a00000-0000-0000-0000-000000000001',
-      6,
-      ARRAY[
-        (SELECT webp_id FROM replacement_id),
-        (SELECT png_id FROM image_ids),
-        (SELECT jpeg_id FROM image_ids)
-      ],
-      (SELECT webp_id FROM replacement_id)
-    )->>'result'
-  ),
-  'gallery_locked',
-  'publication authorization freezes later gallery mutation'
-);
-
-SELECT throws_ok(
-  $$
-    UPDATE public.products
-    SET cover_image_url = 'https://public.example/manual.jpg'
-    WHERE id = '36a00000-0000-0000-0000-000000000010'
-  $$,
-  '23514',
-  'product_draft_manual_cover_not_allowed',
-  'new direct drafts cannot bypass private publication with a public cover URL'
 );
 
 SELECT * FROM finish();

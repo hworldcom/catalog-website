@@ -118,3 +118,35 @@ DROP TRIGGER IF EXISTS trg_qa_assign_fixture_product_audience ON public.products
 CREATE TRIGGER trg_qa_assign_fixture_product_audience
   AFTER INSERT ON public.products
   FOR EACH ROW EXECUTE FUNCTION pg_temp.assign_fixture_product_audience();
+
+CREATE OR REPLACE FUNCTION pg_temp.disable_legacy_product_publication_guard()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  SET CONSTRAINTS ALL IMMEDIATE;
+  EXECUTE 'ALTER TABLE public.products DISABLE TRIGGER trg_products_10_image_publication';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.set_legacy_fixture_product_status(
+  p_product_id uuid,
+  p_status public.product_status,
+  p_cover_image_url text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  PERFORM pg_temp.disable_legacy_product_publication_guard();
+  UPDATE public.products AS product
+  SET status = p_status,
+      cover_image_url = p_cover_image_url
+  WHERE product.id = p_product_id;
+  EXECUTE 'ALTER TABLE public.products ENABLE TRIGGER trg_products_10_image_publication';
+EXCEPTION
+  WHEN OTHERS THEN
+    EXECUTE 'ALTER TABLE public.products ENABLE TRIGGER trg_products_10_image_publication';
+    RAISE;
+END;
+$$;

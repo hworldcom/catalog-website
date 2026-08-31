@@ -5,6 +5,7 @@ SET LOCAL search_path = public, extensions;
 \ir helpers/approved_seller.inc
 
 SELECT plan(29);
+SELECT pg_temp.disable_legacy_product_publication_guard();
 
 SELECT has_table(
   'public',

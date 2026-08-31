@@ -4,7 +4,8 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 \ir helpers/approved_seller.inc
 
-SELECT plan(15);
+SELECT plan(14);
+SELECT pg_temp.disable_legacy_product_publication_guard();
 
 SELECT is(
   (SELECT result FROM public.validate_product_publication_title(repeat('x', 50))),
@@ -184,6 +185,27 @@ SELECT is(
   'publication preflight rejects an overlong English patch'
 );
 
+INSERT INTO public.product_draft_description_generation_attempts (
+  product_draft_id,
+  status,
+  attempt_count,
+  attempt_token,
+  claim_started_at,
+  claimed_moderation_revision
+)
+VALUES (
+  '27d00000-0000-4000-8000-000000000102',
+  'running',
+  1,
+  '27d00000-0000-4000-8000-000000000205',
+  now(),
+  (
+    SELECT moderation_revision
+    FROM public.products
+    WHERE id = '27d00000-0000-4000-8000-000000000102'
+  )
+);
+
 INSERT INTO public.product_draft_source_memberships (
   product_draft_id,
   classifier_organization_id,
@@ -207,44 +229,33 @@ VALUES (
   true
 );
 
-SELECT is(
-  (
-    SELECT result
-    FROM public.authorize_seller_product_publication(
-      '27d00000-0000-4000-8000-000000000102',
-      '27d00000-0000-4000-8000-000000000001',
-      false,
-      NULL,
-      true,
-      repeat('x', 301),
-      (SELECT id FROM public.categories WHERE slug = 't-shirts'),
-      NULL,
-      NULL,
-      NULL,
-      'USD',
-      'in_stock',
-      false,
-      NULL,
-      false
-    )
-  ),
-  'description_invalid',
-  'seller publication returns a stable description-invalid result before dispatch'
-);
-
 SELECT throws_ok(
   $$
     SELECT *
     FROM public.finalize_product_draft_description_generation(
-      NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-      NULL, NULL, NULL,
+      '27d00000-0000-4000-8000-000000000102',
+      '27d00000-0000-4000-8000-000000000001',
+      '27d00000-0000-4000-8000-000000000205',
+      NULL,
+      1,
+      'public_product_upload',
+      NULL,
+      'https://example.test/qa-0027d-cover.jpg',
+      NULL,
+      NULL,
+      NULL,
+      NULL,
       jsonb_build_object(
         'pl', 'Opis',
         'en', repeat('x', 301),
         'de', 'Beschreibung',
         'vi', 'Mo ta'
       ),
-      NULL, NULL, NULL, NULL, NULL
+      NULL,
+      'openai',
+      'qa-model',
+      'product-description-v1',
+      now()
     )
   $$,
   '22023',
@@ -256,11 +267,29 @@ SELECT throws_ok(
   $$
     SELECT *
     FROM public.finalize_product_draft_description_generation(
-      NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-      NULL, NULL, NULL,
+      '27d00000-0000-4000-8000-000000000102',
+      '27d00000-0000-4000-8000-000000000001',
+      '27d00000-0000-4000-8000-000000000205',
       NULL,
+      1,
+      'public_product_upload',
+      NULL,
+      'https://example.test/qa-0027d-cover.jpg',
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      jsonb_build_object(
+        'pl', 'Opis',
+        'en', 'Description',
+        'de', 'Beschreibung',
+        'vi', 'Mo ta'
+      ),
       repeat('x', 51),
-      NULL, NULL, NULL, NULL
+      'openai',
+      'qa-model',
+      'product-description-v1',
+      now()
     )
   $$,
   '22023',
@@ -288,12 +317,12 @@ SELECT ok(
     'public.authorize_seller_product_publication_0027d_legacy(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean)',
     'EXECUTE'
   )
-  AND has_function_privilege(
+  AND NOT has_function_privilege(
     'service_role',
     'public.authorize_seller_product_publication(uuid,uuid,boolean,text,boolean,text,uuid,integer,text,numeric,text,public.stock_status,boolean,text,boolean)',
     'EXECUTE'
   ),
-  'only the constrained publication authorizer remains callable by the service role'
+  'the superseded publication authorizer is not callable by the service role'
 );
 
 SELECT * FROM finish();

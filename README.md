@@ -14,13 +14,14 @@ The canonical browser and backend quality-assurance flow is documented in
 
 - Node.js 22.13.0 or newer, as recorded in `.nvmrc`.
 - npm 10.9.2 or newer.
-- Access to the hosted Bazoria User Acceptance Testing (UAT) Supabase project.
+- Docker Desktop or another Docker-compatible runtime for local database work.
+- Access to the isolated Bazoria User Acceptance Testing (UAT) Supabase project
+  only when running an explicit hosted preflight or migration.
 - A separately running local classifier API only when testing the optional
   classifier-assisted workflow locally.
 
-The hosted Supabase project with reference `jhkouuxouplqcfecjutd` is UAT. It
-contains no production data. Production must use a separate Supabase project
-and separate credentials.
+UAT and production use separate Supabase projects and credentials. Neither
+hosted project is linked persistently in this repository.
 
 ## Install
 
@@ -202,56 +203,99 @@ the image. The web role exposes database-free `GET /healthz`, build identity at
 `GET /api/runtime-config`. Run `npm run qa:container-runtime` for the local
 container health and configuration smoke test.
 
-## UAT Database Migrations
+## Database Tooling
 
-Applying migrations to hosted UAT is a controlled engineering operation, not a
-normal application startup step. An authorized engineer may link the command
-line interface and apply committed migrations:
+The repository pins Supabase command-line interface version `2.116.0` in the
+package lockfile. Run it only through the npm commands below; do not use a global
+installation, `supabase@latest`, or persistent project-link state.
+
+Start the local Supabase stack, reset it through the complete migration history,
+and run all database contracts with:
 
 ```bash
 cd /Users/hoangdeveloper/catalog-website
-npx -y supabase@latest link --project-ref jhkouuxouplqcfecjutd
-npx -y supabase@latest db push --linked
+npm run supabase:start
+npm run db:local:reset
+npm run db:local:test
 ```
 
-Review the migration plan before confirming it. Never run `supabase db reset`
-against hosted UAT. Automated tests must use mocks or isolated test state and
-must not read or mutate UAT.
+The complete deployment-foundation check starts the local stack when needed,
+resets without seed data, runs every Structured Query Language (SQL) contract,
+reruns the deployment-foundation contract explicitly, and checks generated
+TypeScript database types:
+
+```bash
+npm run db:local:verify
+```
+
+Generate database types only from the clean local schema. The check command
+uses a temporary file and never modifies the worktree:
+
+```bash
+npm run db:types:generate
+npm run db:types:check
+```
+
+Docker must be running for every local database command. An unavailable runtime
+fails with `supabase_local_runtime_unavailable` rather than falling through to a
+hosted target.
+
+### Hosted Environment Preflight
+
+Copy the non-secret templates into ignored root files and enter the matching
+project reference, application URL, and percent-encoded database connection:
+
+```bash
+cp supabase/environments/uat.env.example .env.supabase.uat.local
+cp supabase/environments/production.env.example .env.supabase.production.local
+```
+
+Run a read-only preflight for exactly one named environment:
+
+```bash
+npm run db:environment:preflight -- --environment uat
+npm run db:environment:preflight -- --environment production
+```
+
+The command validates the target before connecting, prints no credentials, and
+reports `uninitialized`, `behind`, `current`, `unknown_history`, or
+`schema_drift`. It compares migration history through the explicit database
+URL, performs a database-push dry run, and checks generated types and the
+deployment foundation when versions are current.
+
+`unknown_history` means the hosted history is not a prefix of the repository
+history. `schema_drift` means versions match but types, extensions, storage, or
+row-level security do not. Investigate either state; do not repair it with a
+forced push or history rewrite.
+
+### Hosted Environment Migration
+
+After reviewing a valid preflight, apply the displayed migration range only
+with the exact selected project reference:
+
+```bash
+npm run db:environment:migrate -- \
+  --environment uat \
+  --confirm-project <uat-project-reference>
+
+npm run db:environment:migrate -- \
+  --environment production \
+  --confirm-project <production-project-reference>
+```
+
+The write command repeats preflight, uses `supabase db push --db-url`, and
+verifies the target is `current` afterward. A current target is a successful
+no-op. These commands never run `db reset` against a hosted database and cannot
+be redirected by stale local link state. Applying hosted migrations remains a
+manually approved release operation; ordinary tests mock all hosted command
+boundaries.
 
 ## UAT Marketplace Fixtures
 
-Ticket `0039c1` provides a destructive, server-only command for replacing the
-disposable hosted UAT seller catalog with four QA sellers and sixteen published
-products. It is not an application startup seed and must never target
-production.
-
-The generated JPEG source pack is kept locally under the ignored
-`.uat-fixtures/0039c1` directory. Before running the command, configure the
-normal hosted UAT Supabase server variables and these additional variables in
-`.env`:
-
-```text
-BAZORIA_ALLOW_UAT_FIXTURE_RESET=true
-BAZORIA_UAT_DATABASE_URL=postgresql://postgres.jhkouuxouplqcfecjutd:<password>@<pooler-host>:6543/postgres
-BAZORIA_UAT_FIXTURE_ASSET_DIR=.uat-fixtures/0039c1
-```
-
-Obtain the database connection string from the hosted UAT project's Supabase
-**Connect** panel. The command validates both the Supabase application URL and
-database connection string against project reference
-`jhkouuxouplqcfecjutd` before reading assets or mutating data.
-
-Run the complete seed twice, then verify it:
-
-```bash
-npm run seed:uat-marketplace-fixtures
-npm run seed:uat-marketplace-fixtures
-npm run verify:uat-marketplace-fixtures
-```
-
-The second seed must retain the first run's product codes. Use
-`npm run reset:uat-marketplace-fixtures` only when an empty seller catalog is
-intentionally required; `seed` already resets a non-fixture seller catalog.
+The earlier fixture command targets a retired disposable project and must not be
+used with either isolated environment. Ticket `0038d` will replace it with a
+moderation-compatible, explicitly guarded UAT fixture workflow after the new
+database and storage foundation is bootstrapped.
 
 ## Validation
 
@@ -264,8 +308,8 @@ npm run lint:node22
 npm run build:node22
 ```
 
-The database contract tests under `supabase/tests` are run only against an
-explicit isolated test database. They must not target hosted UAT.
+The database contract tests under `supabase/tests` run only against local
+Supabase. They must not target hosted UAT or production.
 
 ## Security Boundaries
 

@@ -125,11 +125,11 @@ VALUES (
   'https://example.test/qa-0026e1-published.jpg'
 );
 
-UPDATE public.products
-SET
-  status = 'published',
-  cover_image_url = 'https://example.test/qa-0026e1-published.jpg'
-WHERE id = '26000000-0000-0000-0000-000000000102';
+SELECT pg_temp.set_legacy_fixture_product_status(
+  '26000000-0000-0000-0000-000000000102',
+  'published',
+  'https://example.test/qa-0026e1-published.jpg'
+);
 
 SELECT is(
   (
@@ -222,12 +222,11 @@ VALUES (
   'https://example.test/qa-0026e1-reviewed.jpg'
 );
 
-UPDATE public.products
-SET
-  status = 'published',
-  category_id = (SELECT id FROM public.categories WHERE slug = 't-shirts'),
-  cover_image_url = 'https://example.test/qa-0026e1-reviewed.jpg'
-WHERE id = '26000000-0000-0000-0000-000000000104';
+SELECT pg_temp.set_legacy_fixture_product_status(
+  '26000000-0000-0000-0000-000000000104',
+  'published',
+  'https://example.test/qa-0026e1-reviewed.jpg'
+);
 
 UPDATE public.products
 SET status = 'draft'
@@ -288,7 +287,7 @@ SELECT throws_ok(
     WHERE id = '26000000-0000-0000-0000-000000000105'
   $$,
   '23514',
-  'product_archive_immutable',
+  'product_publication_not_allowed',
   'archived products cannot be restored to repair a missing facts row'
 );
 

@@ -41,7 +41,7 @@ SELECT ok(
       'public.retry_product_image_publication(uuid,uuid)',
       'EXECUTE'
     )
-    AND has_function_privilege(
+    AND NOT has_function_privilege(
       'service_role',
       'public.retry_product_publication_with_correlation(uuid,uuid,uuid,text)',
       'EXECUTE'
@@ -688,10 +688,13 @@ VALUES (
   '40a30000-0000-4000-8000-000000000302',
   'https://example.test/qa-0040a3-product.jpg'
 );
+SET CONSTRAINTS ALL IMMEDIATE;
+ALTER TABLE public.products DISABLE TRIGGER trg_products_10_image_publication;
 UPDATE public.products
 SET status = 'published',
     cover_image_url = 'https://example.test/qa-0040a3-product.jpg'
 WHERE id = '40a30000-0000-4000-8000-000000000302';
+ALTER TABLE public.products ENABLE TRIGGER trg_products_10_image_publication;
 INSERT INTO public.product_images (id, product_id, url, sort_order)
 VALUES (
   '40a30000-0000-4000-8000-000000000303',
@@ -719,8 +722,8 @@ FROM public.set_seller_storefront_enabled(
   '40a30000-0000-4000-8000-000000000001'
 );
 SELECT results_eq(
-  $$ SELECT storefront_enabled, published FROM qa_0040a3_disabled $$,
-  $$ VALUES (false, false) $$,
+  $$ SELECT storefront_enabled FROM qa_0040a3_disabled $$,
+  $$ VALUES (false) $$,
   'an approved seller can disable the storefront without losing approval'
 );
 

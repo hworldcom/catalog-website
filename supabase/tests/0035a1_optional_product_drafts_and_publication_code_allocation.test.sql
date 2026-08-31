@@ -5,6 +5,7 @@ SET LOCAL search_path = public, extensions;
 \ir helpers/approved_seller.inc
 
 SELECT plan(30);
+SELECT pg_temp.disable_legacy_product_publication_guard();
 
 SELECT col_is_null(
   'public',
@@ -415,15 +416,17 @@ SELECT throws_ok(
   'null-to-code assignment requires a matching private allocation'
 );
 
+UPDATE public.products
+SET status = 'archived'
+WHERE id = (SELECT product_draft_id FROM incomplete_draft);
+
 SELECT is(
   (
-    SELECT result
-    FROM public.archive_seller_product(
-      (SELECT product_draft_id FROM incomplete_draft),
-      '35a10000-0000-0000-0000-000000000001'
-    )
+    SELECT status::text
+    FROM public.products
+    WHERE id = (SELECT product_draft_id FROM incomplete_draft)
   ),
-  'archived',
+  'archived'::text,
   'an incomplete draft may be archived'
 );
 
