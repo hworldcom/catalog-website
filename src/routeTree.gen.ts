@@ -9,13 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VersionRouteImport } from './routes/version'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as HealthzRouteImport } from './routes/healthz'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SSellerSlugRouteImport } from './routes/s.$sellerSlug'
 import { Route as PProductIdRouteImport } from './routes/p.$productId'
 import { Route as CCategoryRouteImport } from './routes/c.$category'
+import { Route as ApiRuntimeConfigRouteImport } from './routes/api.runtime-config'
 import { Route as AuthenticatedSellerRouteImport } from './routes/_authenticated/seller'
 import { Route as AuthenticatedSellerIndexRouteImport } from './routes/_authenticated/seller.index'
 import { Route as V1SellerProfileAssetsAssetIdRouteImport } from './routes/v1.seller-profile-assets.$assetId'
@@ -50,9 +53,19 @@ import { Route as AuthenticatedAdminClassifierUploadsWorkflowIdProductsProductDr
 import { Route as V1SellerClassifierBatchesWorkflowIdImagesImageIdThumbnailRouteImport } from './routes/v1.seller.classifier-batches.$workflowId.images.$imageId.thumbnail'
 import { Route as V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRouteImport } from './routes/v1.admin.classifier-uploads.$workflowId.images.$imageId.thumbnail'
 
+const VersionRoute = VersionRouteImport.update({
+  id: '/version',
+  path: '/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JoinRoute = JoinRouteImport.update({
   id: '/join',
   path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthzRoute = HealthzRouteImport.update({
+  id: '/healthz',
+  path: '/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -82,6 +95,11 @@ const PProductIdRoute = PProductIdRouteImport.update({
 const CCategoryRoute = CCategoryRouteImport.update({
   id: '/c/$category',
   path: '/c/$category',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRuntimeConfigRoute = ApiRuntimeConfigRouteImport.update({
+  id: '/api/runtime-config',
+  path: '/api/runtime-config',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedSellerRoute = AuthenticatedSellerRouteImport.update({
@@ -287,8 +305,11 @@ const V1AdminClassifierUploadsWorkflowIdImagesImageIdThumbnailRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/healthz': typeof HealthzRoute
   '/join': typeof JoinRoute
+  '/version': typeof VersionRoute
   '/seller': typeof AuthenticatedSellerRouteWithChildren
+  '/api/runtime-config': typeof ApiRuntimeConfigRoute
   '/c/$category': typeof CCategoryRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
@@ -328,7 +349,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/healthz': typeof HealthzRoute
   '/join': typeof JoinRoute
+  '/version': typeof VersionRoute
+  '/api/runtime-config': typeof ApiRuntimeConfigRoute
   '/c/$category': typeof CCategoryRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
@@ -370,8 +394,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/healthz': typeof HealthzRoute
   '/join': typeof JoinRoute
+  '/version': typeof VersionRoute
   '/_authenticated/seller': typeof AuthenticatedSellerRouteWithChildren
+  '/api/runtime-config': typeof ApiRuntimeConfigRoute
   '/c/$category': typeof CCategoryRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
@@ -413,8 +440,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/healthz'
     | '/join'
+    | '/version'
     | '/seller'
+    | '/api/runtime-config'
     | '/c/$category'
     | '/p/$productId'
     | '/s/$sellerSlug'
@@ -454,7 +484,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/healthz'
     | '/join'
+    | '/version'
+    | '/api/runtime-config'
     | '/c/$category'
     | '/p/$productId'
     | '/s/$sellerSlug'
@@ -495,8 +528,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/healthz'
     | '/join'
+    | '/version'
     | '/_authenticated/seller'
+    | '/api/runtime-config'
     | '/c/$category'
     | '/p/$productId'
     | '/s/$sellerSlug'
@@ -538,7 +574,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  HealthzRoute: typeof HealthzRoute
   JoinRoute: typeof JoinRoute
+  VersionRoute: typeof VersionRoute
+  ApiRuntimeConfigRoute: typeof ApiRuntimeConfigRoute
   CCategoryRoute: typeof CCategoryRoute
   PProductIdRoute: typeof PProductIdRoute
   SSellerSlugRoute: typeof SSellerSlugRoute
@@ -551,11 +590,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/version': {
+      id: '/version'
+      path: '/version'
+      fullPath: '/version'
+      preLoaderRoute: typeof VersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/join': {
       id: '/join'
       path: '/join'
       fullPath: '/join'
       preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/healthz': {
+      id: '/healthz'
+      path: '/healthz'
+      fullPath: '/healthz'
+      preLoaderRoute: typeof HealthzRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -598,6 +651,13 @@ declare module '@tanstack/react-router' {
       path: '/c/$category'
       fullPath: '/c/$category'
       preLoaderRoute: typeof CCategoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/runtime-config': {
+      id: '/api/runtime-config'
+      path: '/api/runtime-config'
+      fullPath: '/api/runtime-config'
+      preLoaderRoute: typeof ApiRuntimeConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/seller': {
@@ -955,7 +1015,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  HealthzRoute: HealthzRoute,
   JoinRoute: JoinRoute,
+  VersionRoute: VersionRoute,
+  ApiRuntimeConfigRoute: ApiRuntimeConfigRoute,
   CCategoryRoute: CCategoryRoute,
   PProductIdRoute: PProductIdRoute,
   SSellerSlugRoute: SSellerSlugRoute,

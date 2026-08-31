@@ -11,6 +11,17 @@ type ServerEntry = {
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 const productActivationStartupPromise = startProductActivationRuntime();
 
+let acceptingRequests = true;
+let activeRequests = 0;
+let shutdownTimer: ReturnType<typeof setTimeout> | undefined;
+
+process.once("SIGTERM", () => {
+  acceptingRequests = false;
+  shutdownTimer = setTimeout(() => process.exit(0), 9_000);
+  shutdownTimer.unref();
+  exitWhenDrained();
+});
+
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     serverEntryPromise = import("@tanstack/react-start/server-entry").then(
@@ -48,6 +59,8 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    if (!acceptingRequests) return new Response(null, { status: 503 });
+    activeRequests += 1;
     try {
       await productActivationStartupPromise;
       const handler = await getServerEntry();
@@ -59,6 +72,15 @@ export default {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },
       });
+    } finally {
+      activeRequests -= 1;
+      exitWhenDrained();
     }
   },
 };
+
+function exitWhenDrained(): void {
+  if (acceptingRequests || activeRequests > 0) return;
+  if (shutdownTimer) clearTimeout(shutdownTimer);
+  process.exit(0);
+}

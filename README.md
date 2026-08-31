@@ -50,9 +50,11 @@ cp .env.example .env
 Obtain the UAT publishable key, service-role key, seller identifiers, and
 administrator user identifiers through the project owner. Do not commit them.
 
-Browser-safe values use `VITE_` names. The service-role key is server-only and
-must never use a `VITE_` prefix, appear in browser code, or be printed in logs.
-The local `.env` file is ignored by Git.
+The server reads the browser-safe Supabase URL and publishable key at runtime
+and exposes only those values through `GET /api/runtime-config`. Browser code
+does not use build-time `VITE_SUPABASE_*` values. The service-role key is
+server-only and must never appear in browser code, the runtime public response,
+or logs. The local `.env` file is ignored by Git.
 
 The required classifier organization for the prototype is
 `00000000-0000-0000-0000-000000000001`. Seller ownership remains in Bazoria's
@@ -69,6 +71,9 @@ cd /Users/hoangdeveloper/catalog-website
 nvm use
 npm run dev
 ```
+
+Without an active Node.js version manager, use `npm run dev:node22`. Deployment
+packaging does not change either local development path.
 
 Open `http://localhost:8080`. Sign in at `http://localhost:8080/auth`.
 
@@ -117,9 +122,9 @@ private, standalone worker service. It starts independently from Bazoria Web
 and exposes only `GET /health` and the authenticated internal Cloud Tasks
 endpoint:
 
-```bash
-npm run worker:product-activation
-```
+The compiled production command is `npm run start:product-activation-worker`.
+Local engineering checks may continue to use
+`npm run worker:product-activation`.
 
 The worker uses the publication image-count, concurrency, item-timeout,
 worker-deadline, and claim-timeout settings plus the server-side Supabase
@@ -135,9 +140,9 @@ User Acceptance Testing and production run one bounded server-only pass to
 recover activation runs committed before their deterministic Cloud Task was
 confirmed:
 
-```bash
-npm run reconcile:product-activation-dispatches
-```
+The compiled production command is
+`npm run start:product-activation-reconciliation`. Local engineering checks may
+continue to use `npm run reconcile:product-activation-dispatches`.
 
 The command requires cloud dispatch mode, the same Cloud Tasks and server-side
 Supabase configuration as the website dispatcher, and the reconciliation batch
@@ -145,6 +150,34 @@ size and deadline settings from `.env.example`. It dispatches sequentially,
 never executes activation work itself, and exits nonzero if selected work
 remains pending or a dispatch failed. It is intended for the scheduled Cloud
 Run Job owned by deployment ticket `0038`; browser reads never run it.
+
+## Production Runtime Artifact
+
+`npm run build` creates the Nitro Node server and three compiled role entry
+points under `.output`:
+
+```text
+npm run start:web
+npm run start:product-activation-worker
+npm run start:product-activation-reconciliation
+```
+
+The checked-in multi-stage `Dockerfile` packages those entries into one
+non-root Node.js 22.13.1 image. Build the tested architecture explicitly:
+
+```bash
+docker build \
+  --platform linux/amd64 \
+  --build-arg BAZORIA_RELEASE_COMMIT="$(git rev-parse HEAD)" \
+  --build-arg BAZORIA_BUILD_ID=local \
+  --tag bazoria-web:local .
+```
+
+Cloud Run selects a role by overriding the image command; it does not rebuild
+the image. The web role exposes database-free `GET /healthz`, build identity at
+`GET /version`, and runtime browser configuration at
+`GET /api/runtime-config`. Run `npm run qa:container-runtime` for the local
+container health and configuration smoke test.
 
 ## UAT Database Migrations
 

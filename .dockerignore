@@ -1,0 +1,22 @@
+**
+!.npmrc
+!package.json
+!package-lock.json
+!tsconfig.json
+!vite.config.ts
+!public/**
+!scripts/**
+!src/**
+
+# Keep workstation and generated state out even if the allowlist expands later.
+.env
+.env.*
+.git
+.github
+.tanstack
+.uat-fixtures
+.vercel
+coverage
+node_modules
+supabase/.temp
+tickets

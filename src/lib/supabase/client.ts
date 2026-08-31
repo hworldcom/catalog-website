@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getInitializedRuntimePublicConfig } from "@/lib/runtime-public-config";
 import type { Database } from "./types";
 
 function isNewSupabaseApiKey(value: string): boolean {
@@ -29,11 +30,10 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY =
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+  const runtimeConfig =
+    typeof window === "undefined" ? readServerConfig() : getInitializedRuntimePublicConfig();
+  const SUPABASE_URL = runtimeConfig.supabaseUrl;
+  const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
@@ -55,6 +55,21 @@ function createSupabaseClient() {
       autoRefreshToken: true,
     },
   });
+}
+
+function readServerConfig(): { supabaseUrl: string; supabasePublishableKey: string } {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !supabasePublishableKey) {
+    const missing = [
+      ...(!supabaseUrl ? ["SUPABASE_URL"] : []),
+      ...(!supabasePublishableKey ? ["SUPABASE_PUBLISHABLE_KEY"] : []),
+    ];
+    const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Set them in your local or deployment environment.`;
+    console.error(`[Supabase] ${message}`);
+    throw new Error(message);
+  }
+  return { supabaseUrl, supabasePublishableKey };
 }
 
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;

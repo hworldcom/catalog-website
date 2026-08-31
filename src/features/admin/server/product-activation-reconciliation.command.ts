@@ -2,6 +2,10 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  readRuntimeIdentity,
+  writeRuntimeStartupLog,
+} from "@/features/runtime/server/runtime-identity";
+import {
   CloudTasksProductActivationDispatcher,
   GoogleCloudProductActivationTaskClient,
 } from "./product-activation.cloud-tasks";
@@ -28,6 +32,7 @@ export async function runProductActivationReconciliationCommand(): Promise<numbe
     });
     return 1;
   }
+  writeRuntimeStartupLog(readRuntimeIdentity("product-activation-reconciliation"));
 
   try {
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");

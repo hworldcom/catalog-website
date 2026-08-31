@@ -56,7 +56,17 @@ export default defineConfig(({ command }) => ({
         entry: "server",
       },
     }),
-    ...(command === "build" ? nitro({ preset: "vercel" }) : []),
+    ...(command === "build"
+      ? nitro({
+          preset: "node-server",
+          rolldownConfig: {
+            // The Google client is CommonJS and relies on __dirname. Keep it in
+            // its native package form for the Node runtime instead of rewriting
+            // it into a Nitro ECMAScript module chunk.
+            external: [/^@google-cloud\/tasks(?:\/.*)?$/],
+          },
+        })
+      : []),
     react(),
     serverFunctionWarmup(),
   ],

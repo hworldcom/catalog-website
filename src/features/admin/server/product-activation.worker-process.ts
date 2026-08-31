@@ -3,6 +3,10 @@ import type { Socket } from "node:net";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  readRuntimeIdentity,
+  writeRuntimeStartupLog,
+} from "@/features/runtime/server/runtime-identity";
 import { GoogleTaskIdentityVerifier } from "./product-activation.task-identity";
 import {
   readProductActivationWorkerConfig,
@@ -163,6 +167,7 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  writeRuntimeStartupLog(readRuntimeIdentity("product-activation-worker"));
 
   let signalCount = 0;
   const handleSignal = () => {
