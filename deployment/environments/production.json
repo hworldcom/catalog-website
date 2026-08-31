@@ -52,14 +52,14 @@
     ]
   },
   "ownership": {
-    "administratorAllowlist": [],
+    "administratorAllowlist": ["a0ab3ce3-46eb-4ed8-a979-147c10655bca"],
     "externalProviderConfiguration": {
       "googleEnabled": false
     }
   },
   "bootstrap": {
-    "gitCommit": null,
-    "migrationHead": null,
-    "verifiedAt": null
+    "gitCommit": "2d3c16b5d54e6ba1025093626d9324f4aa540c5c",
+    "migrationHead": "20260831120000",
+    "verifiedAt": "2026-08-31T22:11:11Z"
   }
 }
