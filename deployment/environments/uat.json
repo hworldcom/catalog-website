@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "environment": "uat",
   "supabase": {
     "projectRef": "mekobnkujzpzeiwmecyy",
@@ -19,15 +19,19 @@
     }
   },
   "application": {
-    "canonicalOrigin": "https://uat2026.bazoria.pl"
+    "canonicalOrigin": "https://uat2026.bazoria.pl",
+    "googleSignInEnabled": false
   },
   "authentication": {
     "siteUrl": "https://uat2026.bazoria.pl",
-    "redirectUrls": [
-      "https://uat2026.bazoria.pl/auth",
-      "https://uat2026.bazoria.pl/auth/recovery"
-    ],
-    "googleCallbackUrl": "https://mekobnkujzpzeiwmecyy.supabase.co/auth/v1/callback"
+    "redirectUrls": ["https://uat2026.bazoria.pl/auth", "https://uat2026.bazoria.pl/auth/recovery"],
+    "googleCallbackUrl": "https://mekobnkujzpzeiwmecyy.supabase.co/auth/v1/callback",
+    "passwordPolicy": {
+      "minimumLength": 8,
+      "requiredCharacters": "none",
+      "verifiedBy": null,
+      "verifiedAt": null
+    }
   },
   "storage": {
     "requiredBuckets": [

@@ -2,11 +2,17 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { PublicShell } from "@/components/layout/public-shell";
+import { getInitializedRuntimePublicConfig } from "@/lib/runtime-public-config";
 import { supabase } from "@/lib/supabase/client";
 import { t, tr } from "@/lib/i18n";
 import { toast } from "sonner";
 
 import { buildAuthCallbackUrl, safeAuthRedirect } from "../auth-redirect";
+import { normalizeAuthenticationError } from "../authentication-error";
+import {
+  type NewCredentialPasswordError,
+  validateNewCredentialPassword,
+} from "../new-credential-password";
 
 const A = {
   signIn: t("Sign in", "Zaloguj się", "Anmelden", "Đăng nhập"),
@@ -37,6 +43,30 @@ const A = {
   or: t("or", "lub", "oder", "hoặc"),
   email: t("Email", "E-mail", "E-Mail", "Email"),
   password: t("Password", "Hasło", "Passwort", "Mật khẩu"),
+  passwordConfirmation: t(
+    "Confirm password",
+    "Potwierdź hasło",
+    "Passwort bestätigen",
+    "Xác nhận mật khẩu",
+  ),
+  passwordTooShort: t(
+    "Enter at least 8 characters.",
+    "Wpisz co najmniej 8 znaków.",
+    "Geben Sie mindestens 8 Zeichen ein.",
+    "Nhập ít nhất 8 ký tự.",
+  ),
+  passwordTooLong: t(
+    "Enter at most 128 characters.",
+    "Wpisz maksymalnie 128 znaków.",
+    "Geben Sie höchstens 128 Zeichen ein.",
+    "Nhập tối đa 128 ký tự.",
+  ),
+  passwordConfirmationMismatch: t(
+    "Passwords do not match.",
+    "Hasła nie są zgodne.",
+    "Die Passwörter stimmen nicht überein.",
+    "Mật khẩu không khớp.",
+  ),
   submitIn: t("Sign in", "Zaloguj się", "Anmelden", "Đăng nhập"),
   submitUp: t("Create account", "Utwórz konto", "Konto erstellen", "Tạo tài khoản"),
   newHere: t("New to Bazoria?", "Nowy w Bazoria?", "Neu bei Bazoria?", "Mới đến Bazoria?"),
@@ -59,25 +89,16 @@ const A = {
     "Konto erstellt. Prüfen Sie ggf. Ihre E-Mail zur Bestätigung.",
     "Đã tạo tài khoản. Kiểm tra email nếu cần xác nhận.",
   ),
-  toastGeneric: t(
-    "Something went wrong",
-    "Coś poszło nie tak",
-    "Etwas ist schiefgelaufen",
-    "Đã có lỗi xảy ra",
-  ),
-  toastGoogle: t(
-    "Google sign-in failed",
-    "Logowanie Google nie powiodło się",
-    "Google-Anmeldung fehlgeschlagen",
-    "Đăng nhập Google thất bại",
-  ),
 };
 
 export function AuthScreen({ redirect }: { redirect?: string }) {
+  const { canonicalSiteOrigin, googleSignInEnabled } = getInitializedRuntimePublicConfig();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [passwordError, setPasswordError] = useState<NewCredentialPasswordError | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -89,13 +110,26 @@ export function AuthScreen({ redirect }: { redirect?: string }) {
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
+    setPasswordError(null);
+    if (mode === "signup") {
+      const validation = validateNewCredentialPassword({
+        password,
+        confirmation: passwordConfirmation,
+      });
+      if (!validation.valid) {
+        setPasswordError(validation.error);
+        return;
+      }
+    }
     setBusy(true);
     try {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + "/seller" },
+          options: {
+            emailRedirectTo: buildAuthCallbackUrl({ canonicalSiteOrigin, redirect }),
+          },
         });
         if (error) throw error;
         toast.success(tr(A.toastCreated));
@@ -108,29 +142,41 @@ export function AuthScreen({ redirect }: { redirect?: string }) {
         navigate({ to: safeAuthRedirect(redirect), replace: true });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : tr(A.toastGeneric));
+      const normalized = normalizeAuthenticationError(
+        mode === "signup" ? "sign_up" : "sign_in",
+        err,
+      );
+      toast.error(tr(normalized.message));
     } finally {
       setBusy(false);
     }
   }
 
   async function handleGoogle() {
+    if (!googleSignInEnabled) return;
     setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: buildAuthCallbackUrl({
-            origin: window.location.origin,
+            canonicalSiteOrigin,
             redirect,
           }),
         },
       });
       if (error) throw error;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : tr(A.toastGoogle));
+      const normalized = normalizeAuthenticationError("google_sign_in", err);
+      toast.error(tr(normalized.message));
       setBusy(false);
     }
+  }
+
+  function changeMode(nextMode: "signin" | "signup") {
+    setMode(nextMode);
+    setPasswordConfirmation("");
+    setPasswordError(null);
   }
 
   return (
@@ -143,21 +189,12 @@ export function AuthScreen({ redirect }: { redirect?: string }) {
           {mode === "signin" ? tr(A.leadSignIn) : tr(A.leadSignUp)}
         </p>
 
-        <button
-          onClick={handleGoogle}
-          disabled={busy}
-          className="mt-6 flex w-full items-center justify-center gap-2 border border-border bg-card px-4 py-2.5 text-sm font-medium hover:border-primary disabled:opacity-60"
+        <GoogleSignInOption enabled={googleSignInEnabled} busy={busy} onClick={handleGoogle} />
+
+        <form
+          onSubmit={handleEmail}
+          className={`flex flex-col gap-3 ${googleSignInEnabled ? "" : "mt-6"}`}
         >
-          {tr(A.continueGoogle)}
-        </button>
-
-        <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-          <div className="h-px flex-1 bg-border" />
-          {tr(A.or)}
-          <div className="h-px flex-1 bg-border" />
-        </div>
-
-        <form onSubmit={handleEmail} className="flex flex-col gap-3">
           <label className="text-xs uppercase tracking-wide text-muted-foreground">
             {tr(A.email)}
           </label>
@@ -174,11 +211,35 @@ export function AuthScreen({ redirect }: { redirect?: string }) {
           <input
             type="password"
             required
-            minLength={6}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setPasswordError(null);
+            }}
             className="border border-border bg-background px-3 py-2 text-sm"
           />
+          {mode === "signup" ? (
+            <>
+              <label className="text-xs uppercase tracking-wide text-muted-foreground">
+                {tr(A.passwordConfirmation)}
+              </label>
+              <input
+                type="password"
+                required
+                value={passwordConfirmation}
+                onChange={(e) => {
+                  setPasswordConfirmation(e.target.value);
+                  setPasswordError(null);
+                }}
+                className="border border-border bg-background px-3 py-2 text-sm"
+              />
+              {passwordError ? (
+                <p role="alert" className="text-xs text-destructive">
+                  {tr(passwordErrorMessage(passwordError))}
+                </p>
+              ) : null}
+            </>
+          ) : null}
           <button
             type="submit"
             disabled={busy}
@@ -192,14 +253,14 @@ export function AuthScreen({ redirect }: { redirect?: string }) {
           {mode === "signin" ? (
             <>
               {tr(A.newHere)}{" "}
-              <button className="text-primary hover:underline" onClick={() => setMode("signup")}>
+              <button className="text-primary hover:underline" onClick={() => changeMode("signup")}>
                 {tr(A.createOne)}
               </button>
             </>
           ) : (
             <>
               {tr(A.haveOne)}{" "}
-              <button className="text-primary hover:underline" onClick={() => setMode("signin")}>
+              <button className="text-primary hover:underline" onClick={() => changeMode("signin")}>
                 {tr(A.submitIn)}
               </button>
             </>
@@ -214,4 +275,43 @@ export function AuthScreen({ redirect }: { redirect?: string }) {
       </div>
     </PublicShell>
   );
+}
+
+export function GoogleSignInOption({
+  enabled,
+  busy,
+  onClick,
+}: {
+  enabled: boolean;
+  busy: boolean;
+  onClick: () => void;
+}) {
+  if (!enabled) return null;
+  return (
+    <>
+      <button
+        onClick={onClick}
+        disabled={busy}
+        className="mt-6 flex w-full items-center justify-center gap-2 border border-border bg-card px-4 py-2.5 text-sm font-medium hover:border-primary disabled:opacity-60"
+      >
+        {tr(A.continueGoogle)}
+      </button>
+      <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="h-px flex-1 bg-border" />
+        {tr(A.or)}
+        <div className="h-px flex-1 bg-border" />
+      </div>
+    </>
+  );
+}
+
+function passwordErrorMessage(error: NewCredentialPasswordError) {
+  switch (error) {
+    case "password_too_short":
+      return A.passwordTooShort;
+    case "password_too_long":
+      return A.passwordTooLong;
+    case "password_confirmation_mismatch":
+      return A.passwordConfirmationMismatch;
+  }
 }

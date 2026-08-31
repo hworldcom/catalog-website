@@ -15,13 +15,13 @@ export function safeAuthRedirect(input: string | undefined): string {
 }
 
 export function buildAuthCallbackUrl({
-  origin,
+  canonicalSiteOrigin,
   redirect,
 }: {
-  origin: string;
+  canonicalSiteOrigin: string;
   redirect?: string;
 }): string {
-  const callbackUrl = new URL("/auth", origin);
+  const callbackUrl = new URL("/auth", canonicalSiteOrigin);
   callbackUrl.searchParams.set("redirect", safeAuthRedirect(redirect));
   return callbackUrl.toString();
 }

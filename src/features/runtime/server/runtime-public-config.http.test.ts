@@ -9,6 +9,8 @@ describe("runtime public configuration endpoint", () => {
       supabaseUrl: "https://project.supabase.co",
       supabasePublishableKey: "sb_publishable_browser-key",
       classifierAssistedUploadEnabled: false,
+      canonicalSiteOrigin: "https://uat.example",
+      googleSignInEnabled: false,
     });
 
     expect(response.status).toBe(200);
@@ -18,6 +20,8 @@ describe("runtime public configuration endpoint", () => {
       supabaseUrl: "https://project.supabase.co",
       supabasePublishableKey: "sb_publishable_browser-key",
       classifierAssistedUploadEnabled: false,
+      canonicalSiteOrigin: "https://uat.example",
+      googleSignInEnabled: false,
     });
   });
 });

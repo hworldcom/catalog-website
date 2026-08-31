@@ -43,6 +43,7 @@ function baseEnvironment(): Record<string, string | undefined> {
     BAZORIA_PRODUCT_PUBLICATION_CLAIM_TIMEOUT_SECONDS: "360",
     SUPABASE_URL: "https://project.supabase.co",
     SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+    BAZORIA_PUBLIC_SITE_URL: "https://uat.example",
   };
 }
 
@@ -51,6 +52,7 @@ function cloudEnvironment(): Record<string, string | undefined> {
     ...baseEnvironment(),
     SUPABASE_PUBLISHABLE_KEY: "sb_publishable_browser-key",
     BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "false",
+    BAZORIA_GOOGLE_SIGN_IN_ENABLED: "false",
     GOOGLE_CLOUD_PROJECT: "bazoria-uat",
     BAZORIA_PRODUCT_PUBLICATION_TASK_LOCATION: "europe-west3",
     BAZORIA_PRODUCT_PUBLICATION_TASK_QUEUE: "product-activation",

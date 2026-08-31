@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { resolvePublicSiteOrigin } from "./public-site-origin";
+
 const deploymentEnvironmentSchema = z.enum(["local", "uat", "production"]);
 const runtimePublicConfigSchema = z
   .object({
@@ -25,8 +27,28 @@ const runtimePublicConfigSchema = z
       .min(1)
       .refine((value) => !isSupabaseSecret(value), "must be a browser-safe Supabase key"),
     classifierAssistedUploadEnabled: z.boolean(),
+    canonicalSiteOrigin: z.string().trim().min(1),
+    googleSignInEnabled: z.boolean(),
   })
-  .strict();
+  .strict()
+  .transform((value, context) => {
+    try {
+      return {
+        ...value,
+        canonicalSiteOrigin: resolvePublicSiteOrigin({
+          BAZORIA_DEPLOYMENT_ENVIRONMENT: value.environment,
+          BAZORIA_PUBLIC_SITE_URL: value.canonicalSiteOrigin,
+        }),
+      };
+    } catch {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["canonicalSiteOrigin"],
+        message: "must be the canonical root origin for the deployment environment",
+      });
+      return z.NEVER;
+    }
+  });
 
 export type DeploymentEnvironment = z.infer<typeof deploymentEnvironmentSchema>;
 export type RuntimePublicConfig = z.infer<typeof runtimePublicConfigSchema>;

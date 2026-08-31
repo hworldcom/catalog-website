@@ -42,6 +42,8 @@ function environment(): Record<string, string | undefined> {
   return {
     BAZORIA_DEPLOYMENT_ENVIRONMENT: "uat",
     BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "false",
+    BAZORIA_GOOGLE_SIGN_IN_ENABLED: "false",
+    BAZORIA_PUBLIC_SITE_URL: "https://uat.example",
     SUPABASE_URL: "https://project.supabase.co",
     SUPABASE_PUBLISHABLE_KEY: "sb_publishable_browser-key",
     SUPABASE_SERVICE_ROLE_KEY: "service-role-key",

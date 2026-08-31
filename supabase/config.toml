@@ -1,2 +1,8 @@
 # Local development only. Hosted commands always use an explicit database URL.
 project_id = "bazoria-web-local"
+
+[auth]
+site_url = "http://localhost:8080"
+additional_redirect_urls = ["http://localhost:8080/auth", "http://localhost:8080/auth/recovery"]
+minimum_password_length = 8
+password_requirements = ""

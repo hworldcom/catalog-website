@@ -24,6 +24,7 @@ describe("runtime public configuration", () => {
         BAZORIA_DEPLOYMENT_ENVIRONMENT: "uat",
         SUPABASE_URL: "https://project.supabase.co/",
         SUPABASE_PUBLISHABLE_KEY: "sb_publishable_browser-key",
+        BAZORIA_PUBLIC_SITE_URL: "https://uat.example/",
         BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "false",
       }),
     ).toEqual({
@@ -31,6 +32,8 @@ describe("runtime public configuration", () => {
       supabaseUrl: "https://project.supabase.co",
       supabasePublishableKey: "sb_publishable_browser-key",
       classifierAssistedUploadEnabled: false,
+      canonicalSiteOrigin: "https://uat.example",
+      googleSignInEnabled: false,
     });
 
     expect(() =>
@@ -38,19 +41,48 @@ describe("runtime public configuration", () => {
         BAZORIA_DEPLOYMENT_ENVIRONMENT: "production",
         SUPABASE_URL: "https://project.supabase.co",
         SUPABASE_PUBLISHABLE_KEY: "sb_secret_server-key",
+        BAZORIA_PUBLIC_SITE_URL: "https://bazoria.example",
         BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "false",
       }),
     ).toThrow("runtime_public_configuration_invalid");
   });
 
   it("allows local development to default the disabled classifier flag", () => {
+    const config = readRuntimePublicConfig({
+      BAZORIA_DEPLOYMENT_ENVIRONMENT: "local",
+      SUPABASE_URL: "http://127.0.0.1:54321",
+      SUPABASE_PUBLISHABLE_KEY: "local-anon-key",
+    });
+
+    expect(config.classifierAssistedUploadEnabled).toBe(false);
+    expect(config.canonicalSiteOrigin).toBe("http://localhost:8080");
+    expect(config.googleSignInEnabled).toBe(false);
+  });
+
+  it("uses an explicit environment-independent Google release gate", () => {
     expect(
       readRuntimePublicConfig({
-        BAZORIA_DEPLOYMENT_ENVIRONMENT: "local",
-        SUPABASE_URL: "http://127.0.0.1:54321",
-        SUPABASE_PUBLISHABLE_KEY: "local-anon-key",
-      }).classifierAssistedUploadEnabled,
-    ).toBe(false);
+        BAZORIA_DEPLOYMENT_ENVIRONMENT: "uat",
+        SUPABASE_URL: "https://project.supabase.co",
+        SUPABASE_PUBLISHABLE_KEY: "sb_publishable_browser-key",
+        BAZORIA_PUBLIC_SITE_URL: "https://uat.example",
+        BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "false",
+        BAZORIA_GOOGLE_SIGN_IN_ENABLED: "true",
+      }).googleSignInEnabled,
+    ).toBe(true);
+
+    for (const value of ["TRUE", "yes", "1"] as const) {
+      expect(() =>
+        readRuntimePublicConfig({
+          BAZORIA_DEPLOYMENT_ENVIRONMENT: "production",
+          SUPABASE_URL: "https://project.supabase.co",
+          SUPABASE_PUBLISHABLE_KEY: "sb_publishable_browser-key",
+          BAZORIA_PUBLIC_SITE_URL: "https://bazoria.example",
+          BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "false",
+          BAZORIA_GOOGLE_SIGN_IN_ENABLED: value,
+        }),
+      ).toThrow("BAZORIA_GOOGLE_SIGN_IN_ENABLED");
+    }
   });
 
   it("requires the classifier gate to be explicitly disabled in deployed environments", () => {
@@ -60,6 +92,7 @@ describe("runtime public configuration", () => {
           BAZORIA_DEPLOYMENT_ENVIRONMENT: "uat",
           SUPABASE_URL: "https://project.supabase.co",
           SUPABASE_PUBLISHABLE_KEY: "sb_publishable_browser-key",
+          BAZORIA_PUBLIC_SITE_URL: "https://uat.example",
           BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: classifierSetting,
         }),
       ).toThrow("runtime_public_configuration_invalid");
@@ -77,6 +110,7 @@ describe("runtime public configuration", () => {
           BAZORIA_DEPLOYMENT_ENVIRONMENT: "production",
           SUPABASE_URL: "https://project.supabase.co",
           SUPABASE_PUBLISHABLE_KEY: "sb_publishable_browser-key",
+          BAZORIA_PUBLIC_SITE_URL: "https://bazoria.example",
           BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "false",
           [name]: value,
         }),
@@ -88,6 +122,7 @@ describe("runtime public configuration", () => {
         BAZORIA_DEPLOYMENT_ENVIRONMENT: "uat",
         SUPABASE_URL: "https://project.supabase.co",
         SUPABASE_PUBLISHABLE_KEY: "sb_publishable_browser-key",
+        BAZORIA_PUBLIC_SITE_URL: "https://uat.example",
         BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: "false",
         BAZORIA_CLASSIFIER_API_BASE_URL: "   ",
       }).classifierAssistedUploadEnabled,
@@ -101,6 +136,8 @@ describe("runtime public configuration", () => {
         supabaseUrl: "https://project.supabase.co",
         supabasePublishableKey: "sb_publishable_browser-key",
         classifierAssistedUploadEnabled: false,
+        canonicalSiteOrigin: "https://uat.example",
+        googleSignInEnabled: false,
       }),
     );
 
@@ -125,5 +162,22 @@ describe("runtime public configuration", () => {
     );
     expect(fetchImplementation).toHaveBeenCalledTimes(1);
     expect(() => getInitializedRuntimePublicConfig()).toThrow(RuntimePublicConfigurationError);
+  });
+
+  it("rejects a browser payload whose canonical site origin is not a root origin", async () => {
+    const fetchImplementation = vi.fn(async () =>
+      Response.json({
+        environment: "uat",
+        supabaseUrl: "https://project.supabase.co",
+        supabasePublishableKey: "sb_publishable_browser-key",
+        classifierAssistedUploadEnabled: false,
+        canonicalSiteOrigin: "https://uat.example/auth",
+        googleSignInEnabled: false,
+      }),
+    );
+
+    await expect(initializeRuntimePublicConfig(fetchImplementation)).rejects.toBeInstanceOf(
+      RuntimePublicConfigurationError,
+    );
   });
 });

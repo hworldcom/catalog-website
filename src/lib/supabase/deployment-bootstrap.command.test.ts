@@ -239,7 +239,7 @@ function environmentInventory(environment: "uat" | "production") {
   const projectRef = DEPLOYED_PROJECTS[environment];
   const origin = environment === "uat" ? "https://uat2026.bazoria.pl" : "https://bazoria.pl";
   return {
-    schemaVersion: 1 as const,
+    schemaVersion: 2 as const,
     environment,
     supabase: {
       projectRef,
@@ -254,11 +254,17 @@ function environmentInventory(environment: "uat" | "production") {
       plan: "Free",
       backups: { managed: false, retention: "none", pointInTimeRecovery: false },
     },
-    application: { canonicalOrigin: origin },
+    application: { canonicalOrigin: origin, googleSignInEnabled: false as const },
     authentication: {
       siteUrl: origin,
       redirectUrls: [`${origin}/auth`, `${origin}/auth/recovery`],
       googleCallbackUrl: `https://${projectRef}.supabase.co/auth/v1/callback`,
+      passwordPolicy: {
+        minimumLength: 8 as const,
+        requiredCharacters: "none" as const,
+        verifiedBy: null,
+        verifiedAt: null,
+      },
     },
     storage: {
       requiredBuckets: [

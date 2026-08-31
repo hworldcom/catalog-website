@@ -5,6 +5,7 @@ import {
   RuntimePublicConfigurationError,
   type RuntimePublicConfig,
 } from "./runtime-public-config";
+import { resolvePublicSiteOrigin } from "./public-site-origin";
 import {
   ClassifierAssistedUploadConfigurationError,
   readClassifierAssistedUploadReleaseState,
@@ -34,18 +35,42 @@ export function readRuntimePublicConfig(
     throw error;
   }
 
+  let canonicalSiteOrigin: string;
+  try {
+    canonicalSiteOrigin = resolvePublicSiteOrigin(environment);
+  } catch (error) {
+    throw new RuntimePublicConfigurationError(
+      `runtime_public_configuration_invalid: ${
+        error instanceof Error ? error.message : "canonical site origin is invalid"
+      }`,
+    );
+  }
+
+  const googleSignInEnabled = readGoogleSignInEnabled(environment);
+
   try {
     return parseRuntimePublicConfig({
       environment: parsed.data.BAZORIA_DEPLOYMENT_ENVIRONMENT,
       supabaseUrl: parsed.data.SUPABASE_URL,
       supabasePublishableKey: parsed.data.SUPABASE_PUBLISHABLE_KEY,
       classifierAssistedUploadEnabled,
+      canonicalSiteOrigin,
+      googleSignInEnabled,
     });
   } catch {
     throw new RuntimePublicConfigurationError(
       "runtime_public_configuration_invalid: browser-safe configuration is invalid",
     );
   }
+}
+
+function readGoogleSignInEnabled(environment: Record<string, string | undefined>): boolean {
+  const configured = environment.BAZORIA_GOOGLE_SIGN_IN_ENABLED?.trim();
+  if (!configured || configured === "false") return false;
+  if (configured === "true") return true;
+  throw new RuntimePublicConfigurationError(
+    "runtime_public_configuration_invalid: BAZORIA_GOOGLE_SIGN_IN_ENABLED must be true or false",
+  );
 }
 
 function invalidConfiguration(

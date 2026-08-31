@@ -33,7 +33,7 @@ const requiredBucketSchema = z
 
 export const deploymentEnvironmentInventorySchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     environment: z.enum(["uat", "production"]),
     supabase: z
       .object({
@@ -61,6 +61,7 @@ export const deploymentEnvironmentInventorySchema = z
     application: z
       .object({
         canonicalOrigin: httpsUrlSchema,
+        googleSignInEnabled: z.literal(false),
       })
       .strict(),
     authentication: z
@@ -68,6 +69,22 @@ export const deploymentEnvironmentInventorySchema = z
         siteUrl: httpsUrlSchema,
         redirectUrls: z.array(httpsUrlSchema).length(2),
         googleCallbackUrl: httpsUrlSchema,
+        passwordPolicy: z
+          .object({
+            minimumLength: z.literal(8),
+            requiredCharacters: z.literal("none"),
+            verifiedBy: z.string().min(1).nullable(),
+            verifiedAt: z.string().datetime({ offset: true }).nullable(),
+          })
+          .strict()
+          .superRefine((value, context) => {
+            if ((value.verifiedBy === null) !== (value.verifiedAt === null)) {
+              context.addIssue({
+                code: "custom",
+                message: "Password-policy verifier and time must be recorded together.",
+              });
+            }
+          }),
       })
       .strict(),
     storage: z
@@ -164,6 +181,7 @@ export function validateEnvironmentInventoryIdentity(environment, inventory) {
     inventory.supabase.projectRef !== expectedRef ||
     inventory.supabase.projectUrl !== expectedProjectUrl ||
     inventory.application.canonicalOrigin !== expectedOrigin ||
+    inventory.application.googleSignInEnabled !== false ||
     inventory.authentication.siteUrl !== expectedOrigin ||
     JSON.stringify(inventory.authentication.redirectUrls) !== JSON.stringify(expectedRedirects) ||
     inventory.authentication.googleCallbackUrl !== `${expectedProjectUrl}/auth/v1/callback`

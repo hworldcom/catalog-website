@@ -51,6 +51,9 @@ async function initialize(environment: "uat" | "production"): Promise<void> {
       supabaseUrl: "https://project.supabase.co",
       supabasePublishableKey: "sb_publishable_browser-key",
       classifierAssistedUploadEnabled: false,
+      canonicalSiteOrigin:
+        environment === "uat" ? "https://uat2026.bazoria.pl" : "https://bazoria.pl",
+      googleSignInEnabled: false,
     }),
   );
 }

@@ -158,10 +158,10 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     icon: UserPlus,
     title: t("Create your account", "Utwórz konto", "Konto erstellen", "Tạo tài khoản"),
     description: t(
-      "Continue with Google or sign up with email and password.",
-      "Kontynuuj przez Google lub zarejestruj się za pomocą adresu e-mail i hasła.",
-      "Mit Google fortfahren oder mit E-Mail-Adresse und Passwort registrieren.",
-      "Tiếp tục với Google hoặc đăng ký bằng email và mật khẩu.",
+      "Sign up with email and password.",
+      "Zarejestruj się za pomocą adresu e-mail i hasła.",
+      "Registrieren Sie sich mit E-Mail-Adresse und Passwort.",
+      "Đăng ký bằng email và mật khẩu.",
     ),
   },
   {

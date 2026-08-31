@@ -80,6 +80,13 @@ describe("JoinAudienceDetails", () => {
     ]);
   });
 
+  it("advertises only email and password account creation", () => {
+    render(<JoinAudienceDetails audience="all" />);
+
+    expect(screen.getByText("Sign up with email and password.")).toBeVisible();
+    expect(screen.queryByText(/Google/u)).not.toBeInTheDocument();
+  });
+
   it("preserves the anchor focus contract and responsive numbered-list presentation", () => {
     render(<JoinAudienceDetails audience="all" />);
 

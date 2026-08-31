@@ -22,7 +22,7 @@ describe("buildAuthCallbackUrl", () => {
   it("returns to the auth route with the safe destination", () => {
     expect(
       buildAuthCallbackUrl({
-        origin: "https://bazoria.example",
+        canonicalSiteOrigin: "https://bazoria.example",
         redirect: "/seller/leads?lang=PL",
       }),
     ).toBe("https://bazoria.example/auth?redirect=%2Fseller%2Fleads%3Flang%3DPL");
@@ -31,7 +31,7 @@ describe("buildAuthCallbackUrl", () => {
   it("does not include an unsafe destination", () => {
     expect(
       buildAuthCallbackUrl({
-        origin: "https://bazoria.example",
+        canonicalSiteOrigin: "https://bazoria.example",
         redirect: "https://attacker.example",
       }),
     ).toBe("https://bazoria.example/auth?redirect=%2Fseller");
