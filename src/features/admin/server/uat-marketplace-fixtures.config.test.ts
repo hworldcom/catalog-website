@@ -108,14 +108,40 @@ describe("readUatMarketplaceFixtureConfig", () => {
 
   it("requires the fixture password only for seed", () => {
     expect(() => readUatMarketplaceFixtureConfig(commonEnvironment, ["seed"])).toThrow(
-      "uat_marketplace_fixture_configuration_invalid",
+      "uat_marketplace_fixture_configuration_invalid invalid_fields=BAZORIA_UAT_FIXTURE_USER_PASSWORD",
     );
     expect(() =>
       readUatMarketplaceFixtureConfig(
         { ...commonEnvironment, BAZORIA_UAT_FIXTURE_USER_PASSWORD: "too-short" },
         ["seed"],
       ),
-    ).toThrow("uat_marketplace_fixture_configuration_invalid");
+    ).toThrow(
+      "uat_marketplace_fixture_configuration_invalid invalid_fields=BAZORIA_UAT_FIXTURE_USER_PASSWORD",
+    );
+  });
+
+  it("reports only invalid field names and never their values", () => {
+    const invalidPassword = "private";
+    let error: unknown;
+
+    try {
+      readUatMarketplaceFixtureConfig(
+        {
+          ...commonEnvironment,
+          BAZORIA_UAT_FIXTURE_USER_PASSWORD: invalidPassword,
+          SUPABASE_SERVICE_ROLE_KEY: " ",
+        },
+        ["seed"],
+      );
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      "uat_marketplace_fixture_configuration_invalid invalid_fields=BAZORIA_UAT_FIXTURE_USER_PASSWORD,SUPABASE_SERVICE_ROLE_KEY",
+    );
+    expect((error as Error).message).not.toContain(invalidPassword);
   });
 
   it("accepts direct and short-lived UAT database connections", () => {

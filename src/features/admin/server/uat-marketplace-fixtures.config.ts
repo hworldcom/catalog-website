@@ -159,8 +159,19 @@ function parseEnvironment(
         ? resetEnvironmentSchema
         : baseEnvironmentSchema;
   const parsed = schema.safeParse(environment);
-  if (!parsed.success) throw new Error("uat_marketplace_fixture_configuration_invalid");
+  if (!parsed.success) {
+    const invalidFields = parsed.error.issues
+      .map((issue) => issue.path[0])
+      .filter((field): field is string => typeof field === "string");
+    throw configurationInvalid(invalidFields);
+  }
   return parsed.data as ParsedFixtureEnvironment;
+}
+
+function configurationInvalid(fields: string[] = []): Error {
+  const invalidFields = [...new Set(fields)].sort();
+  const detail = invalidFields.length > 0 ? ` invalid_fields=${invalidFields.join(",")}` : "";
+  return new Error(`uat_marketplace_fixture_configuration_invalid${detail}`);
 }
 
 function loadDeploymentInventories(workingDirectory: string): {

@@ -42,7 +42,9 @@ describe("UAT marketplace fixture workflow", () => {
         ...commonEnvironment,
         BAZORIA_UAT_FIXTURE_WORKFLOW_OPERATION: "seed-verify",
       }),
-    ).rejects.toThrow("uat_marketplace_fixture_configuration_invalid");
+    ).rejects.toThrow(
+      "uat_marketplace_fixture_configuration_invalid invalid_fields=BAZORIA_UAT_FIXTURE_USER_PASSWORD",
+    );
 
     await expect(
       preflightUatMarketplaceFixtureWorkflow({
