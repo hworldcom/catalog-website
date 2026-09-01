@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DEPLOYED_PROJECTS,
   DatabaseToolingError,
+  assertEnvironmentCurrent,
   assertSupportedRuntime,
   classifyMigrationHistory,
   normalizeGeneratedTypes,
@@ -128,6 +129,15 @@ describe("database tooling migration state", () => {
     [["20260101000000", "20260102000000", "20260103000000"], "unknown_history"],
   ])("classifies %j as %s", (remoteVersions, expected) => {
     expect(classifyMigrationHistory(localMigrations, remoteVersions)).toBe(expected);
+  });
+
+  it("requires the exact checked-out migration head for read-only fixture operations", () => {
+    expect(() => assertEnvironmentCurrent("current")).not.toThrow();
+    for (const state of ["uninitialized", "behind", "unknown_history", "schema_drift"]) {
+      expect(() => assertEnvironmentCurrent(state)).toThrowError(
+        expect.objectContaining({ reason: "supabase_environment_database_not_current" }),
+      );
+    }
   });
 
   it("uses only explicit database URL commands during a current preflight", async () => {

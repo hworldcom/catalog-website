@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import {
+  assertEnvironmentCurrent,
   assertPreflightMayMigrate,
   assertSupportedRuntime,
   loadEnvironmentTarget,
@@ -15,7 +16,7 @@ try {
   assertSupportedRuntime();
   const action = process.argv[2];
   const write = action === "migrate";
-  if (!new Set(["preflight", "migrate"]).has(action)) {
+  if (!new Set(["assert-current", "preflight", "migrate"]).has(action)) {
     throw new Error(`Unsupported environment action ${action}.`);
   }
   const { environment, confirmProject } = parseEnvironmentArguments(process.argv.slice(3), {
@@ -27,7 +28,8 @@ try {
     await runEnvironmentMigration(target, confirmProject);
   } else {
     const result = await runEnvironmentPreflight(target);
-    assertPreflightMayMigrate(result.state);
+    if (action === "assert-current") assertEnvironmentCurrent(result.state);
+    else assertPreflightMayMigrate(result.state);
   }
 } catch (error) {
   reportDatabaseToolingError(error);

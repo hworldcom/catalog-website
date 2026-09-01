@@ -38,7 +38,7 @@ the protected GitHub `uat` environment:
 | `BAZORIA_UAT_FIXTURE_PROJECT_REF`        | protected UAT environment variable                                     |
 | `BAZORIA_UAT_FIXTURE_ADMIN_USER_ID`      | protected UAT environment variable; must be in the inventory allowlist |
 | `BAZORIA_UAT_FIXTURE_USER_PASSWORD`      | protected UAT environment secret; seed only                            |
-| `BAZORIA_UAT_FIXTURE_ASSET_DIR`          | optional local override; seed only                                     |
+| `BAZORIA_UAT_FIXTURE_ASSET_DIR`          | optional local override; seed and verify                               |
 | `BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION` | explicit operator input; reset only                                    |
 | `BAZORIA_UAT_DATABASE_URL`               | protected UAT environment secret                                       |
 | `SUPABASE_URL`                           | protected UAT environment variable                                     |
@@ -47,3 +47,16 @@ the protected GitHub `uat` environment:
 The tracked synthetic bundle is under `fixtures/uat/0038d`. It is validated
 before fixture mutations and is excluded from container build contexts and
 runtime images.
+
+Hosted fixture operations run only through the manual
+`UAT marketplace fixtures` GitHub workflow in the protected `uat` environment.
+The workflow accepts an exact commit and one of `verify`, `seed-verify`, or
+`reset-seed-verify`. The commit must be reachable from the repository's trusted
+default branch. The workflow never runs during an ordinary deployment. The
+reset operation requires the per-run value `RESET-UAT-<project-ref>` and
+environment approval before the job can access UAT secrets.
+
+The protected `uat` environment owns the variables and secrets listed above.
+Production must not define any `BAZORIA_UAT_FIXTURE_*` value. Successful runs
+publish a non-secret artifact with the checked-out commit, bundle version,
+fixture counts, seller slugs, product codes, and verification result.

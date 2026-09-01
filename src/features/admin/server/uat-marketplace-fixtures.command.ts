@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+
 import { createClient } from "@supabase/supabase-js";
 import postgres from "postgres";
 
@@ -40,7 +43,14 @@ async function main(): Promise<void> {
               password: config.fixtureUserPassword,
             })
           : await service.verify(config.assetDirectory);
-    process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+    const serializedSummary = `${JSON.stringify(summary, null, 2)}\n`;
+    const resultPath = process.env.BAZORIA_UAT_FIXTURE_RESULT_PATH?.trim();
+    if (resultPath) {
+      const absoluteResultPath = resolve(resultPath);
+      await mkdir(dirname(absoluteResultPath), { recursive: true });
+      await writeFile(absoluteResultPath, serializedSummary, { mode: 0o600 });
+    }
+    process.stdout.write(serializedSummary);
   } catch (error) {
     process.stderr.write(
       `${JSON.stringify({

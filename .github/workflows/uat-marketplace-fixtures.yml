@@ -1,0 +1,183 @@
+name: UAT marketplace fixtures
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_commit:
+        description: Exact 40-character Git commit to check out
+        required: true
+        type: string
+      operation:
+        description: Guarded fixture operation
+        required: true
+        type: choice
+        options:
+          - verify
+          - seed-verify
+          - reset-seed-verify
+      expected_uat_project_ref:
+        description: Expected isolated UAT Supabase project reference
+        required: true
+        default: mekobnkujzpzeiwmecyy
+        type: string
+      destructive_confirmation:
+        description: Required only for reset-seed-verify (RESET-UAT-<project-ref>)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uat-marketplace-fixtures
+  cancel-in-progress: false
+
+jobs:
+  fixtures:
+    name: ${{ inputs.operation }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: uat
+    env:
+      BAZORIA_DEPLOYMENT_ENVIRONMENT: ${{ vars.BAZORIA_DEPLOYMENT_ENVIRONMENT }}
+      BAZORIA_UAT_FIXTURE_ADMIN_USER_ID: ${{ vars.BAZORIA_UAT_FIXTURE_ADMIN_USER_ID }}
+      BAZORIA_UAT_FIXTURE_PROJECT_REF: ${{ vars.BAZORIA_UAT_FIXTURE_PROJECT_REF }}
+      BAZORIA_UAT_FIXTURE_WORKFLOW_COMMIT: ${{ inputs.git_commit }}
+      BAZORIA_UAT_FIXTURE_WORKFLOW_EXPECTED_PROJECT_REF: ${{ inputs.expected_uat_project_ref }}
+      BAZORIA_UAT_FIXTURE_WORKFLOW_OPERATION: ${{ inputs.operation }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+
+    steps:
+      - name: Check out requested commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.git_commit }}
+          persist-credentials: false
+
+      - name: Verify exact commit
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REQUESTED_COMMIT: ${{ inputs.git_commit }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$REQUESTED_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "The requested commit must be an exact lowercase 40-character Git SHA." >&2
+            exit 1
+          fi
+          git cat-file -e "${REQUESTED_COMMIT}^{commit}"
+          ACTUAL_COMMIT="$(git rev-parse HEAD)"
+          test "$ACTUAL_COMMIT" = "$REQUESTED_COMMIT"
+          git show-ref --verify --quiet "refs/remotes/origin/${DEFAULT_BRANCH}"
+          if ! git merge-base --is-ancestor "$REQUESTED_COMMIT" "refs/remotes/origin/${DEFAULT_BRANCH}"; then
+            echo "The requested commit must be reachable from the trusted default branch." >&2
+            exit 1
+          fi
+          echo "checked_out_commit=$ACTUAL_COMMIT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Set up pinned npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.2
+          test "$(npm --version)" = "10.9.2"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate workflow request and fixture bundle
+        shell: bash
+        env:
+          BAZORIA_UAT_DATABASE_URL: ${{ secrets.BAZORIA_UAT_DATABASE_URL }}
+          BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION: ${{ inputs.operation == 'reset-seed-verify' && inputs.destructive_confirmation || '' }}
+          BAZORIA_UAT_FIXTURE_USER_PASSWORD: ${{ inputs.operation != 'verify' && secrets.BAZORIA_UAT_FIXTURE_USER_PASSWORD || '' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run preflight:uat-marketplace-fixtures-workflow
+
+      - name: Run focused fixture tests
+        run: >-
+          npm run test --
+          src/features/admin/server/uat-marketplace-fixtures.assets.test.ts
+          src/features/admin/server/uat-marketplace-fixtures.config.test.ts
+          src/features/admin/server/uat-marketplace-fixtures.service.test.ts
+          src/features/admin/server/supabase-uat-marketplace-fixtures.gateway.test.ts
+          src/features/admin/server/uat-marketplace-fixtures.activation.test.ts
+          src/features/admin/server/uat-marketplace-fixtures.workflow-file.test.ts
+          src/features/admin/server/uat-marketplace-fixtures.workflow.test.ts
+          src/lib/supabase/database-tooling.command.test.ts
+
+      - name: Prepare ignored database target file
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.BAZORIA_UAT_DATABASE_URL }}
+          PROJECT_REF: ${{ inputs.expected_uat_project_ref }}
+        run: |
+          set -euo pipefail
+          umask 077
+          {
+            printf 'BAZORIA_SUPABASE_PROJECT_REF=%s\n' "$PROJECT_REF"
+            printf 'SUPABASE_URL=%s\n' "$SUPABASE_URL"
+            printf 'BAZORIA_SUPABASE_DATABASE_URL=%s\n' "$DATABASE_URL"
+          } > .env.supabase.uat.local
+
+      - name: Require current hosted migration head
+        run: npm run db:environment:assert-current -- --environment uat
+
+      - name: Prepare non-secret result directory
+        run: mkdir -p artifacts/uat-marketplace-fixtures
+
+      - name: Reset UAT business data
+        if: inputs.operation == 'reset-seed-verify'
+        env:
+          BAZORIA_UAT_DATABASE_URL: ${{ secrets.BAZORIA_UAT_DATABASE_URL }}
+          BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION: ${{ inputs.destructive_confirmation }}
+          BAZORIA_UAT_FIXTURE_RESULT_PATH: artifacts/uat-marketplace-fixtures/reset.json
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx src/features/admin/server/uat-marketplace-fixtures.command.ts reset
+
+      - name: Seed moderated UAT fixtures
+        if: inputs.operation != 'verify'
+        env:
+          BAZORIA_UAT_DATABASE_URL: ${{ secrets.BAZORIA_UAT_DATABASE_URL }}
+          BAZORIA_UAT_FIXTURE_RESULT_PATH: artifacts/uat-marketplace-fixtures/seed.json
+          BAZORIA_UAT_FIXTURE_USER_PASSWORD: ${{ secrets.BAZORIA_UAT_FIXTURE_USER_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx src/features/admin/server/uat-marketplace-fixtures.command.ts seed
+
+      - name: Verify hosted UAT fixtures
+        env:
+          BAZORIA_UAT_DATABASE_URL: ${{ secrets.BAZORIA_UAT_DATABASE_URL }}
+          BAZORIA_UAT_FIXTURE_RESULT_PATH: artifacts/uat-marketplace-fixtures/verify.json
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx src/features/admin/server/uat-marketplace-fixtures.command.ts verify
+
+      - name: Create non-secret run summary
+        env:
+          BAZORIA_UAT_FIXTURE_RESET_RESULT_PATH: ${{ inputs.operation == 'reset-seed-verify' && 'artifacts/uat-marketplace-fixtures/reset.json' || '' }}
+          BAZORIA_UAT_FIXTURE_SUMMARY_JSON_PATH: artifacts/uat-marketplace-fixtures/summary.json
+          BAZORIA_UAT_FIXTURE_SUMMARY_MARKDOWN_PATH: artifacts/uat-marketplace-fixtures/summary.md
+          BAZORIA_UAT_FIXTURE_VERIFY_RESULT_PATH: artifacts/uat-marketplace-fixtures/verify.json
+        run: |
+          npm run summarize:uat-marketplace-fixtures-workflow
+          cat artifacts/uat-marketplace-fixtures/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload non-secret fixture summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: uat-marketplace-fixtures-${{ github.run_id }}
+          path: |
+            artifacts/uat-marketplace-fixtures/summary.json
+            artifacts/uat-marketplace-fixtures/summary.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Remove temporary database target file
+        if: always()
+        run: rm -f .env.supabase.uat.local

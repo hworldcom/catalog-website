@@ -346,6 +346,15 @@ export function assertPreflightMayMigrate(state) {
   }
 }
 
+export function assertEnvironmentCurrent(state) {
+  if (state !== "current") {
+    throw new DatabaseToolingError(
+      "supabase_environment_database_not_current",
+      `The hosted database state is ${state}; fixture operations require the checked-out migration head.`,
+    );
+  }
+}
+
 export function ensureDockerRuntime() {
   const result = spawnSync("docker", ["info", "--format", "{{.ServerVersion}}"], {
     cwd: repositoryRoot,
