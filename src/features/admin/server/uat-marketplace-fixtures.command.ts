@@ -3,10 +3,7 @@ import postgres from "postgres";
 
 import type { Database } from "@/lib/supabase/types";
 
-import {
-  readUatMarketplaceFixtureConfig,
-  UAT_MARKETPLACE_FIXTURE_PASSWORD,
-} from "./uat-marketplace-fixtures.config";
+import { readUatMarketplaceFixtureConfig } from "./uat-marketplace-fixtures.config";
 import { UatMarketplaceFixtureService } from "./uat-marketplace-fixtures.service";
 import { SupabaseUatMarketplaceFixtureGateway } from "./supabase-uat-marketplace-fixtures.gateway";
 
@@ -30,16 +27,16 @@ async function main(): Promise<void> {
         config.supabaseUrl,
         config.serviceRoleKey,
       ),
-      config.assetDirectory,
-      config.preservedAdministratorUserIds,
-      UAT_MARKETPLACE_FIXTURE_PASSWORD,
     );
 
     const summary =
       config.mode === "reset"
-        ? await service.reset()
+        ? await service.reset([config.administratorUserId])
         : config.mode === "seed"
-          ? await service.seed()
+          ? await service.seed({
+              assetDirectory: config.assetDirectory,
+              password: config.fixtureUserPassword,
+            })
           : await service.verify();
     process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
   } catch (error) {

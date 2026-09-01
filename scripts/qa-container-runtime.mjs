@@ -1,10 +1,12 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 
 const image = process.env.BAZORIA_CONTAINER_QA_IMAGE ?? "bazoria-web:0038a-qa";
 const containerPrefix = `bazoria-web-0038a-qa-${process.pid}`;
 
 try {
+  assertFixtureBundleExcludedFromBuildContext();
   run("docker", [
     "build",
     "--platform",
@@ -46,6 +48,16 @@ try {
     "--platform",
     "linux/amd64",
     image,
+    "sh",
+    "-c",
+    "test ! -e deployment/fixtures/uat && test -z \"$(find /app -name manifest.json -path '*/0038d/assets/*' -print -quit)\"",
+  ]);
+  run("docker", [
+    "run",
+    "--rm",
+    "--platform",
+    "linux/amd64",
+    image,
     "node",
     "-e",
     "require('sharp')({create:{width:1,height:1,channels:4,background:'#000'}}).png().toBuffer().then((buffer)=>{if(buffer.length===0)process.exit(1)})",
@@ -57,6 +69,8 @@ try {
       supabaseUrl: "https://project.supabase.co",
       supabasePublishableKey: "sb_publishable_browser-key",
       classifierAssistedUploadEnabled: false,
+      canonicalSiteOrigin: "https://uat.example.com",
+      googleSignInEnabled: false,
     },
   });
   const production = await runWebContainer("production", {
@@ -65,6 +79,8 @@ try {
       supabaseUrl: "https://production.supabase.co",
       supabasePublishableKey: "sb_publishable_production-key",
       classifierAssistedUploadEnabled: false,
+      canonicalSiteOrigin: "https://www.example.com",
+      googleSignInEnabled: false,
     },
   });
   if (uat.assetHash !== production.assetHash) {
@@ -87,6 +103,8 @@ async function runWebContainer(label, { expectedConfig }) {
     BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED: String(
       expectedConfig.classifierAssistedUploadEnabled,
     ),
+    BAZORIA_GOOGLE_SIGN_IN_ENABLED: String(expectedConfig.googleSignInEnabled),
+    BAZORIA_PUBLIC_SITE_URL: expectedConfig.canonicalSiteOrigin,
     SUPABASE_URL: expectedConfig.supabaseUrl,
     SUPABASE_PUBLISHABLE_KEY: expectedConfig.supabasePublishableKey,
     PORT: "8080",
@@ -151,6 +169,15 @@ function assertReconciliationRejectsInvalidConfiguration() {
   ]);
   if (result.status === 0) {
     throw new Error("Reconciliation accepted an incomplete role configuration.");
+  }
+}
+
+function assertFixtureBundleExcludedFromBuildContext() {
+  const patterns = readFileSync(".dockerignore", "utf8")
+    .split(/\r?\n/u)
+    .map((line) => line.trim());
+  if (!patterns.includes("deployment/fixtures/uat")) {
+    throw new Error("UAT fixture assets are not excluded from the container build context.");
   }
 }
 

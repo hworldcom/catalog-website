@@ -1,21 +1,15 @@
-import { readFile } from "node:fs/promises";
-import { resolve, sep } from "node:path";
-
 import {
-  fixtureAssetFiles,
   fixtureSellerSlugs,
   UAT_MARKETPLACE_SELLERS,
   type UatMarketplaceProductFixture,
   type UatMarketplaceSellerFixture,
 } from "./uat-marketplace-fixtures.manifest";
+import {
+  loadUatMarketplaceFixtureAssetBundle,
+  type UatMarketplaceFixtureAsset,
+} from "./uat-marketplace-fixtures.assets";
 
-const MAXIMUM_ASSET_SIZE_BYTES = 20 * 1024 * 1024;
-
-export type UatMarketplaceFixtureAsset = {
-  bytes: Uint8Array;
-  contentType: "image/jpeg";
-  relativePath: string;
-};
+export type { UatMarketplaceFixtureAsset } from "./uat-marketplace-fixtures.assets";
 
 export type UatMarketplaceFixtureVerification = {
   productCodes: string[];
@@ -57,37 +51,41 @@ export type UatMarketplaceFixtureSummary = {
   verification: UatMarketplaceFixtureVerification | null;
 };
 
-type AssetLoader = (relativePath: string) => Promise<UatMarketplaceFixtureAsset>;
+type AssetBundleLoader = (
+  assetDirectory: string,
+) => Promise<Map<string, UatMarketplaceFixtureAsset>>;
+
+type SeedInput = {
+  assetDirectory: string;
+  password: string;
+};
 
 export class UatMarketplaceFixtureService {
   constructor(
     private readonly gateway: UatMarketplaceFixtureGateway,
-    private readonly assetDirectory: string,
-    private readonly preservedAdministratorUserIds: string[],
-    private readonly password: string,
-    private readonly loadAsset: AssetLoader = loadFixtureAsset,
+    private readonly loadAssets: AssetBundleLoader = loadUatMarketplaceFixtureAssetBundle,
   ) {}
 
-  async reset(): Promise<UatMarketplaceFixtureSummary> {
+  async reset(preservedAdministratorUserIds: string[]): Promise<UatMarketplaceFixtureSummary> {
     return {
       mode: "reset",
-      reset: await this.gateway.reset(this.preservedAdministratorUserIds),
+      reset: await this.gateway.reset(preservedAdministratorUserIds),
       verification: null,
     };
   }
 
-  async seed(): Promise<UatMarketplaceFixtureSummary> {
-    const assets = await this.preflightAssets();
+  async seed(input: SeedInput): Promise<UatMarketplaceFixtureSummary> {
+    const assets = await this.loadAssets(input.assetDirectory);
     const existingSellerSlugs = await this.gateway.listSellerSlugs();
     const expectedSellerSlugs = new Set(fixtureSellerSlugs());
-    const reset = existingSellerSlugs.some((slug) => !expectedSellerSlugs.has(slug))
-      ? await this.gateway.reset(this.preservedAdministratorUserIds)
-      : null;
+    if (existingSellerSlugs.some((slug) => !expectedSellerSlugs.has(slug))) {
+      throw new Error("uat_marketplace_fixture_conflict");
+    }
 
     for (const seller of UAT_MARKETPLACE_SELLERS) {
       const ensured = await this.gateway.ensureSeller({
         fixture: seller,
-        password: this.password,
+        password: input.password,
         logo: requireAsset(assets, seller.logoFile),
         cover: requireAsset(assets, seller.coverFile),
       });
@@ -102,50 +100,12 @@ export class UatMarketplaceFixtureService {
       }
     }
 
-    return { mode: "seed", reset, verification: await this.gateway.verify() };
+    return { mode: "seed", reset: null, verification: await this.gateway.verify() };
   }
 
   async verify(): Promise<UatMarketplaceFixtureSummary> {
     return { mode: "verify", reset: null, verification: await this.gateway.verify() };
   }
-
-  private async preflightAssets(): Promise<Map<string, UatMarketplaceFixtureAsset>> {
-    const entries = await Promise.all(
-      fixtureAssetFiles().map(async (relativePath) => {
-        const absolutePath = safeAssetPath(this.assetDirectory, relativePath);
-        return [relativePath, await this.loadAsset(absolutePath)] as const;
-      }),
-    );
-    return new Map(entries);
-  }
-}
-
-export async function loadFixtureAsset(absolutePath: string): Promise<UatMarketplaceFixtureAsset> {
-  let bytes: Uint8Array;
-  try {
-    bytes = new Uint8Array(await readFile(absolutePath));
-  } catch {
-    throw new Error(`uat_marketplace_fixture_asset_missing:${absolutePath}`);
-  }
-  if (
-    bytes.byteLength < 3 ||
-    bytes.byteLength > MAXIMUM_ASSET_SIZE_BYTES ||
-    bytes[0] !== 0xff ||
-    bytes[1] !== 0xd8 ||
-    bytes[2] !== 0xff
-  ) {
-    throw new Error(`uat_marketplace_fixture_asset_invalid:${absolutePath}`);
-  }
-  return { relativePath: absolutePath, bytes, contentType: "image/jpeg" };
-}
-
-function safeAssetPath(assetDirectory: string, relativePath: string): string {
-  const root = resolve(assetDirectory);
-  const absolutePath = resolve(root, relativePath);
-  if (!absolutePath.startsWith(`${root}${sep}`)) {
-    throw new Error("uat_marketplace_fixture_asset_path_invalid");
-  }
-  return absolutePath;
 }
 
 function requireAsset(
@@ -153,6 +113,6 @@ function requireAsset(
   relativePath: string,
 ): UatMarketplaceFixtureAsset {
   const asset = assets.get(relativePath);
-  if (!asset) throw new Error(`uat_marketplace_fixture_asset_missing:${relativePath}`);
+  if (!asset) throw new Error("uat_marketplace_fixture_asset_missing");
   return asset;
 }

@@ -1,0 +1,263 @@
+{
+  "schemaVersion": 1,
+  "bundleVersion": "0038d-v1",
+  "provenance": {
+    "synthetic": true,
+    "containsCustomerData": false,
+    "containsThirdPartyBranding": false
+  },
+  "assets": [
+    {
+      "sellerSlug": "little-orbit-kids",
+      "productTitle": "Adventure Cotton Shorts",
+      "role": "product_image",
+      "relativePath": "little-orbit-kids/adventure-cotton-shorts-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 232305,
+      "sha256": "8025f5a1a0a174c3445d8981b807ffadfd283ff0faf35b5627374ded335f854a"
+    },
+    {
+      "sellerSlug": "little-orbit-kids",
+      "productTitle": "Colorblock Tracksuit Set",
+      "role": "product_image",
+      "relativePath": "little-orbit-kids/colorblock-tracksuit-set-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 212854,
+      "sha256": "fa76d540628178c93564528e3544bdff780b9ab1bf6c566ba25fda21042dc02f"
+    },
+    {
+      "sellerSlug": "little-orbit-kids",
+      "productTitle": "Comet Zip Hoodie",
+      "role": "product_image",
+      "relativePath": "little-orbit-kids/comet-zip-hoodie-back.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 267221,
+      "sha256": "d9d78f23e3631757ec5acd68cc4e97f584a63c60daa785af3bdd297e0724d6a9"
+    },
+    {
+      "sellerSlug": "little-orbit-kids",
+      "productTitle": "Comet Zip Hoodie",
+      "role": "product_image",
+      "relativePath": "little-orbit-kids/comet-zip-hoodie-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 231901,
+      "sha256": "dbb89a59e1404ebf51b867d7b9fc1ad7356311699e8d31afee2660625bc8242c"
+    },
+    {
+      "sellerSlug": "little-orbit-kids",
+      "productTitle": null,
+      "role": "seller_logo",
+      "relativePath": "little-orbit-kids/logo.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 157992,
+      "sha256": "bd3a7ae5f36722682a7c212d59ee455b53562c54dc3af0bfb9b1620c9dc4466b"
+    },
+    {
+      "sellerSlug": "little-orbit-kids",
+      "productTitle": "Orbit Fleece Sweatpants",
+      "role": "product_image",
+      "relativePath": "little-orbit-kids/orbit-fleece-sweatpants-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 199860,
+      "sha256": "86ededa989566451d38ffee76e0bbbf78285ffb7ae15861b7f0da44a4737f94f"
+    },
+    {
+      "sellerSlug": "little-orbit-kids",
+      "productTitle": null,
+      "role": "seller_storefront_cover",
+      "relativePath": "little-orbit-kids/storefront-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 303021,
+      "sha256": "b2ad7de2232b3898f953982229b340a2b8580cda6fe16752be9cf56a935ee33f"
+    },
+    {
+      "sellerSlug": "luna-atelier",
+      "productTitle": null,
+      "role": "seller_logo",
+      "relativePath": "luna-atelier/logo.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 111894,
+      "sha256": "8012c133a60a41b27c0779f73f4b3197fd5115b3ab5b82db56355fb255ed3e43"
+    },
+    {
+      "sellerSlug": "luna-atelier",
+      "productTitle": "Moonlight Midi Dress",
+      "role": "product_image",
+      "relativePath": "luna-atelier/moonlight-midi-dress-back.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 129592,
+      "sha256": "322d7a9061eba9beaa801fd6d369e145fc4dece9486aca718dc09d2b3f2f28b6"
+    },
+    {
+      "sellerSlug": "luna-atelier",
+      "productTitle": "Moonlight Midi Dress",
+      "role": "product_image",
+      "relativePath": "luna-atelier/moonlight-midi-dress-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 133109,
+      "sha256": "74d819ec5ec2a42318262af282360232e9ec42ed2b778dcfaaf55e49e730666a"
+    },
+    {
+      "sellerSlug": "luna-atelier",
+      "productTitle": "Pearl Knit Cardigan",
+      "role": "product_image",
+      "relativePath": "luna-atelier/pearl-knit-cardigan-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 212332,
+      "sha256": "80373101073d98bc0bec798ae88afdbaa3bb8527135d707fe8c5d88b4e3e5c66"
+    },
+    {
+      "sellerSlug": "luna-atelier",
+      "productTitle": "Satin Column Skirt",
+      "role": "product_image",
+      "relativePath": "luna-atelier/satin-column-skirt-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 136978,
+      "sha256": "a7fdb00fed61f8e33ab0f386a34bd01518044b99784386a953d649160fad0127"
+    },
+    {
+      "sellerSlug": "luna-atelier",
+      "productTitle": "Soft Tailored Blazer",
+      "role": "product_image",
+      "relativePath": "luna-atelier/soft-tailored-blazer-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 228823,
+      "sha256": "5f23b1c949d539e0651f809d70fc5c026fb5efd7918290f6ad522f09753cf4d6"
+    },
+    {
+      "sellerSlug": "luna-atelier",
+      "productTitle": null,
+      "role": "seller_storefront_cover",
+      "relativePath": "luna-atelier/storefront-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 259256,
+      "sha256": "3d8bb5d0362f59114b6ffbcce089b6387f38fee385d0b9da3d0e1898801ade28"
+    },
+    {
+      "sellerSlug": "northline-menswear",
+      "productTitle": "Heavyweight Crew T-Shirt",
+      "role": "product_image",
+      "relativePath": "northline-menswear/heavyweight-crew-tshirt-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 168871,
+      "sha256": "1175667b7538bab9417d875b90900bfd7e5f691ebfdab0e1bceb8b9612aec420"
+    },
+    {
+      "sellerSlug": "northline-menswear",
+      "productTitle": null,
+      "role": "seller_logo",
+      "relativePath": "northline-menswear/logo.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 137171,
+      "sha256": "dad811fdce85b162d4f7c8d49e83be0a424a24314b112e21a7a76cbb4feb0ddc"
+    },
+    {
+      "sellerSlug": "northline-menswear",
+      "productTitle": null,
+      "role": "seller_storefront_cover",
+      "relativePath": "northline-menswear/storefront-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 286057,
+      "sha256": "ccacf1767b32e1cfb9e673b4a0ed096d4550e0559a500eefe2cb3e3cd9110594"
+    },
+    {
+      "sellerSlug": "northline-menswear",
+      "productTitle": "Straight Indigo Jeans",
+      "role": "product_image",
+      "relativePath": "northline-menswear/straight-indigo-jeans-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 195747,
+      "sha256": "e28f55ecead74fbba53016bf76f9ccc5cb56483c4a9e8af68b098d1f19c08a5e"
+    },
+    {
+      "sellerSlug": "northline-menswear",
+      "productTitle": "Tapered Travel Trousers",
+      "role": "product_image",
+      "relativePath": "northline-menswear/tapered-travel-trousers-back.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 125722,
+      "sha256": "f7ffe74793af71746b2ebeca3bf3f3da99ba6257c8cd38352821dec1d281aaed"
+    },
+    {
+      "sellerSlug": "northline-menswear",
+      "productTitle": "Tapered Travel Trousers",
+      "role": "product_image",
+      "relativePath": "northline-menswear/tapered-travel-trousers-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 171406,
+      "sha256": "b6e73911cf8a8068970e1afb8aceb9b8719d0fcd3e949f974f4524da261b9f8b"
+    },
+    {
+      "sellerSlug": "northline-menswear",
+      "productTitle": "Utility Field Jacket",
+      "role": "product_image",
+      "relativePath": "northline-menswear/utility-field-jacket-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 256972,
+      "sha256": "f44fb17781f8360bc15d06a33ff5d7c4533e73ebb990b372cc9144564f8a70f5"
+    },
+    {
+      "sellerSlug": "vela-essentials",
+      "productTitle": "Belted Wool Blend Coat",
+      "role": "product_image",
+      "relativePath": "vela-essentials/belted-wool-blend-coat-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 272927,
+      "sha256": "267ebd435dd5fe9c401c07f8526aded5709471572f7191da2e36db66c9aa09e1"
+    },
+    {
+      "sellerSlug": "vela-essentials",
+      "productTitle": "Cloud Crew Sweater",
+      "role": "product_image",
+      "relativePath": "vela-essentials/cloud-crew-sweater-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 395941,
+      "sha256": "4e66169df74725c1de802b9970a7b8897148fbd29c368a1646f8e72e87cac7f9"
+    },
+    {
+      "sellerSlug": "vela-essentials",
+      "productTitle": "Contour Everyday Leggings",
+      "role": "product_image",
+      "relativePath": "vela-essentials/contour-everyday-leggings-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 120539,
+      "sha256": "e24c283a924ea819ce104fa629b87e6904ed30e3eebe99a7d15e77c42061a759"
+    },
+    {
+      "sellerSlug": "vela-essentials",
+      "productTitle": "Contour Everyday Leggings",
+      "role": "product_image",
+      "relativePath": "vela-essentials/contour-everyday-leggings-detail.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 318062,
+      "sha256": "302866b3349dd1ffe0a7789c8d131dbe06f1710f19fa0b7d1b21b4206dae7987"
+    },
+    {
+      "sellerSlug": "vela-essentials",
+      "productTitle": null,
+      "role": "seller_logo",
+      "relativePath": "vela-essentials/logo.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 219585,
+      "sha256": "25d5ee4c224e18fca83e37e25d51629cfb6304f751ef45be0d19df15d406dccc"
+    },
+    {
+      "sellerSlug": "vela-essentials",
+      "productTitle": "Quilted Layering Vest",
+      "role": "product_image",
+      "relativePath": "vela-essentials/quilted-layering-vest-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 213045,
+      "sha256": "e8fd2ef4c04cb4679ef95eb9d43b587c8b8e783d76f5a34b08cdc48918f999d5"
+    },
+    {
+      "sellerSlug": "vela-essentials",
+      "productTitle": null,
+      "role": "seller_storefront_cover",
+      "relativePath": "vela-essentials/storefront-cover.jpg",
+      "mediaType": "image/jpeg",
+      "sizeBytes": 284850,
+      "sha256": "463fb114d40e437596313d07228adf54f9bb428a5544116ad21f51d7e0e993de"
+    }
+  ]
+}

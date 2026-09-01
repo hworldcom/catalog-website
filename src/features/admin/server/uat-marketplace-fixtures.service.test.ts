@@ -29,66 +29,75 @@ function gateway(overrides: Partial<UatMarketplaceFixtureGateway> = {}) {
   } satisfies UatMarketplaceFixtureGateway;
 }
 
-const assetLoader = vi.fn(async (path: string): Promise<UatMarketplaceFixtureAsset> => ({
-  relativePath: path,
-  bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
-  contentType: "image/jpeg",
-}));
+const assets = new Map(
+  fixtureAssetFiles().map((path) => [
+    path,
+    {
+      relativePath: path,
+      bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      contentType: "image/jpeg",
+    } satisfies UatMarketplaceFixtureAsset,
+  ]),
+);
+
+const seedInput = {
+  assetDirectory: "/assets",
+  password: "fixture-password",
+};
 
 describe("UatMarketplaceFixtureService", () => {
-  it("preflights all assets before resetting a non-fixture catalog", async () => {
+  it("preflights the complete bundle before refusing a non-fixture catalog", async () => {
     const events: string[] = [];
     const fake = gateway({
-      listSellerSlugs: vi.fn().mockResolvedValue(["old-seller"]),
-      reset: vi.fn(async () => {
-        events.push("reset");
-        return {
-          deletedAuthUsers: 1,
-          deletedDatabaseSellers: 1,
-          deletedPrivateObjects: 1,
-          deletedPublicObjects: 1,
-        };
+      listSellerSlugs: vi.fn(async () => {
+        events.push("list");
+        return ["old-seller"];
       }),
     });
-    const load = vi.fn(async (path: string) => {
-      events.push(`asset:${path}`);
-      return assetLoader(path);
+    const load = vi.fn(async () => {
+      events.push("assets");
+      return assets;
     });
 
-    const result = await new UatMarketplaceFixtureService(
-      fake,
-      "/assets",
-      [],
-      "password",
-      load,
-    ).seed();
+    await expect(new UatMarketplaceFixtureService(fake, load).seed(seedInput)).rejects.toThrow(
+      "uat_marketplace_fixture_conflict",
+    );
 
-    expect(load).toHaveBeenCalledTimes(fixtureAssetFiles().length);
-    expect(events.indexOf("reset")).toBeGreaterThan(fixtureAssetFiles().length - 1);
-    expect(fake.ensureSeller).toHaveBeenCalledTimes(4);
-    expect(fake.ensureProduct).toHaveBeenCalledTimes(16);
-    expect(result.verification?.publicImageCount).toBe(20);
+    expect(events).toEqual(["assets", "list"]);
+    expect(load).toHaveBeenCalledWith("/assets");
+    expect(fake.reset).not.toHaveBeenCalled();
+    expect(fake.ensureSeller).not.toHaveBeenCalled();
+    expect(fake.ensureProduct).not.toHaveBeenCalled();
   });
 
   it("does not reset an existing fixture-only catalog", async () => {
     const fake = gateway({
       listSellerSlugs: vi.fn().mockResolvedValue(fixtureSellerSlugs()),
     });
-    await new UatMarketplaceFixtureService(fake, "/assets", [], "password", assetLoader).seed();
+    await new UatMarketplaceFixtureService(fake, vi.fn().mockResolvedValue(assets)).seed(seedInput);
     expect(fake.reset).not.toHaveBeenCalled();
   });
 
-  it("does not delete anything when asset preflight fails", async () => {
+  it("does not call any gateway method when bundle preflight fails", async () => {
     const fake = gateway({ listSellerSlugs: vi.fn().mockResolvedValue(["old-seller"]) });
     const service = new UatMarketplaceFixtureService(
       fake,
-      "/assets",
-      [],
-      "password",
-      vi.fn().mockRejectedValue(new Error("asset missing")),
+      vi.fn().mockRejectedValue(new Error("uat_marketplace_fixture_asset_missing")),
     );
-    await expect(service.seed()).rejects.toThrow("asset missing");
+    await expect(service.seed(seedInput)).rejects.toThrow("uat_marketplace_fixture_asset_missing");
     expect(fake.listSellerSlugs).not.toHaveBeenCalled();
     expect(fake.reset).not.toHaveBeenCalled();
+    expect(fake.ensureSeller).not.toHaveBeenCalled();
+    expect(fake.ensureProduct).not.toHaveBeenCalled();
+    expect(fake.verify).not.toHaveBeenCalled();
+  });
+
+  it("passes the preserved administrator only to reset", async () => {
+    const fake = gateway();
+    const service = new UatMarketplaceFixtureService(fake);
+    const preservedAdministratorUserIds = ["00000000-0000-4000-8000-000000000001"];
+    await service.reset(preservedAdministratorUserIds);
+    expect(fake.reset).toHaveBeenCalledWith(preservedAdministratorUserIds);
+    expect(fake.listSellerSlugs).not.toHaveBeenCalled();
   });
 });

@@ -25,3 +25,25 @@ after that check succeeds.
 Secret bootstrap values belong only in the ignored root files
 `.env.supabase.uat.local` and `.env.supabase.production.local`. Hosted writes
 always require an explicit environment and matching project confirmation.
+
+## UAT Marketplace Fixtures
+
+The fixture commands are server-only operations. Their non-secret target facts
+come from `environments/uat.json`; credentials are supplied by the operator or
+the protected GitHub `uat` environment:
+
+| Value                                    | Owner                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| `BAZORIA_DEPLOYMENT_ENVIRONMENT`         | command or protected workflow; always `uat`                            |
+| `BAZORIA_UAT_FIXTURE_PROJECT_REF`        | protected UAT environment variable                                     |
+| `BAZORIA_UAT_FIXTURE_ADMIN_USER_ID`      | protected UAT environment variable; must be in the inventory allowlist |
+| `BAZORIA_UAT_FIXTURE_USER_PASSWORD`      | protected UAT environment secret; seed only                            |
+| `BAZORIA_UAT_FIXTURE_ASSET_DIR`          | optional local override; seed only                                     |
+| `BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION` | explicit operator input; reset only                                    |
+| `BAZORIA_UAT_DATABASE_URL`               | protected UAT environment secret                                       |
+| `SUPABASE_URL`                           | protected UAT environment variable                                     |
+| `SUPABASE_SERVICE_ROLE_KEY`              | protected UAT environment secret                                       |
+
+The tracked synthetic bundle is under `fixtures/uat/0038d`. It is validated
+before fixture mutations and is excluded from container build contexts and
+runtime images.

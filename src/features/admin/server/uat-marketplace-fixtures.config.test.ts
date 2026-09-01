@@ -1,82 +1,197 @@
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import {
-  readUatMarketplaceFixtureConfig,
-  UAT_MARKETPLACE_FIXTURE_PROJECT_REF,
-} from "./uat-marketplace-fixtures.config";
+import { readUatMarketplaceFixtureConfig } from "./uat-marketplace-fixtures.config";
 
-const validEnvironment = {
-  BAZORIA_ALLOW_UAT_FIXTURE_RESET: "true",
+const UAT_PROJECT_REF = "mekobnkujzpzeiwmecyy";
+const PRODUCTION_PROJECT_REF = "njtgjrctfmtvackjmlww";
+const UAT_ADMINISTRATOR_ID = "aed397bc-27cf-483d-bcd2-4455ccb83bc0";
+
+const commonEnvironment = {
+  BAZORIA_DEPLOYMENT_ENVIRONMENT: "uat",
   BAZORIA_UAT_DATABASE_URL:
-    "postgresql://postgres.jhkouuxouplqcfecjutd:secret@aws-0-eu-central-1.pooler.supabase.com:6543/postgres",
+    "postgresql://postgres.mekobnkujzpzeiwmecyy:secret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres",
+  BAZORIA_UAT_FIXTURE_ADMIN_USER_ID: UAT_ADMINISTRATOR_ID,
+  BAZORIA_UAT_FIXTURE_PROJECT_REF: UAT_PROJECT_REF,
   SUPABASE_SERVICE_ROLE_KEY: "sb_secret_test",
-  SUPABASE_URL: `https://${UAT_MARKETPLACE_FIXTURE_PROJECT_REF}.supabase.co`,
+  SUPABASE_URL: `https://${UAT_PROJECT_REF}.supabase.co`,
+};
+
+const seedEnvironment = {
+  ...commonEnvironment,
+  BAZORIA_UAT_FIXTURE_USER_PASSWORD: "fixture-password",
 };
 
 describe("readUatMarketplaceFixtureConfig", () => {
-  it("accepts only the guarded hosted UAT project", () => {
-    expect(readUatMarketplaceFixtureConfig(validEnvironment, ["seed"], "/workspace")).toEqual({
-      assetDirectory: "/workspace/.uat-fixtures/0039c1",
-      databaseUrl:
-        "postgresql://postgres.jhkouuxouplqcfecjutd:secret@aws-0-eu-central-1.pooler.supabase.com:6543/postgres",
+  it("loads the checked-in UAT inventory and returns seed-only values", () => {
+    expect(readUatMarketplaceFixtureConfig(seedEnvironment, ["seed"])).toEqual({
+      administratorUserId: UAT_ADMINISTRATOR_ID,
+      assetDirectory: resolve("deployment/fixtures/uat/0038d/assets"),
+      databaseUrl: commonEnvironment.BAZORIA_UAT_DATABASE_URL,
+      fixtureUserPassword: "fixture-password",
       mode: "seed",
-      preservedAdministratorUserIds: [],
-      projectRef: UAT_MARKETPLACE_FIXTURE_PROJECT_REF,
+      projectRef: UAT_PROJECT_REF,
       serviceRoleKey: "sb_secret_test",
-      supabaseUrl: `https://${UAT_MARKETPLACE_FIXTURE_PROJECT_REF}.supabase.co`,
+      supabaseUrl: `https://${UAT_PROJECT_REF}.supabase.co`,
     });
   });
 
-  it("accepts a short-lived linked Supabase CLI database login for the exact UAT project", () => {
+  it("uses an explicit seed asset directory", () => {
+    const result = readUatMarketplaceFixtureConfig(
+      { ...seedEnvironment, BAZORIA_UAT_FIXTURE_ASSET_DIR: "/tmp/fixture-assets" },
+      ["seed"],
+    );
+    expect(result).toMatchObject({ mode: "seed", assetDirectory: "/tmp/fixture-assets" });
+  });
+
+  it("requires reset confirmation only for reset", () => {
     const result = readUatMarketplaceFixtureConfig(
       {
-        ...validEnvironment,
+        ...commonEnvironment,
+        BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION: `RESET-UAT-${UAT_PROJECT_REF}`,
+      },
+      ["reset"],
+    );
+    expect(result).toEqual({
+      administratorUserId: UAT_ADMINISTRATOR_ID,
+      databaseUrl: commonEnvironment.BAZORIA_UAT_DATABASE_URL,
+      mode: "reset",
+      projectRef: UAT_PROJECT_REF,
+      serviceRoleKey: "sb_secret_test",
+      supabaseUrl: `https://${UAT_PROJECT_REF}.supabase.co`,
+    });
+
+    expect(() => readUatMarketplaceFixtureConfig(commonEnvironment, ["reset"])).toThrow(
+      "uat_marketplace_fixture_configuration_invalid",
+    );
+    expect(() =>
+      readUatMarketplaceFixtureConfig(
+        { ...commonEnvironment, BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION: "RESET-UAT-wrong" },
+        ["reset"],
+      ),
+    ).toThrow("uat_marketplace_fixture_reset_confirmation_invalid");
+  });
+
+  it("requires neither password nor reset confirmation for verify", () => {
+    expect(readUatMarketplaceFixtureConfig(commonEnvironment, ["verify"])).toEqual({
+      administratorUserId: UAT_ADMINISTRATOR_ID,
+      databaseUrl: commonEnvironment.BAZORIA_UAT_DATABASE_URL,
+      mode: "verify",
+      projectRef: UAT_PROJECT_REF,
+      serviceRoleKey: "sb_secret_test",
+      supabaseUrl: `https://${UAT_PROJECT_REF}.supabase.co`,
+    });
+  });
+
+  it("does not grant reset permission to seed or verify", () => {
+    for (const mode of ["seed", "verify"] as const) {
+      const environment =
+        mode === "seed"
+          ? {
+              ...seedEnvironment,
+              BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION: `RESET-UAT-${UAT_PROJECT_REF}`,
+            }
+          : {
+              ...commonEnvironment,
+              BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION: `RESET-UAT-${UAT_PROJECT_REF}`,
+            };
+      expect(() => readUatMarketplaceFixtureConfig(environment, [mode])).toThrow(
+        "uat_marketplace_fixture_reset_confirmation_invalid",
+      );
+    }
+  });
+
+  it("requires the fixture password only for seed", () => {
+    expect(() => readUatMarketplaceFixtureConfig(commonEnvironment, ["seed"])).toThrow(
+      "uat_marketplace_fixture_configuration_invalid",
+    );
+    expect(() =>
+      readUatMarketplaceFixtureConfig(
+        { ...commonEnvironment, BAZORIA_UAT_FIXTURE_USER_PASSWORD: "too-short" },
+        ["seed"],
+      ),
+    ).toThrow("uat_marketplace_fixture_configuration_invalid");
+  });
+
+  it("accepts direct and short-lived UAT database connections", () => {
+    const direct = readUatMarketplaceFixtureConfig(
+      {
+        ...commonEnvironment,
         BAZORIA_UAT_DATABASE_URL:
-          "postgresql://cli_login_postgres.jhkouuxouplqcfecjutd:secret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres",
+          "postgresql://postgres:secret@db.mekobnkujzpzeiwmecyy.supabase.co:5432/postgres",
       },
       ["verify"],
     );
+    expect(direct.projectRef).toBe(UAT_PROJECT_REF);
 
-    expect(result.projectRef).toBe(UAT_MARKETPLACE_FIXTURE_PROJECT_REF);
+    const cliLogin = readUatMarketplaceFixtureConfig(
+      {
+        ...commonEnvironment,
+        BAZORIA_UAT_DATABASE_URL:
+          "postgresql://cli_login_postgres.mekobnkujzpzeiwmecyy:secret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres",
+      },
+      ["verify"],
+    );
+    expect(cliLogin.projectRef).toBe(UAT_PROJECT_REF);
   });
 
   it.each([
-    [{ ...validEnvironment, BAZORIA_ALLOW_UAT_FIXTURE_RESET: undefined }],
-    [{ ...validEnvironment, BAZORIA_ALLOW_UAT_FIXTURE_RESET: "false" }],
-    [{ ...validEnvironment, SUPABASE_URL: "http://127.0.0.1:54321" }],
-    [{ ...validEnvironment, SUPABASE_URL: "https://aaaaaaaaaaaaaaaaaaaa.supabase.co" }],
+    [{ ...seedEnvironment, BAZORIA_DEPLOYMENT_ENVIRONMENT: "production" }],
+    [{ ...seedEnvironment, BAZORIA_UAT_FIXTURE_PROJECT_REF: PRODUCTION_PROJECT_REF }],
+    [{ ...seedEnvironment, SUPABASE_URL: `https://${UAT_PROJECT_REF}.supabase.co/path` }],
+    [{ ...seedEnvironment, SUPABASE_URL: "http://127.0.0.1:54321" }],
     [
       {
-        ...validEnvironment,
+        ...seedEnvironment,
+        BAZORIA_UAT_FIXTURE_PROJECT_REF: "aaaaaaaaaaaaaaaaaaaa",
+        SUPABASE_URL: "https://aaaaaaaaaaaaaaaaaaaa.supabase.co",
         BAZORIA_UAT_DATABASE_URL:
-          "postgresql://postgres.aaaaaaaaaaaaaaaaaaaa:secret@pooler.supabase.com:6543/postgres",
+          "postgresql://postgres.aaaaaaaaaaaaaaaaaaaa:secret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres",
       },
     ],
-  ])("refuses an unconfirmed or non-UAT destination", (environment) => {
+  ])("refuses invalid or caller-defined destinations", (environment) => {
     expect(() => readUatMarketplaceFixtureConfig(environment, ["seed"])).toThrow();
   });
 
-  it("validates the preserved administrator allowlist", () => {
-    const administratorId = "00000000-0000-4000-8000-000000000001";
-    const result = readUatMarketplaceFixtureConfig(
-      { ...validEnvironment, BAZORIA_PROTOTYPE_ADMIN_USER_IDS: ` ${administratorId} ` },
-      ["reset"],
-    );
-    expect(result.preservedAdministratorUserIds).toEqual([administratorId]);
-
-    expect(() =>
-      readUatMarketplaceFixtureConfig(
-        { ...validEnvironment, BAZORIA_PROTOTYPE_ADMIN_USER_IDS: "not-a-uuid" },
-        ["reset"],
-      ),
-    ).toThrow("uat_marketplace_fixture_administrator_allowlist_invalid");
+  it("refuses a database connection for a different or unknown project", () => {
+    for (const databaseUrl of [
+      `postgresql://postgres.${PRODUCTION_PROJECT_REF}:secret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres`,
+      "postgresql://postgres.mekobnkujzpzeiwmecyy:secret@unknown.supabase.com:5432/postgres",
+      "postgresql://postgres.mekobnkujzpzeiwmecyy:secret@127.0.0.1:5432/postgres",
+    ]) {
+      expect(() =>
+        readUatMarketplaceFixtureConfig(
+          { ...commonEnvironment, BAZORIA_UAT_DATABASE_URL: databaseUrl },
+          ["verify"],
+        ),
+      ).toThrow("uat_marketplace_fixture_database_destination_refused");
+    }
   });
 
-  it("rejects extra or unsupported command arguments", () => {
-    expect(() => readUatMarketplaceFixtureConfig(validEnvironment, [])).toThrow(
+  it("requires the single administrator to be in the UAT inventory", () => {
+    expect(() =>
+      readUatMarketplaceFixtureConfig(
+        {
+          ...commonEnvironment,
+          BAZORIA_UAT_FIXTURE_ADMIN_USER_ID: "00000000-0000-4000-8000-000000000001",
+        },
+        ["verify"],
+      ),
+    ).toThrow("uat_marketplace_fixture_administrator_invalid");
+  });
+
+  it("fails closed when deployment inventories cannot be loaded", () => {
+    expect(() =>
+      readUatMarketplaceFixtureConfig(commonEnvironment, ["verify"], "/missing/repository"),
+    ).toThrow("uat_marketplace_fixture_configuration_invalid");
+  });
+
+  it("rejects extra or unsupported command arguments before parsing configuration", () => {
+    expect(() => readUatMarketplaceFixtureConfig({}, [])).toThrow(
       "uat_marketplace_fixture_mode_invalid",
     );
-    expect(() => readUatMarketplaceFixtureConfig(validEnvironment, ["seed", "extra"])).toThrow(
+    expect(() => readUatMarketplaceFixtureConfig({}, ["seed", "extra"])).toThrow(
       "uat_marketplace_fixture_mode_invalid",
     );
   });
