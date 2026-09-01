@@ -58,6 +58,63 @@ describe("SupabaseUatMarketplaceFixtureGateway", () => {
     expect(Object.values(plan.storageObjectKeys)).toHaveLength(3);
   });
 
+  it("removes non-administrator roles from preserved administrators during reset", async () => {
+    const queries: string[] = [];
+    const transaction = Object.assign(
+      vi.fn((strings: TemplateStringsArray | readonly string[]) => {
+        if (!("raw" in strings)) return strings;
+        queries.push(strings.join("?"));
+        return Promise.resolve([]);
+      }),
+      { unsafe: vi.fn().mockResolvedValue([]) },
+    );
+    const sql = {
+      begin: vi.fn(async (callback: (value: typeof transaction) => Promise<void>) => {
+        await callback(transaction);
+      }),
+    };
+    const gateway = createGateway({}, sql);
+    Object.assign(gateway as object, {
+      countBusinessRows: vi.fn().mockResolvedValue(0),
+    });
+
+    await (
+      gateway as unknown as {
+        truncateBusinessData(userIds: string[]): Promise<number>;
+      }
+    ).truncateBusinessData([administratorUserId]);
+
+    expect(queries.some((query) => query.includes("role <> 'admin'::public.app_role"))).toBe(true);
+    expect(queries.some((query) => query.includes("user_id NOT IN"))).toBe(true);
+  });
+
+  it("rejects extra roles on a preserved administrator after reset", async () => {
+    const selectRoles = vi.fn().mockResolvedValue({
+      data: [
+        { user_id: administratorUserId, role: "admin" },
+        { user_id: administratorUserId, role: "seller" },
+      ],
+      error: null,
+    });
+    const database = {
+      from: vi.fn(() => ({ select: selectRoles })),
+    };
+    const gateway = createGateway(database);
+    Object.assign(gateway as object, {
+      countBusinessRows: vi.fn().mockResolvedValue(0),
+      listStorageObjectKeys: vi.fn().mockResolvedValue([]),
+      listAuthUsers: vi.fn().mockResolvedValue([{ id: administratorUserId }]),
+    });
+
+    await expect(
+      (
+        gateway as unknown as {
+          verifyReset(userIds: string[]): Promise<void>;
+        }
+      ).verifyReset([administratorUserId]),
+    ).rejects.toThrow("uat_marketplace_fixture_reset_failed");
+  });
+
   it("refuses an unmarked non-administrator user before seed mutation", async () => {
     const gateway = createGateway();
     Object.assign(gateway as object, {

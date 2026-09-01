@@ -919,7 +919,8 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
       if (preservedAdministratorUserIds.length > 0) {
         await transaction`
           DELETE FROM public.user_roles
-          WHERE user_id NOT IN ${transaction(preservedAdministratorUserIds)}
+          WHERE role <> 'admin'::public.app_role
+            OR user_id NOT IN ${transaction(preservedAdministratorUserIds)}
         `;
       } else {
         await transaction`DELETE FROM public.user_roles`;
@@ -941,12 +942,15 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
     if (users.some((user) => !preservedAdministratorUserIds.includes(user.id))) {
       throw new Error("uat_marketplace_fixture_reset_failed");
     }
-    const adminRoles = await this.database.from("user_roles").select("user_id").eq("role", "admin");
+    const roles = await this.database.from("user_roles").select("user_id,role");
     if (
-      adminRoles.error ||
-      adminRoles.data.length !== preservedAdministratorUserIds.length ||
+      roles.error ||
+      roles.data.length !== preservedAdministratorUserIds.length ||
+      roles.data.some(
+        (role) => role.role !== "admin" || !preservedAdministratorUserIds.includes(role.user_id),
+      ) ||
       preservedAdministratorUserIds.some(
-        (userId) => !adminRoles.data.some((role) => role.user_id === userId),
+        (userId) => !roles.data.some((role) => role.user_id === userId && role.role === "admin"),
       )
     ) {
       throw new Error("uat_marketplace_fixture_reset_failed");
