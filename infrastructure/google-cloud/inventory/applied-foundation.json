@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-01T23:50:28.107Z",
+  "terraformVersion": "1.15.9",
+  "googleProviderConstraint": "~> 7.46.0",
+  "environments": {
+    "uat": {
+      "project": {
+        "billing_account_id": "014CA9-692646-D9E4CE",
+        "environment": "uat",
+        "organization_id": "33779488200",
+        "project_id": "bazoria-uat-lnlabs",
+        "project_number": "145571383840",
+        "region": "europe-west3"
+      },
+      "state": {
+        "bucket": "bazoria-uat-lnlabs-tfstate",
+        "bootstrapPrefix": "terraform/bootstrap",
+        "platformPrefix": "terraform/platform",
+        "directPrincipals": [
+          "user:hoang@lnlabs.xyz"
+        ],
+        "inheritedAdministratorAccess": [
+          {
+            "principal": "user:hoang@lnlabs.xyz",
+            "role": "roles/owner",
+            "source": "project:bazoria-uat-lnlabs",
+            "disposition": "bootstrap-only; replace with reviewed granular access in 0038e2"
+          }
+        ]
+      },
+      "enabledServices": [
+        "artifactregistry.googleapis.com",
+        "billingbudgets.googleapis.com",
+        "certificatemanager.googleapis.com",
+        "cloudbilling.googleapis.com",
+        "cloudresourcemanager.googleapis.com",
+        "cloudscheduler.googleapis.com",
+        "cloudtasks.googleapis.com",
+        "compute.googleapis.com",
+        "iam.googleapis.com",
+        "iamcredentials.googleapis.com",
+        "logging.googleapis.com",
+        "monitoring.googleapis.com",
+        "run.googleapis.com",
+        "secretmanager.googleapis.com",
+        "serviceusage.googleapis.com",
+        "storage.googleapis.com",
+        "sts.googleapis.com"
+      ]
+    },
+    "production": {
+      "project": {
+        "billing_account_id": "014CA9-692646-D9E4CE",
+        "environment": "production",
+        "organization_id": "33779488200",
+        "project_id": "bazoria-prod-lnlabs",
+        "project_number": "787649115343",
+        "region": "europe-west3"
+      },
+      "state": {
+        "bucket": "bazoria-prod-lnlabs-tfstate",
+        "bootstrapPrefix": "terraform/bootstrap",
+        "platformPrefix": "terraform/platform",
+        "directPrincipals": [
+          "user:hoang@lnlabs.xyz"
+        ],
+        "inheritedAdministratorAccess": [
+          {
+            "principal": "user:hoang@lnlabs.xyz",
+            "role": "roles/owner",
+            "source": "project:bazoria-prod-lnlabs",
+            "disposition": "bootstrap-only; replace with reviewed granular access in 0038e2"
+          }
+        ]
+      },
+      "enabledServices": [
+        "artifactregistry.googleapis.com",
+        "billingbudgets.googleapis.com",
+        "certificatemanager.googleapis.com",
+        "cloudbilling.googleapis.com",
+        "cloudresourcemanager.googleapis.com",
+        "cloudscheduler.googleapis.com",
+        "cloudtasks.googleapis.com",
+        "compute.googleapis.com",
+        "iam.googleapis.com",
+        "iamcredentials.googleapis.com",
+        "logging.googleapis.com",
+        "monitoring.googleapis.com",
+        "run.googleapis.com",
+        "secretmanager.googleapis.com",
+        "serviceusage.googleapis.com",
+        "storage.googleapis.com",
+        "sts.googleapis.com"
+      ]
+    }
+  }
+}
