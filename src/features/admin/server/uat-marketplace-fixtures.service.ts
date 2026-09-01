@@ -1,5 +1,4 @@
 import {
-  fixtureSellerSlugs,
   UAT_MARKETPLACE_SELLERS,
   type UatMarketplaceProductFixture,
   type UatMarketplaceSellerFixture,
@@ -21,28 +20,41 @@ export type UatMarketplaceFixtureVerification = {
 
 export type UatMarketplaceFixtureResetSummary = {
   deletedAuthUsers: number;
-  deletedDatabaseSellers: number;
-  deletedPrivateObjects: number;
-  deletedPublicObjects: number;
+  deletedDatabaseRows: number;
+  deletedStorageObjects: number;
+  plannedAuthUsers: number;
+  plannedDatabaseRows: number;
+  plannedStorageObjects: number;
+};
+
+export type UatMarketplaceFixtureResetPlan = {
+  authUserIds: string[];
+  databaseRows: number;
+  preservedAdministratorUserIds: string[];
+  storageObjectKeys: Record<string, string[]>;
 };
 
 export interface UatMarketplaceFixtureGateway {
-  listSellerSlugs(): Promise<string[]>;
-  reset(preservedAdministratorUserIds: string[]): Promise<UatMarketplaceFixtureResetSummary>;
+  planReset(preservedAdministratorUserIds: string[]): Promise<UatMarketplaceFixtureResetPlan>;
+  reset(plan: UatMarketplaceFixtureResetPlan): Promise<UatMarketplaceFixtureResetSummary>;
+  preflightSeed(assets: Map<string, UatMarketplaceFixtureAsset>): Promise<void>;
   ensureSeller(input: {
     cover: UatMarketplaceFixtureAsset;
     fixture: UatMarketplaceSellerFixture;
     logo: UatMarketplaceFixtureAsset;
     password: string;
-  }): Promise<{ sellerId: string }>;
+  }): Promise<{ sellerId: string; sellerUserId: string }>;
   ensureProduct(input: {
     assets: UatMarketplaceFixtureAsset[];
     audience: UatMarketplaceSellerFixture["audience"];
     fixture: UatMarketplaceProductFixture;
     sellerId: string;
     sellerSlug: string;
+    sellerUserId: string;
   }): Promise<void>;
-  verify(): Promise<UatMarketplaceFixtureVerification>;
+  verify(
+    assets: Map<string, UatMarketplaceFixtureAsset>,
+  ): Promise<UatMarketplaceFixtureVerification>;
 }
 
 export type UatMarketplaceFixtureSummary = {
@@ -60,27 +72,41 @@ type SeedInput = {
   password: string;
 };
 
+type FixtureLog = (entry: Record<string, unknown>) => void;
+
 export class UatMarketplaceFixtureService {
   constructor(
     private readonly gateway: UatMarketplaceFixtureGateway,
     private readonly loadAssets: AssetBundleLoader = loadUatMarketplaceFixtureAssetBundle,
+    private readonly log: FixtureLog = writeFixtureLog,
   ) {}
 
   async reset(preservedAdministratorUserIds: string[]): Promise<UatMarketplaceFixtureSummary> {
+    const plan = await this.gateway.planReset(preservedAdministratorUserIds);
+    const plannedStorageObjects = Object.values(plan.storageObjectKeys).reduce(
+      (total, keys) => total + keys.length,
+      0,
+    );
+    this.log({
+      event: "uat_marketplace_fixture_reset_planned",
+      mode: "reset",
+      preservedAdministratorUserIds: plan.preservedAdministratorUserIds,
+      plannedAuthUsers: plan.authUserIds.length,
+      plannedDatabaseRows: plan.databaseRows,
+      plannedStorageObjects,
+    });
+    const reset = await this.gateway.reset(plan);
+    this.log({ event: "uat_marketplace_fixture_reset_completed", mode: "reset", ...reset });
     return {
       mode: "reset",
-      reset: await this.gateway.reset(preservedAdministratorUserIds),
+      reset,
       verification: null,
     };
   }
 
   async seed(input: SeedInput): Promise<UatMarketplaceFixtureSummary> {
     const assets = await this.loadAssets(input.assetDirectory);
-    const existingSellerSlugs = await this.gateway.listSellerSlugs();
-    const expectedSellerSlugs = new Set(fixtureSellerSlugs());
-    if (existingSellerSlugs.some((slug) => !expectedSellerSlugs.has(slug))) {
-      throw new Error("uat_marketplace_fixture_conflict");
-    }
+    await this.gateway.preflightSeed(assets);
 
     for (const seller of UAT_MARKETPLACE_SELLERS) {
       const ensured = await this.gateway.ensureSeller({
@@ -92,6 +118,7 @@ export class UatMarketplaceFixtureService {
       for (const product of seller.products) {
         await this.gateway.ensureProduct({
           sellerId: ensured.sellerId,
+          sellerUserId: ensured.sellerUserId,
           sellerSlug: seller.slug,
           audience: seller.audience,
           fixture: product,
@@ -100,12 +127,24 @@ export class UatMarketplaceFixtureService {
       }
     }
 
-    return { mode: "seed", reset: null, verification: await this.gateway.verify() };
+    return { mode: "seed", reset: null, verification: await this.gateway.verify(assets) };
   }
 
-  async verify(): Promise<UatMarketplaceFixtureSummary> {
-    return { mode: "verify", reset: null, verification: await this.gateway.verify() };
+  async verify(assetDirectory: string): Promise<UatMarketplaceFixtureSummary> {
+    const assets = await this.loadAssets(assetDirectory);
+    return { mode: "verify", reset: null, verification: await this.gateway.verify(assets) };
   }
+}
+
+function writeFixtureLog(entry: Record<string, unknown>): void {
+  console.info(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      service: "bazoria_uat_marketplace_fixtures",
+      severity: "info",
+      ...entry,
+    }),
+  );
 }
 
 function requireAsset(

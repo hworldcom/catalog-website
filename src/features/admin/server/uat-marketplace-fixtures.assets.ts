@@ -4,7 +4,11 @@ import { relative, resolve, sep } from "node:path";
 
 import { z } from "zod";
 
-import { fixtureAssetFiles, UAT_MARKETPLACE_SELLERS } from "./uat-marketplace-fixtures.manifest";
+import {
+  fixtureAssetFiles,
+  UAT_MARKETPLACE_FIXTURE_BUNDLE_VERSION,
+  UAT_MARKETPLACE_SELLERS,
+} from "./uat-marketplace-fixtures.manifest";
 
 const MANIFEST_FILE = "manifest.json";
 const MAXIMUM_ASSET_SIZE_BYTES = 20 * 1024 * 1024;
@@ -26,7 +30,7 @@ const assetEntrySchema = z
 const assetManifestSchema = z
   .object({
     schemaVersion: z.literal(1),
-    bundleVersion: z.literal("0038d-v1"),
+    bundleVersion: z.literal(UAT_MARKETPLACE_FIXTURE_BUNDLE_VERSION),
     provenance: z
       .object({
         synthetic: z.literal(true),

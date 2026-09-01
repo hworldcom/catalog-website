@@ -26,18 +26,20 @@ async function main(): Promise<void> {
         sql,
         config.supabaseUrl,
         config.serviceRoleKey,
+        config.administratorUserId,
+        config.administratorUserIds,
       ),
     );
 
     const summary =
       config.mode === "reset"
-        ? await service.reset([config.administratorUserId])
+        ? await service.reset(config.administratorUserIds)
         : config.mode === "seed"
           ? await service.seed({
               assetDirectory: config.assetDirectory,
               password: config.fixtureUserPassword,
             })
-          : await service.verify();
+          : await service.verify(config.assetDirectory);
     process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
   } catch (error) {
     process.stderr.write(

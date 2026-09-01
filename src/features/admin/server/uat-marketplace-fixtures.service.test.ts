@@ -9,14 +9,25 @@ import {
 
 function gateway(overrides: Partial<UatMarketplaceFixtureGateway> = {}) {
   return {
-    listSellerSlugs: vi.fn().mockResolvedValue([]),
+    planReset: vi.fn().mockResolvedValue({
+      authUserIds: [],
+      databaseRows: 0,
+      preservedAdministratorUserIds: [],
+      storageObjectKeys: {},
+    }),
     reset: vi.fn().mockResolvedValue({
       deletedAuthUsers: 0,
-      deletedDatabaseSellers: 0,
-      deletedPrivateObjects: 0,
-      deletedPublicObjects: 0,
+      deletedDatabaseRows: 0,
+      deletedStorageObjects: 0,
+      plannedAuthUsers: 0,
+      plannedDatabaseRows: 0,
+      plannedStorageObjects: 0,
     }),
-    ensureSeller: vi.fn().mockResolvedValue({ sellerId: crypto.randomUUID() }),
+    preflightSeed: vi.fn().mockResolvedValue(undefined),
+    ensureSeller: vi.fn().mockResolvedValue({
+      sellerId: crypto.randomUUID(),
+      sellerUserId: crypto.randomUUID(),
+    }),
     ensureProduct: vi.fn().mockResolvedValue(undefined),
     verify: vi.fn().mockResolvedValue({
       productCodes: Array.from({ length: 16 }, (_, index) => `CODE-${index}`),
@@ -49,9 +60,9 @@ describe("UatMarketplaceFixtureService", () => {
   it("preflights the complete bundle before refusing a non-fixture catalog", async () => {
     const events: string[] = [];
     const fake = gateway({
-      listSellerSlugs: vi.fn(async () => {
-        events.push("list");
-        return ["old-seller"];
+      preflightSeed: vi.fn(async () => {
+        events.push("gateway");
+        throw new Error("uat_marketplace_fixture_conflict");
       }),
     });
     const load = vi.fn(async () => {
@@ -63,7 +74,7 @@ describe("UatMarketplaceFixtureService", () => {
       "uat_marketplace_fixture_conflict",
     );
 
-    expect(events).toEqual(["assets", "list"]);
+    expect(events).toEqual(["assets", "gateway"]);
     expect(load).toHaveBeenCalledWith("/assets");
     expect(fake.reset).not.toHaveBeenCalled();
     expect(fake.ensureSeller).not.toHaveBeenCalled();
@@ -71,33 +82,89 @@ describe("UatMarketplaceFixtureService", () => {
   });
 
   it("does not reset an existing fixture-only catalog", async () => {
-    const fake = gateway({
-      listSellerSlugs: vi.fn().mockResolvedValue(fixtureSellerSlugs()),
-    });
+    const fake = gateway();
     await new UatMarketplaceFixtureService(fake, vi.fn().mockResolvedValue(assets)).seed(seedInput);
     expect(fake.reset).not.toHaveBeenCalled();
+    expect(fake.verify).toHaveBeenCalledWith(assets);
+  });
+
+  it("loads the fixture bundle for standalone verification", async () => {
+    const fake = gateway();
+    const load = vi.fn().mockResolvedValue(assets);
+
+    await new UatMarketplaceFixtureService(fake, load).verify("/assets");
+
+    expect(load).toHaveBeenCalledWith("/assets");
+    expect(fake.verify).toHaveBeenCalledWith(assets);
   });
 
   it("does not call any gateway method when bundle preflight fails", async () => {
-    const fake = gateway({ listSellerSlugs: vi.fn().mockResolvedValue(["old-seller"]) });
+    const fake = gateway();
     const service = new UatMarketplaceFixtureService(
       fake,
       vi.fn().mockRejectedValue(new Error("uat_marketplace_fixture_asset_missing")),
     );
     await expect(service.seed(seedInput)).rejects.toThrow("uat_marketplace_fixture_asset_missing");
-    expect(fake.listSellerSlugs).not.toHaveBeenCalled();
+    expect(fake.preflightSeed).not.toHaveBeenCalled();
     expect(fake.reset).not.toHaveBeenCalled();
     expect(fake.ensureSeller).not.toHaveBeenCalled();
     expect(fake.ensureProduct).not.toHaveBeenCalled();
     expect(fake.verify).not.toHaveBeenCalled();
   });
 
-  it("passes the preserved administrator only to reset", async () => {
-    const fake = gateway();
-    const service = new UatMarketplaceFixtureService(fake);
+  it("logs the reset plan before deleting while preserving the administrator allowlist", async () => {
+    const events: string[] = [];
     const preservedAdministratorUserIds = ["00000000-0000-4000-8000-000000000001"];
+    const plan = {
+      authUserIds: ["00000000-0000-4000-8000-000000000002"],
+      databaseRows: 42,
+      preservedAdministratorUserIds,
+      storageObjectKeys: {
+        "product-images": ["one.jpg"],
+        "product-draft-images": ["two.jpg"],
+      },
+    };
+    const fake = gateway({
+      planReset: vi.fn(async () => {
+        events.push("plan");
+        return plan;
+      }),
+      reset: vi.fn(async () => {
+        events.push("reset");
+        return {
+          deletedAuthUsers: 1,
+          deletedDatabaseRows: 42,
+          deletedStorageObjects: 2,
+          plannedAuthUsers: 1,
+          plannedDatabaseRows: 42,
+          plannedStorageObjects: 2,
+        };
+      }),
+    });
+    const log = vi.fn((entry: Record<string, unknown>) => {
+      events.push(`log:${entry.event}`);
+    });
+    const service = new UatMarketplaceFixtureService(fake, undefined, log);
+
     await service.reset(preservedAdministratorUserIds);
-    expect(fake.reset).toHaveBeenCalledWith(preservedAdministratorUserIds);
-    expect(fake.listSellerSlugs).not.toHaveBeenCalled();
+
+    expect(events).toEqual([
+      "plan",
+      "log:uat_marketplace_fixture_reset_planned",
+      "reset",
+      "log:uat_marketplace_fixture_reset_completed",
+    ]);
+    expect(fake.planReset).toHaveBeenCalledWith(preservedAdministratorUserIds);
+    expect(fake.reset).toHaveBeenCalledWith(plan);
+    expect(log).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        plannedAuthUsers: 1,
+        plannedDatabaseRows: 42,
+        plannedStorageObjects: 2,
+        preservedAdministratorUserIds,
+      }),
+    );
+    expect(fake.preflightSeed).not.toHaveBeenCalled();
   });
 });

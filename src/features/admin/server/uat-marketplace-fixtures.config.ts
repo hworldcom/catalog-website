@@ -52,6 +52,7 @@ type ParsedFixtureEnvironment = z.infer<typeof baseEnvironmentSchema> & {
 };
 
 type UatMarketplaceFixtureCommonConfig = {
+  administratorUserIds: string[];
   administratorUserId: string;
   databaseUrl: string;
   projectRef: string;
@@ -66,7 +67,10 @@ export type UatMarketplaceFixtureConfig =
       fixtureUserPassword: string;
       mode: "seed";
     })
-  | (UatMarketplaceFixtureCommonConfig & { mode: "verify" });
+  | (UatMarketplaceFixtureCommonConfig & {
+      assetDirectory: string;
+      mode: "verify";
+    });
 
 export type UatMarketplaceFixtureMode = UatMarketplaceFixtureConfig["mode"];
 
@@ -102,6 +106,7 @@ export function readUatMarketplaceFixtureConfig(
   }
 
   const common = {
+    administratorUserIds: [...uatInventory.ownership.administratorAllowlist],
     administratorUserId,
     databaseUrl: parsed.BAZORIA_UAT_DATABASE_URL,
     projectRef,
@@ -133,7 +138,14 @@ export function readUatMarketplaceFixtureConfig(
     };
   }
 
-  return { ...common, mode };
+  return {
+    ...common,
+    assetDirectory: resolve(
+      workingDirectory,
+      parsed.BAZORIA_UAT_FIXTURE_ASSET_DIR ?? DEFAULT_ASSET_DIRECTORY,
+    ),
+    mode,
+  };
 }
 
 function parseEnvironment(

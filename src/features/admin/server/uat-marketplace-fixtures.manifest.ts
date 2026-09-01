@@ -26,7 +26,7 @@ export type UatMarketplaceSellerFixture = {
   slug: string;
 };
 
-export const UAT_MARKETPLACE_FIXTURE_PREFIX = "uat-marketplace-fixtures";
+export const UAT_MARKETPLACE_FIXTURE_BUNDLE_VERSION = "0038d-v1";
 
 export const UAT_MARKETPLACE_SELLERS: readonly UatMarketplaceSellerFixture[] = [
   {

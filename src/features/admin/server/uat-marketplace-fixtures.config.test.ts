@@ -27,6 +27,7 @@ describe("readUatMarketplaceFixtureConfig", () => {
   it("loads the checked-in UAT inventory and returns seed-only values", () => {
     expect(readUatMarketplaceFixtureConfig(seedEnvironment, ["seed"])).toEqual({
       administratorUserId: UAT_ADMINISTRATOR_ID,
+      administratorUserIds: [UAT_ADMINISTRATOR_ID],
       assetDirectory: resolve("deployment/fixtures/uat/0038d/assets"),
       databaseUrl: commonEnvironment.BAZORIA_UAT_DATABASE_URL,
       fixtureUserPassword: "fixture-password",
@@ -55,6 +56,7 @@ describe("readUatMarketplaceFixtureConfig", () => {
     );
     expect(result).toEqual({
       administratorUserId: UAT_ADMINISTRATOR_ID,
+      administratorUserIds: [UAT_ADMINISTRATOR_ID],
       databaseUrl: commonEnvironment.BAZORIA_UAT_DATABASE_URL,
       mode: "reset",
       projectRef: UAT_PROJECT_REF,
@@ -76,6 +78,8 @@ describe("readUatMarketplaceFixtureConfig", () => {
   it("requires neither password nor reset confirmation for verify", () => {
     expect(readUatMarketplaceFixtureConfig(commonEnvironment, ["verify"])).toEqual({
       administratorUserId: UAT_ADMINISTRATOR_ID,
+      administratorUserIds: [UAT_ADMINISTRATOR_ID],
+      assetDirectory: resolve(process.cwd(), "deployment/fixtures/uat/0038d/assets"),
       databaseUrl: commonEnvironment.BAZORIA_UAT_DATABASE_URL,
       mode: "verify",
       projectRef: UAT_PROJECT_REF,
