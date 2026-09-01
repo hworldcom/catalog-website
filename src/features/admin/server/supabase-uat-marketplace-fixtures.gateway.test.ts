@@ -6,10 +6,10 @@ import { SupabaseUatMarketplaceFixtureGateway } from "./supabase-uat-marketplace
 const administratorUserId = "abcdefab-cdef-4abc-8def-abcdefabcdef";
 const sellerUserId = "12345678-abcd-4abc-8def-123456789abc";
 
-function createGateway(database: object = {}) {
+function createGateway(database: object = {}, sql: object = vi.fn()) {
   return new SupabaseUatMarketplaceFixtureGateway(
     database as never,
-    vi.fn() as never,
+    sql as never,
     "https://example.supabase.co",
     "service-role-key",
     administratorUserId,
@@ -18,6 +18,23 @@ function createGateway(database: object = {}) {
 }
 
 describe("SupabaseUatMarketplaceFixtureGateway", () => {
+  it("validates audience normalization through the protected database connection", async () => {
+    const remoteProcedureCall = vi.fn();
+    const sql = vi.fn().mockResolvedValue([{ audiences: ["women", "men", "kids"] }]);
+    const gateway = createGateway({ rpc: remoteProcedureCall }, sql);
+
+    await expect(
+      (
+        gateway as unknown as {
+          requireNormalizedAudiences(): Promise<void>;
+        }
+      ).requireNormalizedAudiences(),
+    ).resolves.toBeUndefined();
+
+    expect(remoteProcedureCall).not.toHaveBeenCalled();
+    expect(sql).toHaveBeenCalledOnce();
+  });
+
   it("plans deletion of every authentication user except allowlisted administrators", async () => {
     const gateway = createGateway();
     const countBusinessRows = vi.fn().mockResolvedValue(17);

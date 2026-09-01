@@ -856,15 +856,7 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
       throw new Error("uat_marketplace_fixture_reference_data_invalid");
     }
 
-    const audiences = await this.database.rpc("normalize_product_audience_set", {
-      p_audiences: ["women", "men", "kids"],
-    });
-    if (
-      audiences.error ||
-      JSON.stringify(audiences.data) !== JSON.stringify(["women", "men", "kids"])
-    ) {
-      throw new Error("uat_marketplace_fixture_reference_data_invalid");
-    }
+    await this.requireNormalizedAudiences();
 
     const buckets = await this.sql<
       { id: string; public: boolean; file_size_limit: number; allowed_mime_types: string[] }[]
@@ -882,6 +874,17 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
           (bucket.id === PUBLIC_IMAGE_BUCKET ? !bucket.public : bucket.public),
       )
     ) {
+      throw new Error("uat_marketplace_fixture_reference_data_invalid");
+    }
+  }
+
+  private async requireNormalizedAudiences(): Promise<void> {
+    const audiences = await this.sql<{ audiences: string[] }[]>`
+      SELECT public.normalize_product_audience_set(
+        ARRAY['women', 'men', 'kids']::text[]
+      ) AS audiences
+    `;
+    if (JSON.stringify(audiences[0]?.audiences) !== JSON.stringify(["women", "men", "kids"])) {
       throw new Error("uat_marketplace_fixture_reference_data_invalid");
     }
   }
