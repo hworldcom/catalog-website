@@ -98,6 +98,27 @@ describe("seller company-code screens", () => {
     vi.unstubAllGlobals();
   });
 
+  it("uses a consistent Polish-market onboarding example", () => {
+    renderScreen(<OnboardingScreen />);
+
+    expect(screen.getByRole("textbox", { name: "Business name*" })).toHaveAttribute(
+      "placeholder",
+      "Mazovia Moda",
+    );
+    expect(screen.getByRole("textbox", { name: /^Company code\*/ })).toHaveAttribute(
+      "placeholder",
+      "MIA",
+    );
+    expect(screen.getByRole("textbox", { name: "City" })).toHaveAttribute("placeholder", "Warsaw");
+    expect(screen.getByRole("textbox", { name: "Country" })).toHaveAttribute(
+      "placeholder",
+      "Poland",
+    );
+    expect(
+      screen.getByRole("textbox", { name: /^WhatsApp \(with country code\)/ }),
+    ).toHaveAttribute("placeholder", "+48 000 000 000");
+  });
+
   it("preserves a deliberate onboarding code when the business name changes", async () => {
     renderScreen(<OnboardingScreen />);
 

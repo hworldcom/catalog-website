@@ -86,7 +86,7 @@ export function OnboardingScreen() {
               if (!companyCodeEdited) setCompanyCode(deriveCompanyCodePreview(nextName));
             }}
             className="border border-border bg-background px-3 py-2 text-sm"
-            placeholder="Kesar Textiles"
+            placeholder="Mazovia Moda"
           />
         </Field>
         <Field label={tr(companyCodeCopy.label)}>
@@ -101,7 +101,7 @@ export function OnboardingScreen() {
               setCompanyCode(e.target.value.toUpperCase());
             }}
             className="border border-border bg-background px-3 py-2 text-sm uppercase"
-            placeholder="KES"
+            placeholder="MIA"
             autoComplete="off"
           />
           <span className="text-[11px] text-muted-foreground">
@@ -132,7 +132,7 @@ export function OnboardingScreen() {
               onChange={(e) => setCity(e.target.value)}
               maxLength={80}
               className="border border-border bg-background px-3 py-2 text-sm"
-              placeholder="Jaipur"
+              placeholder="Warsaw"
             />
           </Field>
           <Field label="Country">
@@ -141,7 +141,7 @@ export function OnboardingScreen() {
               onChange={(e) => setCountry(e.target.value)}
               maxLength={80}
               className="border border-border bg-background px-3 py-2 text-sm"
-              placeholder="India"
+              placeholder="Poland"
             />
           </Field>
         </div>
@@ -151,7 +151,7 @@ export function OnboardingScreen() {
             onChange={(e) => setWhatsapp(e.target.value)}
             maxLength={40}
             className="border border-border bg-background px-3 py-2 text-sm"
-            placeholder="+91 98765 43210"
+            placeholder="+48 000 000 000"
           />
           <span className="text-[11px] text-muted-foreground">
             Buyers use this to message you directly. You can add it later.
