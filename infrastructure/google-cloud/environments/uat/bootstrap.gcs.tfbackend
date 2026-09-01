@@ -1,0 +1,2 @@
+bucket = "bazoria-uat-lnlabs-tfstate"
+prefix = "terraform/bootstrap"

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-09-02",
+  "environments": {
+    "uat": {
+      "projectInheritedStateAccess": [
+        {
+          "principal": "user:hoang@lnlabs.xyz",
+          "role": "roles/owner",
+          "source": "project:bazoria-uat-lnlabs",
+          "disposition": "bootstrap-only; replace with reviewed granular access in 0038e2"
+        }
+      ]
+    },
+    "production": {
+      "projectInheritedStateAccess": [
+        {
+          "principal": "user:hoang@lnlabs.xyz",
+          "role": "roles/owner",
+          "source": "project:bazoria-prod-lnlabs",
+          "disposition": "bootstrap-only; replace with reviewed granular access in 0038e2"
+        }
+      ]
+    }
+  }
+}

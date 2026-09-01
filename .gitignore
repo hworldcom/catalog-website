@@ -26,6 +26,18 @@ dist-ssr
 .vercel/
 supabase/.temp/
 supabase/.branches/
+.terraform/
+.terraform-data/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+infrastructure/google-cloud/bootstrap/backend.generated.tf
 
 # Test and tool caches
 coverage/

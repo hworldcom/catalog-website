@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-09-02",
+  "terraformVersion": "1.15.9",
+  "googleProviderConstraint": "~> 7.46.0",
+  "environments": {
+    "uat": {
+      "projectId": "bazoria-uat-lnlabs",
+      "projectNumber": "145571383840",
+      "organizationId": "33779488200",
+      "billingAccountId": "014CA9-692646-D9E4CE",
+      "region": "europe-west3",
+      "stateBucket": "bazoria-uat-lnlabs-tfstate",
+      "bootstrapOperatorPrincipal": "user:hoang@lnlabs.xyz"
+    },
+    "production": {
+      "projectId": "bazoria-prod-lnlabs",
+      "projectNumber": "787649115343",
+      "organizationId": "33779488200",
+      "billingAccountId": "014CA9-692646-D9E4CE",
+      "region": "europe-west3",
+      "stateBucket": "bazoria-prod-lnlabs-tfstate",
+      "bootstrapOperatorPrincipal": "user:hoang@lnlabs.xyz"
+    }
+  }
+}

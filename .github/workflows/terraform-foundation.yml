@@ -1,0 +1,63 @@
+name: Terraform foundation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/terraform-foundation.yml"
+      - ".terraform-version"
+      - "infrastructure/google-cloud/**"
+      - "scripts/terraform/**"
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/terraform-foundation.yml"
+      - ".terraform-version"
+      - "infrastructure/google-cloud/**"
+      - "scripts/terraform/**"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-foundation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test repository foundation contract
+        run: >-
+          npm run test --
+          scripts/terraform/foundation-contract.test.ts
+          scripts/terraform/foundation-plan-contract.test.ts
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Validate Terraform foundation
+        run: npm run infra:terraform:validate

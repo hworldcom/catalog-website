@@ -1,0 +1,23 @@
+{
+  "bootstrap": [
+    "cloudresourcemanager.googleapis.com",
+    "serviceusage.googleapis.com",
+    "storage.googleapis.com"
+  ],
+  "platform": [
+    "artifactregistry.googleapis.com",
+    "billingbudgets.googleapis.com",
+    "certificatemanager.googleapis.com",
+    "cloudbilling.googleapis.com",
+    "cloudscheduler.googleapis.com",
+    "cloudtasks.googleapis.com",
+    "compute.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "logging.googleapis.com",
+    "monitoring.googleapis.com",
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
+    "sts.googleapis.com"
+  ]
+}
