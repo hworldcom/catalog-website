@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { UAT_MARKETPLACE_SELLERS } from "./uat-marketplace-fixtures.manifest";
 import { SupabaseUatMarketplaceFixtureGateway } from "./supabase-uat-marketplace-fixtures.gateway";
 
 const administratorUserId = "abcdefab-cdef-4abc-8def-abcdefabcdef";
@@ -18,6 +19,35 @@ function createGateway(database: object = {}, sql: object = vi.fn()) {
 }
 
 describe("SupabaseUatMarketplaceFixtureGateway", () => {
+  it("accepts approved fixture sellers without the separate verification badge", async () => {
+    const rows = [...UAT_MARKETPLACE_SELLERS]
+      .sort((left, right) => left.slug.localeCompare(right.slug))
+      .map((seller, index) => ({
+        id: `seller-${index}`,
+        owner_id: `owner-${index}`,
+        slug: seller.slug,
+        published: true,
+        verified: false,
+        storefront_enabled: true,
+        approved_profile_submission_id: `submission-${index}`,
+        logo_url: `/logos/${index}`,
+        cover_image_url: `/covers/${index}`,
+      }));
+    const order = vi.fn().mockResolvedValue({ data: rows, error: null });
+    const select = vi.fn(() => ({ order }));
+    const gateway = createGateway({ from: vi.fn(() => ({ select })) });
+
+    await expect(
+      (
+        gateway as unknown as {
+          requireFixtureSellers(): Promise<unknown>;
+        }
+      ).requireFixtureSellers(),
+    ).resolves.toEqual(rows);
+
+    expect(select).toHaveBeenCalledWith(expect.not.stringContaining("verified"));
+  });
+
   it("validates audience normalization through the protected database connection", async () => {
     const remoteProcedureCall = vi.fn();
     const sql = vi.fn().mockResolvedValue([{ audiences: ["women", "men", "kids"] }]);

@@ -495,31 +495,7 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
     assets: Map<string, UatMarketplaceFixtureAsset>,
   ): Promise<UatMarketplaceFixtureVerification> {
     try {
-      const sellerResponse = await this.database
-        .from("sellers")
-        .select(
-          "id,owner_id,slug,published,verified,storefront_enabled,approved_profile_submission_id,logo_url,cover_image_url",
-        )
-        .order("slug");
-      if (sellerResponse.error) throw databaseFailure("verify_sellers", sellerResponse.error);
-      const sellers = sellerResponse.data;
-      const expectedSlugs = UAT_MARKETPLACE_SELLERS.map((seller) => seller.slug).sort();
-      if (
-        sellers.length !== expectedSlugs.length ||
-        JSON.stringify(sellers.map((seller) => seller.slug)) !== JSON.stringify(expectedSlugs) ||
-        sellers.some(
-          (seller) =>
-            !seller.owner_id ||
-            !seller.published ||
-            !seller.verified ||
-            !seller.storefront_enabled ||
-            !seller.approved_profile_submission_id ||
-            !seller.logo_url ||
-            !seller.cover_image_url,
-        )
-      ) {
-        throw verificationFailed();
-      }
+      const sellers = await this.requireFixtureSellers();
 
       const sellerIds = sellers.map((seller) => seller.id);
       const [
@@ -648,6 +624,34 @@ export class SupabaseUatMarketplaceFixtureGateway implements UatMarketplaceFixtu
       }
       throw verificationFailed();
     }
+  }
+
+  private async requireFixtureSellers() {
+    const response = await this.database
+      .from("sellers")
+      .select(
+        "id,owner_id,slug,published,storefront_enabled,approved_profile_submission_id,logo_url,cover_image_url",
+      )
+      .order("slug");
+    if (response.error) throw databaseFailure("verify_sellers", response.error);
+    const expectedSlugs = UAT_MARKETPLACE_SELLERS.map((seller) => seller.slug).sort();
+    if (
+      response.data.length !== expectedSlugs.length ||
+      JSON.stringify(response.data.map((seller) => seller.slug)) !==
+        JSON.stringify(expectedSlugs) ||
+      response.data.some(
+        (seller) =>
+          !seller.owner_id ||
+          !seller.published ||
+          !seller.storefront_enabled ||
+          !seller.approved_profile_submission_id ||
+          !seller.logo_url ||
+          !seller.cover_image_url,
+      )
+    ) {
+      throw verificationFailed();
+    }
+    return response.data;
   }
 
   private activationBackend(): UatFixtureActivationBackend {
