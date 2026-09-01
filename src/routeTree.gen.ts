@@ -18,6 +18,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SSellerSlugRouteImport } from './routes/s.$sellerSlug'
 import { Route as PProductIdRouteImport } from './routes/p.$productId'
 import { Route as CCategoryRouteImport } from './routes/c.$category'
+import { Route as AuthRecoveryRouteImport } from './routes/auth_.recovery'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth_.forgot-password'
 import { Route as ApiRuntimeConfigRouteImport } from './routes/api.runtime-config'
 import { Route as AuthenticatedSellerRouteImport } from './routes/_authenticated/seller'
 import { Route as AuthenticatedSellerIndexRouteImport } from './routes/_authenticated/seller.index'
@@ -95,6 +97,16 @@ const PProductIdRoute = PProductIdRouteImport.update({
 const CCategoryRoute = CCategoryRouteImport.update({
   id: '/c/$category',
   path: '/c/$category',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRecoveryRoute = AuthRecoveryRouteImport.update({
+  id: '/auth_/recovery',
+  path: '/auth/recovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/auth_/forgot-password',
+  path: '/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRuntimeConfigRoute = ApiRuntimeConfigRouteImport.update({
@@ -310,6 +322,8 @@ export interface FileRoutesByFullPath {
   '/version': typeof VersionRoute
   '/seller': typeof AuthenticatedSellerRouteWithChildren
   '/api/runtime-config': typeof ApiRuntimeConfigRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/recovery': typeof AuthRecoveryRoute
   '/c/$category': typeof CCategoryRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
@@ -353,6 +367,8 @@ export interface FileRoutesByTo {
   '/join': typeof JoinRoute
   '/version': typeof VersionRoute
   '/api/runtime-config': typeof ApiRuntimeConfigRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/recovery': typeof AuthRecoveryRoute
   '/c/$category': typeof CCategoryRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
@@ -399,6 +415,8 @@ export interface FileRoutesById {
   '/version': typeof VersionRoute
   '/_authenticated/seller': typeof AuthenticatedSellerRouteWithChildren
   '/api/runtime-config': typeof ApiRuntimeConfigRoute
+  '/auth_/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth_/recovery': typeof AuthRecoveryRoute
   '/c/$category': typeof CCategoryRoute
   '/p/$productId': typeof PProductIdRoute
   '/s/$sellerSlug': typeof SSellerSlugRoute
@@ -445,6 +463,8 @@ export interface FileRouteTypes {
     | '/version'
     | '/seller'
     | '/api/runtime-config'
+    | '/auth/forgot-password'
+    | '/auth/recovery'
     | '/c/$category'
     | '/p/$productId'
     | '/s/$sellerSlug'
@@ -488,6 +508,8 @@ export interface FileRouteTypes {
     | '/join'
     | '/version'
     | '/api/runtime-config'
+    | '/auth/forgot-password'
+    | '/auth/recovery'
     | '/c/$category'
     | '/p/$productId'
     | '/s/$sellerSlug'
@@ -533,6 +555,8 @@ export interface FileRouteTypes {
     | '/version'
     | '/_authenticated/seller'
     | '/api/runtime-config'
+    | '/auth_/forgot-password'
+    | '/auth_/recovery'
     | '/c/$category'
     | '/p/$productId'
     | '/s/$sellerSlug'
@@ -578,6 +602,8 @@ export interface RootRouteChildren {
   JoinRoute: typeof JoinRoute
   VersionRoute: typeof VersionRoute
   ApiRuntimeConfigRoute: typeof ApiRuntimeConfigRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthRecoveryRoute: typeof AuthRecoveryRoute
   CCategoryRoute: typeof CCategoryRoute
   PProductIdRoute: typeof PProductIdRoute
   SSellerSlugRoute: typeof SSellerSlugRoute
@@ -651,6 +677,20 @@ declare module '@tanstack/react-router' {
       path: '/c/$category'
       fullPath: '/c/$category'
       preLoaderRoute: typeof CCategoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth_/recovery': {
+      id: '/auth_/recovery'
+      path: '/auth/recovery'
+      fullPath: '/auth/recovery'
+      preLoaderRoute: typeof AuthRecoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth_/forgot-password': {
+      id: '/auth_/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/runtime-config': {
@@ -1019,6 +1059,8 @@ const rootRouteChildren: RootRouteChildren = {
   JoinRoute: JoinRoute,
   VersionRoute: VersionRoute,
   ApiRuntimeConfigRoute: ApiRuntimeConfigRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthRecoveryRoute: AuthRecoveryRoute,
   CCategoryRoute: CCategoryRoute,
   PProductIdRoute: PProductIdRoute,
   SSellerSlugRoute: SSellerSlugRoute,

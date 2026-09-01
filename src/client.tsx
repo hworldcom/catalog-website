@@ -2,13 +2,14 @@ import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { StartClient } from "@tanstack/react-start/client";
 
+import { bootstrapAuthAwareBrowserApplication } from "@/features/auth/auth-recovery-bootstrap";
+import { initializeAuthRecoveryCoordinator } from "@/features/auth/auth-recovery-coordinator";
 import { initializeRuntimePublicConfig } from "@/lib/runtime-public-config";
 
-void bootstrap();
-
-async function bootstrap(): Promise<void> {
-  try {
-    await initializeRuntimePublicConfig();
+void bootstrapAuthAwareBrowserApplication({
+  initializeRuntimeConfig: initializeRuntimePublicConfig,
+  initializeRecoveryCoordinator: initializeAuthRecoveryCoordinator,
+  hydrate: () => {
     startTransition(() => {
       hydrateRoot(
         document,
@@ -17,10 +18,10 @@ async function bootstrap(): Promise<void> {
         </StrictMode>,
       );
     });
-  } catch {
-    renderConfigurationUnavailable();
-  }
-}
+  },
+}).catch(() => {
+  renderConfigurationUnavailable();
+});
 
 function renderConfigurationUnavailable(): void {
   document.title = "Bazoria configuration unavailable";

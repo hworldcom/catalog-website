@@ -19,3 +19,16 @@ is `src/routes/__root.tsx`.
 | `__root.tsx`             | app shell — wraps every page; preserve `<Outlet />`     |
 
 `routeTree.gen.ts` is auto-generated. Don't edit it by hand.
+
+## Authentication Routes
+
+- `/auth` owns sign-in and account creation. Its optional `notice` value is
+  limited to the predefined `password-reset` completion notice.
+- `/auth/forgot-password` requests a reset email without disclosing whether an
+  account exists.
+- `/auth/recovery` is browser-only and exposes password editing only while the
+  application recovery coordinator and freshly validated Supabase session
+  agree.
+- Authentication routes preserve only normalized `lang` values and validated
+  local redirect paths. Callback URLs come from runtime canonical origin
+  configuration rather than the incoming browser host.

@@ -22,6 +22,7 @@ import {
 import { LangProvider } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase/client";
 import { UatEnvironmentBadge } from "@/features/classifier-release/classifier-release-ui";
+import { subscribeToAuthRecoveryRouterInvalidation } from "@/features/auth/auth-recovery-router";
 
 const rootSearchSchema = z.object({
   lang: fallback(z.string(), "EN").default("EN"),
@@ -153,12 +154,16 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
+    const unsubscribeFromRecovery = subscribeToAuthRecoveryRouterInvalidation({
+      invalidate: () => router.invalidate(),
+    });
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
     return () => {
+      unsubscribeFromRecovery();
       data.subscription.unsubscribe();
     };
   }, [router, queryClient]);

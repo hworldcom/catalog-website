@@ -5,6 +5,7 @@ import { AuthScreen } from "@/features/auth/screens/auth-screen";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
+  notice: z.literal("password-reset").optional(),
 });
 
 export const Route = createFileRoute("/auth")({
@@ -20,5 +21,5 @@ export const Route = createFileRoute("/auth")({
 
 function AuthRoute() {
   const search = Route.useSearch();
-  return <AuthScreen redirect={search.redirect} />;
+  return <AuthScreen redirect={search.redirect} notice={search.notice} />;
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { PublicShell } from "@/components/layout/public-shell";
 import { getInitializedRuntimePublicConfig } from "@/lib/runtime-public-config";
 import { supabase } from "@/lib/supabase/client";
-import { t, tr } from "@/lib/i18n";
+import { t, tr, useLang } from "@/lib/i18n";
 import { toast } from "sonner";
 
 import { buildAuthCallbackUrl, safeAuthRedirect } from "../auth-redirect";
@@ -67,6 +67,18 @@ const A = {
     "Die Passwörter stimmen nicht überein.",
     "Mật khẩu không khớp.",
   ),
+  forgotPassword: t(
+    "Forgot password?",
+    "Nie pamiętasz hasła?",
+    "Passwort vergessen?",
+    "Quên mật khẩu?",
+  ),
+  passwordResetNotice: t(
+    "Your password was changed. Sign in with the new password.",
+    "Hasło zostało zmienione. Zaloguj się przy użyciu nowego hasła.",
+    "Ihr Passwort wurde geändert. Melden Sie sich mit dem neuen Passwort an.",
+    "Mật khẩu đã được thay đổi. Hãy đăng nhập bằng mật khẩu mới.",
+  ),
   submitIn: t("Sign in", "Zaloguj się", "Anmelden", "Đăng nhập"),
   submitUp: t("Create account", "Utwórz konto", "Konto erstellen", "Tạo tài khoản"),
   newHere: t("New to Bazoria?", "Nowy w Bazoria?", "Neu bei Bazoria?", "Mới đến Bazoria?"),
@@ -91,9 +103,10 @@ const A = {
   ),
 };
 
-export function AuthScreen({ redirect }: { redirect?: string }) {
+export function AuthScreen({ redirect, notice }: { redirect?: string; notice?: "password-reset" }) {
   const { canonicalSiteOrigin, googleSignInEnabled } = getInitializedRuntimePublicConfig();
   const navigate = useNavigate();
+  const lang = useLang();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -189,6 +202,15 @@ export function AuthScreen({ redirect }: { redirect?: string }) {
           {mode === "signin" ? tr(A.leadSignIn) : tr(A.leadSignUp)}
         </p>
 
+        {notice === "password-reset" ? (
+          <p
+            role="status"
+            className="mt-5 border border-green-700 bg-green-50 px-4 py-3 text-sm text-green-900"
+          >
+            {tr(A.passwordResetNotice)}
+          </p>
+        ) : null}
+
         <GoogleSignInOption enabled={googleSignInEnabled} busy={busy} onClick={handleGoogle} />
 
         <form
@@ -247,6 +269,15 @@ export function AuthScreen({ redirect }: { redirect?: string }) {
           >
             {mode === "signin" ? tr(A.submitIn) : tr(A.submitUp)}
           </button>
+          {mode === "signin" ? (
+            <Link
+              to="/auth/forgot-password"
+              search={{ lang, redirect: safeAuthRedirect(redirect) }}
+              className="text-center text-xs text-primary hover:underline"
+            >
+              {tr(A.forgotPassword)}
+            </Link>
+          ) : null}
         </form>
 
         <div className="mt-6 text-center text-xs text-muted-foreground">
