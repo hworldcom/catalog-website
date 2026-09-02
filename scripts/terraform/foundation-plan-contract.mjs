@@ -3,7 +3,11 @@ import { dirname, join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { buildArtifactRepositoryInventory } from "./artifact-contract.mjs";
+import {
+  buildArtifactCleanupContract,
+  buildArtifactRepositoryInventory,
+  normalizeArtifactCleanupPlan,
+} from "./artifact-contract.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const infrastructureRoot = join(repositoryRoot, "infrastructure/google-cloud");
@@ -148,6 +152,26 @@ function isReviewedProviderSubjectUpdate(resource, environment, reviewed, expect
   );
 }
 
+function isReviewedArtifactCleanupUpdate(resource, expectedCleanup) {
+  if (
+    resource.address !==
+      "module.artifact_registry_foundation.google_artifact_registry_repository.containers" ||
+    resource.type !== "google_artifact_registry_repository" ||
+    !isDeepStrictEqual(resource.change?.actions, ["update"]) ||
+    !isDeepStrictEqual(normalizeArtifactCleanupPlan(resource.change.after ?? {}), expectedCleanup)
+  ) {
+    return false;
+  }
+
+  const before = structuredClone(resource.change.before ?? {});
+  const after = structuredClone(resource.change.after ?? {});
+  for (const value of [before, after]) {
+    delete value.cleanup_policies;
+    delete value.cleanup_policy_dry_run;
+  }
+  return isDeepStrictEqual(before, after);
+}
+
 export function validateFoundationPlan({
   plan,
   environment,
@@ -174,6 +198,8 @@ export function validateFoundationPlan({
     root === "platform"
       ? expectedArtifactValues(environment, reviewed, identityCatalog, artifactCatalog)
       : undefined;
+  const expectedArtifactCleanup =
+    root === "platform" ? buildArtifactCleanupContract({ environment, artifactCatalog }) : null;
   const serialized = JSON.stringify(plan);
   for (const pattern of [
     /sb_secret_[A-Za-z0-9_-]+/,
@@ -191,6 +217,7 @@ export function validateFoundationPlan({
     ),
     ...(root === "bootstrap"
       ? [
+          "google_project_iam_audit_config.artifact_registry_data_write",
           "module.state_bucket.google_storage_bucket.state",
           "module.state_bucket.google_storage_bucket_iam_member.bootstrap_operator",
         ]
@@ -205,6 +232,9 @@ export function validateFoundationPlan({
       reviewed,
       expectedIdentity,
     );
+    const reviewedArtifactCleanupUpdate =
+      root === "platform" && isReviewedArtifactCleanupUpdate(resource, expectedArtifactCleanup);
+    const reviewedInPlaceUpdate = reviewedProviderSubjectUpdate || reviewedArtifactCleanupUpdate;
     assertPlan(
       allowedAddresses.has(resource.address) ||
         (root === "bootstrap" && identityAddressIsAllowed(resource.address)) ||
@@ -213,11 +243,11 @@ export function validateFoundationPlan({
     );
     assertPlan(!actions.includes("delete"), `${resource.address} would delete a resource`);
     assertPlan(
-      !actions.includes("update") || reviewedProviderSubjectUpdate,
+      !actions.includes("update") || reviewedInPlaceUpdate,
       `${resource.address} would perform an unreviewed update`,
     );
     assertPlan(
-      reviewedProviderSubjectUpdate ||
+      reviewedInPlaceUpdate ||
         actions.every((action) => ["create", "no-op", "read"].includes(action)),
       `${resource.address} has an unsupported action`,
     );
@@ -235,6 +265,23 @@ export function validateFoundationPlan({
       assertPlan(after.input?.organization_id === reviewed.organizationId, "organization differs");
       assertPlan(after.input?.billing_account_id === reviewed.billingAccountId, "billing differs");
       assertPlan(after.input?.region === reviewed.region, "region differs");
+    }
+    if (resource.type === "google_project_iam_audit_config") {
+      assertPlan(
+        resource.address === "google_project_iam_audit_config.artifact_registry_data_write",
+        `${resource.address} is not the reviewed audit configuration`,
+      );
+      assertPlan(
+        after.service === "artifactregistry.googleapis.com",
+        `${resource.address} service differs`,
+      );
+      const auditLogs = after.audit_log_config ?? [];
+      assertPlan(auditLogs.length === 1, `${resource.address} audit-log count differs`);
+      assertPlan(
+        auditLogs[0]?.log_type === "DATA_WRITE" &&
+          (auditLogs[0]?.exempted_members ?? []).length === 0,
+        `${resource.address} audit-log contract differs`,
+      );
     }
     if (resource.address === "module.state_bucket.google_storage_bucket.state") {
       assertPlan(after.name === reviewed.stateBucket, "state bucket differs");
@@ -365,8 +412,8 @@ export function validateFoundationPlan({
         `${resource.address} tag mutability differs`,
       );
       assertPlan(
-        (after.cleanup_policies ?? []).length === 0,
-        `${resource.address} has an early cleanup policy`,
+        isDeepStrictEqual(normalizeArtifactCleanupPlan(after), expectedArtifactCleanup),
+        `${resource.address} cleanup policy differs`,
       );
     }
     if (resource.type === "google_artifact_registry_repository_iam_member") {

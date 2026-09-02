@@ -10,6 +10,26 @@
     "suffix": "containers",
     "writerServiceAccountKeys": ["artifactRelease"]
   },
+  "cleanup": {
+    "activationEnabledEnvironments": [],
+    "applicationPackage": "bazoria-web",
+    "environmentRetentionDays": {
+      "production": 30,
+      "uat": 14
+    },
+    "keepRecentVersionCount": 5,
+    "permissionSmokePackage": "permission-smoke",
+    "permissionSmokeRetentionDays": 7,
+    "permissionSmokeTagPrefix": "latest",
+    "policyIds": {
+      "deleteApplicationByAge": "delete-bazoria-web-by-age",
+      "deleteSupersededPermissionSmoke": "delete-superseded-permission-smoke",
+      "keepProtectedApplicationTags": "keep-bazoria-web-protected-tags",
+      "keepRecentApplicationVersions": "keep-recent-bazoria-web",
+      "keepPermissionSmokeLatest": "keep-permission-smoke-latest"
+    },
+    "protectedApplicationTagPrefixes": ["deployed-", "rollback-", "promotion-eligible-"]
+  },
   "inheritedServiceAgentRole": "roles/run.serviceAgent",
   "reservedRuntimeImagePaths": ["permission-smoke"],
   "smokeArtifact": {

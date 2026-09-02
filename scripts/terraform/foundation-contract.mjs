@@ -139,7 +139,17 @@ function validateEnvironmentFiles(inventory) {
       `${environment} bootstrap variables differ from the reviewed inventory`,
     );
     assertContract(
-      JSON.stringify(platform) === JSON.stringify(expectedBase),
+      JSON.stringify(platform) ===
+        JSON.stringify({
+          billing_account_id: expectedBase.billing_account_id,
+          cleanup_policy_dry_run: true,
+          environment: expectedBase.environment,
+          organization_id: expectedBase.organization_id,
+          project_id: expectedBase.project_id,
+          project_number: expectedBase.project_number,
+          region: expectedBase.region,
+          state_bucket_name: expectedBase.state_bucket_name,
+        }),
       `${environment} platform variables differ from the reviewed inventory`,
     );
 
@@ -206,6 +216,17 @@ function validateTerraformSource() {
     readFileSync(join(repositoryRoot, ".terraform-version"), "utf8").trim() === terraformVersion,
     "root .terraform-version differs from the reviewed version",
   );
+  const bootstrapSource = readFileSync(join(infrastructureRoot, "bootstrap/main.tf"), "utf8");
+  for (const required of [
+    'resource "google_project_iam_audit_config" "artifact_registry_data_write"',
+    'service = "artifactregistry.googleapis.com"',
+    'log_type = "DATA_WRITE"',
+  ]) {
+    assertContract(
+      bootstrapSource.includes(required),
+      `bootstrap does not configure Artifact Registry audit logging: ${required}`,
+    );
+  }
 
   for (const root of [
     "bootstrap",

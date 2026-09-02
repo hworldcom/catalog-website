@@ -14,3 +14,14 @@ output "repository" {
     writer_members  = sort(tolist(var.repository.writer_members))
   }
 }
+
+output "cleanup" {
+  description = "Non-secret Artifact Registry cleanup policy inventory."
+  value = {
+    application_retention_days      = var.cleanup.application_retention_days
+    dry_run                         = var.cleanup_policy_dry_run
+    keep_recent_version_count       = var.cleanup.keep_recent_version_count
+    permission_smoke_retention_days = var.cleanup.permission_smoke_retention_days
+    policy_ids                      = sort(values(var.cleanup.policy_ids))
+  }
+}

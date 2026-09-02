@@ -13,13 +13,14 @@ run "uat_platform_enables_only_reviewed_services" {
   command = plan
 
   variables {
-    billing_account_id = "014CA9-692646-D9E4CE"
-    environment        = "uat"
-    organization_id    = "33779488200"
-    project_id         = "bazoria-uat-lnlabs"
-    project_number     = "145571383840"
-    region             = "europe-west3"
-    state_bucket_name  = "bazoria-uat-lnlabs-tfstate"
+    billing_account_id     = "014CA9-692646-D9E4CE"
+    cleanup_policy_dry_run = true
+    environment            = "uat"
+    organization_id        = "33779488200"
+    project_id             = "bazoria-uat-lnlabs"
+    project_number         = "145571383840"
+    region                 = "europe-west3"
+    state_bucket_name      = "bazoria-uat-lnlabs-tfstate"
   }
 
   assert {
@@ -92,6 +93,23 @@ run "uat_platform_enables_only_reviewed_services" {
       ]
     })
     error_message = "The private Artifact Registry repository or direct access differs."
+  }
+
+  assert {
+    condition = module.artifact_registry_foundation.cleanup == {
+      application_retention_days      = 14
+      dry_run                         = true
+      keep_recent_version_count       = 5
+      permission_smoke_retention_days = 7
+      policy_ids = tolist([
+        "delete-bazoria-web-by-age",
+        "delete-superseded-permission-smoke",
+        "keep-bazoria-web-protected-tags",
+        "keep-permission-smoke-latest",
+        "keep-recent-bazoria-web",
+      ])
+    }
+    error_message = "The UAT Artifact Registry cleanup policy differs."
   }
 
   assert {

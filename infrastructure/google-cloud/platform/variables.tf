@@ -3,6 +3,11 @@ variable "billing_account_id" {
   type        = string
 }
 
+variable "cleanup_policy_dry_run" {
+  description = "Whether Artifact Registry cleanup remains non-destructive."
+  type        = bool
+}
+
 variable "environment" {
   description = "Bazoria deployment environment."
   type        = string

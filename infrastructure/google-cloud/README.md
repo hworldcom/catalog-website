@@ -360,6 +360,42 @@ infrastructure verification and cannot be selected as a runtime image. Building
 the Bazoria application image and validating a runtime image digest are owned
 by later deployment tickets.
 
+## Artifact Registry Cleanup Dry Run
+
+Ticket `0038e5c` adds five cleanup policies for the exact `bazoria-web` and
+`permission-smoke` packages. Both checked-in environment inputs set
+`cleanup_policy_dry_run` to `true`, so the policies report candidates but cannot
+delete artifacts. UAT uses a 14-day application retention period, production
+uses 30 days, and both environments keep at least the five most recent
+application versions. Deployed, rollback, and promotion-eligible tags are also
+protected. Superseded untagged permission-smoke manifests become candidates
+after seven days while `permission-smoke:latest` remains protected.
+
+The bootstrap root enables Artifact Registry Data Write audit logs and grants
+the matching Terraform identity read-only access to private logs. Apply the
+bootstrap change before expecting a cleanup preview, then apply the matching
+platform plan separately. Review that the platform plan changes only the
+repository cleanup fields and keeps `cleanup_policy_dry_run = true`.
+
+After ticket `0038f` has created the real release tags and Artifact Registry has
+had at least 24 hours to evaluate the policies, obtain the bounded preview with:
+
+```bash
+cd /Users/hoangdeveloper/catalog-website
+npm run infra:artifact:cleanup:preview -- --environment uat
+```
+
+Use `production` only while authenticated as the production Terraform identity.
+The command reads the matching repository's 48-hour dry-run audit window,
+checks current tags and the five most recent versions, rejects reserved-prefix
+collisions, and prints abbreviated digest identifiers only. An empty result is
+inconclusive and does not authorize activation.
+
+Changing `cleanup_policy_dry_run` to `false` is not part of `0038e5c` dry-run
+implementation. It requires the corresponding environment to be added to the
+reviewed activation list in `artifact-catalog.json`, a successful preview, a
+new plan, and separate explicit approval for that environment.
+
 ## Plan-Only Cloud Run Activation Infrastructure
 
 Ticket `0038e3` adds an opt-in runtime module for the public website, private

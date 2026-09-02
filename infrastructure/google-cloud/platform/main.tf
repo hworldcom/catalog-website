@@ -37,6 +37,26 @@ locals {
       "serviceAccount:${local.service_account_emails[account_key]}"
     ])
   }
+  artifact_cleanup = {
+    application_package                = local.artifact_catalog.cleanup.applicationPackage
+    application_retention_days         = local.artifact_catalog.cleanup.environmentRetentionDays[var.environment]
+    keep_recent_version_count          = local.artifact_catalog.cleanup.keepRecentVersionCount
+    permission_smoke_package           = local.artifact_catalog.cleanup.permissionSmokePackage
+    permission_smoke_retention_days    = local.artifact_catalog.cleanup.permissionSmokeRetentionDays
+    permission_smoke_tag_prefix        = local.artifact_catalog.cleanup.permissionSmokeTagPrefix
+    policy_ids                         = local.artifact_catalog.cleanup.policyIds
+    protected_application_tag_prefixes = local.artifact_catalog.cleanup.protectedApplicationTagPrefixes
+  }
+}
+
+check "artifact_cleanup_activation_is_reviewed" {
+  assert {
+    condition = var.cleanup_policy_dry_run == !contains(
+      local.artifact_catalog.cleanup.activationEnabledEnvironments,
+      var.environment,
+    )
+    error_message = "Artifact cleanup activation must match the reviewed artifact catalog."
+  }
 }
 
 module "project_contract" {
@@ -73,10 +93,12 @@ module "secret_foundation" {
 module "artifact_registry_foundation" {
   source = "../modules/artifact-registry-foundation"
 
-  environment = var.environment
-  project_id  = var.project_id
-  region      = var.region
-  repository  = local.artifact_repository
+  cleanup                = local.artifact_cleanup
+  cleanup_policy_dry_run = var.cleanup_policy_dry_run
+  environment            = var.environment
+  project_id             = var.project_id
+  region                 = var.region
+  repository             = local.artifact_repository
 
   depends_on = [module.platform_services]
 }

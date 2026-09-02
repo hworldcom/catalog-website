@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const infrastructureRoot = join(repositoryRoot, "infrastructure/google-cloud");
+const commitSuffixPattern = /^[0-9a-f]{40}$/;
 
 function assertArtifact(condition, message) {
   if (!condition) {
@@ -22,6 +23,30 @@ function environmentAbbreviation(environment) {
 export function validateArtifactCatalog(catalog, identityCatalog) {
   assertArtifact(catalog.schemaVersion === 1, "artifact catalog schema differs");
   assertArtifact(catalog.region === "europe-west3", "repository region differs");
+  assertArtifact(
+    JSON.stringify(catalog.cleanup) ===
+      JSON.stringify({
+        activationEnabledEnvironments: [],
+        applicationPackage: "bazoria-web",
+        environmentRetentionDays: {
+          production: 30,
+          uat: 14,
+        },
+        keepRecentVersionCount: 5,
+        permissionSmokePackage: "permission-smoke",
+        permissionSmokeRetentionDays: 7,
+        permissionSmokeTagPrefix: "latest",
+        policyIds: {
+          deleteApplicationByAge: "delete-bazoria-web-by-age",
+          deleteSupersededPermissionSmoke: "delete-superseded-permission-smoke",
+          keepProtectedApplicationTags: "keep-bazoria-web-protected-tags",
+          keepRecentApplicationVersions: "keep-recent-bazoria-web",
+          keepPermissionSmokeLatest: "keep-permission-smoke-latest",
+        },
+        protectedApplicationTagPrefixes: ["deployed-", "rollback-", "promotion-eligible-"],
+      }),
+    "cleanup contract differs",
+  );
   assertArtifact(
     JSON.stringify(catalog.repository) ===
       JSON.stringify({
@@ -76,6 +101,140 @@ export function validateArtifactCatalog(catalog, identityCatalog) {
   );
 }
 
+export function artifactPackageNameIsReviewed(packageName, artifactCatalog) {
+  return [
+    artifactCatalog.cleanup.applicationPackage,
+    artifactCatalog.cleanup.permissionSmokePackage,
+  ].includes(packageName);
+}
+
+export function artifactTagIsReviewed({ environment, packageName, tag, artifactCatalog }) {
+  if (packageName === artifactCatalog.cleanup.permissionSmokePackage) {
+    return tag === artifactCatalog.smokeArtifact.tag;
+  }
+  if (packageName !== artifactCatalog.cleanup.applicationPackage) {
+    return false;
+  }
+  if (tag.startsWith("release-")) {
+    return commitSuffixPattern.test(tag.slice("release-".length));
+  }
+  if (tag.startsWith("promotion-eligible-")) {
+    return (
+      environment === "uat" && commitSuffixPattern.test(tag.slice("promotion-eligible-".length))
+    );
+  }
+  if (tag.startsWith("deployed-") || tag.startsWith("rollback-")) {
+    return environment === "uat"
+      ? tag === "deployed-uat"
+      : ["deployed-production", "rollback-production"].includes(tag);
+  }
+  return false;
+}
+
+export function buildArtifactCleanupContract({ environment, artifactCatalog }) {
+  const cleanup = artifactCatalog.cleanup;
+  const condition = ({ tagState, tagPrefixes = [], packageNamePrefixes, olderThan = null }) => ({
+    newerThan: null,
+    olderThan,
+    packageNamePrefixes: [...packageNamePrefixes].sort(),
+    tagPrefixes: [...tagPrefixes].sort(),
+    tagState,
+    versionNamePrefixes: [],
+  });
+  const policies = [
+    {
+      action: "KEEP",
+      condition: condition({
+        tagState: "TAGGED",
+        tagPrefixes: cleanup.protectedApplicationTagPrefixes,
+        packageNamePrefixes: [cleanup.applicationPackage],
+      }),
+      id: cleanup.policyIds.keepProtectedApplicationTags,
+      mostRecentVersions: null,
+    },
+    {
+      action: "KEEP",
+      condition: null,
+      id: cleanup.policyIds.keepRecentApplicationVersions,
+      mostRecentVersions: {
+        keepCount: cleanup.keepRecentVersionCount,
+        packageNamePrefixes: [cleanup.applicationPackage],
+      },
+    },
+    {
+      action: "DELETE",
+      condition: condition({
+        tagState: "ANY",
+        packageNamePrefixes: [cleanup.applicationPackage],
+        olderThan: `${cleanup.environmentRetentionDays[environment] * 86400}s`,
+      }),
+      id: cleanup.policyIds.deleteApplicationByAge,
+      mostRecentVersions: null,
+    },
+    {
+      action: "KEEP",
+      condition: condition({
+        tagState: "TAGGED",
+        tagPrefixes: [cleanup.permissionSmokeTagPrefix],
+        packageNamePrefixes: [cleanup.permissionSmokePackage],
+      }),
+      id: cleanup.policyIds.keepPermissionSmokeLatest,
+      mostRecentVersions: null,
+    },
+    {
+      action: "DELETE",
+      condition: condition({
+        tagState: "UNTAGGED",
+        packageNamePrefixes: [cleanup.permissionSmokePackage],
+        olderThan: `${cleanup.permissionSmokeRetentionDays * 86400}s`,
+      }),
+      id: cleanup.policyIds.deleteSupersededPermissionSmoke,
+      mostRecentVersions: null,
+    },
+  ].sort((left, right) => left.id.localeCompare(right.id));
+
+  return {
+    dryRun: !cleanup.activationEnabledEnvironments.includes(environment),
+    policies,
+  };
+}
+
+export function normalizeArtifactCleanupPlan(repository) {
+  const block = (value) => (Array.isArray(value) ? value[0] : value) ?? null;
+  const list = (value) => [...(value ?? [])].sort();
+  const optional = (value) => (value === "" || value === undefined ? null : value);
+  const policies = (repository.cleanup_policies ?? []).map((policy) => {
+    const condition = block(policy.condition);
+    const mostRecent = block(policy.most_recent_versions);
+    return {
+      action: policy.action,
+      condition:
+        condition === null
+          ? null
+          : {
+              newerThan: optional(condition.newer_than),
+              olderThan: optional(condition.older_than),
+              packageNamePrefixes: list(condition.package_name_prefixes),
+              tagPrefixes: list(condition.tag_prefixes),
+              tagState: condition.tag_state,
+              versionNamePrefixes: list(condition.version_name_prefixes),
+            },
+      id: policy.id,
+      mostRecentVersions:
+        mostRecent === null
+          ? null
+          : {
+              keepCount: mostRecent.keep_count,
+              packageNamePrefixes: list(mostRecent.package_name_prefixes),
+            },
+    };
+  });
+  return {
+    dryRun: repository.cleanup_policy_dry_run,
+    policies: policies.sort((left, right) => left.id.localeCompare(right.id)),
+  };
+}
+
 export function buildArtifactRepositoryInventory({
   environment,
   reviewedEnvironment,
@@ -113,12 +272,7 @@ export function buildArtifactRepositoryInventory({
 }
 
 export function runtimeImagePathIsAllowed(imagePath, artifactCatalog) {
-  return (
-    /^[a-z0-9]+(?:[._/-][a-z0-9]+)*$/.test(imagePath) &&
-    !artifactCatalog.reservedRuntimeImagePaths.some(
-      (reserved) => imagePath === reserved || imagePath.startsWith(`${reserved}/`),
-    )
-  );
+  return imagePath === artifactCatalog.cleanup.applicationPackage;
 }
 
 function validateSource(catalog) {
@@ -128,6 +282,11 @@ function validateSource(catalog) {
     )
     .join("\n");
   const platformSource = readFileSync(join(infrastructureRoot, "platform/main.tf"), "utf8");
+  const runtimeCatalog = readJson(join(infrastructureRoot, "runtime-catalog.json"));
+  const previewSource = readFileSync(
+    join(repositoryRoot, "scripts/terraform/artifact-cleanup-preview.mjs"),
+    "utf8",
+  );
   const workflowSource = readFileSync(
     join(repositoryRoot, ".github/workflows/artifact-release.yml"),
     "utf8",
@@ -142,15 +301,16 @@ function validateSource(catalog) {
     'role       = "roles/artifactregistry.reader"',
     "prevent_destroy = true",
     "var.repository.immutable_tags == false",
+    "cleanup_policy_dry_run = var.cleanup_policy_dry_run",
+    "id     = var.cleanup.policy_ids.keepProtectedApplicationTags",
+    "id     = var.cleanup.policy_ids.keepRecentApplicationVersions",
+    "id     = var.cleanup.policy_ids.deleteApplicationByAge",
+    "id     = var.cleanup.policy_ids.keepPermissionSmokeLatest",
+    "id     = var.cleanup.policy_ids.deleteSupersededPermissionSmoke",
   ]) {
     assertArtifact(moduleSource.includes(required), `artifact module is missing ${required}`);
   }
-  for (const forbidden of [
-    "allUsers",
-    "allAuthenticatedUsers",
-    "cleanup_policies",
-    "force_destroy",
-  ]) {
+  for (const forbidden of ["allUsers", "allAuthenticatedUsers", "force_destroy"]) {
     assertArtifact(!moduleSource.includes(forbidden), `artifact module contains ${forbidden}`);
   }
   assertArtifact(
@@ -158,6 +318,34 @@ function validateSource(catalog) {
       'artifact_catalog         = jsondecode(file("${path.module}/../artifact-catalog.json"))',
     ),
     "platform root does not use the artifact catalog",
+  );
+  assertArtifact(
+    platformSource.includes('check "artifact_cleanup_activation_is_reviewed"'),
+    "platform root lacks the cleanup activation gate",
+  );
+  assertArtifact(
+    runtimeCatalog.imagePath === catalog.cleanup.applicationPackage,
+    "runtime image package differs",
+  );
+  for (const environment of ["uat", "production"]) {
+    const variables = readJson(
+      join(infrastructureRoot, `environments/${environment}/platform.tfvars.json`),
+    );
+    assertArtifact(variables.cleanup_policy_dry_run === true, `${environment} cleanup is active`);
+  }
+  for (const required of [
+    'protoPayload.serviceName="artifactregistry.googleapis.com"',
+    "protoPayload.request.validateOnly=true",
+    '"--freshness=48h"',
+    "protected artifact is a cleanup candidate",
+    "reserved package prefix collision",
+    "dry-run preview is inconclusive",
+  ]) {
+    assertArtifact(previewSource.includes(required), `cleanup preview is missing ${required}`);
+  }
+  assertArtifact(
+    !/sha256:[0-9a-f]{64}/.test(`${moduleSource}\n${platformSource}\n${previewSource}`),
+    "cleanup source contains a full artifact digest",
   );
 
   assertArtifact(

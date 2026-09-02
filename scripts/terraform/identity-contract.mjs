@@ -26,6 +26,7 @@ const expectedProjectRoles = [
   "roles/cloudtasks.admin",
   "roles/compute.loadBalancerAdmin",
   "roles/logging.configWriter",
+  "roles/logging.privateLogViewer",
   "roles/monitoring.editor",
   "roles/run.admin",
   "roles/serviceusage.serviceUsageConsumer",

@@ -61,6 +61,15 @@ run "uat_bootstrap_is_private_and_versioned" {
   }
 
   assert {
+    condition = (
+      output.foundation_inventory.artifact_registry_audit_logging.log_types == ["DATA_WRITE"] &&
+      output.foundation_inventory.artifact_registry_audit_logging.project == "bazoria-uat-lnlabs" &&
+      output.foundation_inventory.artifact_registry_audit_logging.service == "artifactregistry.googleapis.com"
+    )
+    error_message = "Artifact Registry Data Write audit logging must be enabled without exemptions."
+  }
+
+  assert {
     condition = {
       for key, account in module.identity_foundation.service_accounts : key => account.account_id
       } == {

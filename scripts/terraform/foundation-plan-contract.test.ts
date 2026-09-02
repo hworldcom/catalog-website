@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { validateFoundationPlan } from "./foundation-plan-contract.mjs";
+import { buildArtifactCleanupContract } from "./artifact-contract.mjs";
 
 import artifactCatalog from "../../infrastructure/google-cloud/artifact-catalog.json";
 
@@ -77,6 +78,56 @@ function createPlan() {
         },
       },
     ],
+  };
+}
+
+function cleanupPlanValues(environment = "uat") {
+  const cleanup = buildArtifactCleanupContract({ environment, artifactCatalog });
+  return {
+    cleanup_policy_dry_run: cleanup.dryRun,
+    cleanup_policies: cleanup.policies.map((policy) => ({
+      action: policy.action,
+      condition:
+        policy.condition === null
+          ? []
+          : [
+              {
+                newer_than: policy.condition.newerThan,
+                older_than: policy.condition.olderThan,
+                package_name_prefixes: policy.condition.packageNamePrefixes,
+                tag_prefixes: policy.condition.tagPrefixes,
+                tag_state: policy.condition.tagState,
+                version_name_prefixes: policy.condition.versionNamePrefixes,
+              },
+            ],
+      id: policy.id,
+      most_recent_versions:
+        policy.mostRecentVersions === null
+          ? []
+          : [
+              {
+                keep_count: policy.mostRecentVersions.keepCount,
+                package_name_prefixes: policy.mostRecentVersions.packageNamePrefixes,
+              },
+            ],
+    })),
+  };
+}
+
+function uatArtifactRepositoryAfter() {
+  return {
+    project: "bazoria-uat-lnlabs",
+    location: "europe-west3",
+    repository_id: "bazoria-uat-containers",
+    format: "DOCKER",
+    mode: "STANDARD_REPOSITORY",
+    labels: {
+      environment: "uat",
+      managed_by: "terraform",
+      purpose: "container-images",
+    },
+    docker_config: [],
+    ...cleanupPlanValues(),
   };
 }
 
@@ -548,20 +599,7 @@ describe("Terraform foundation plan contract", () => {
         type: "google_artifact_registry_repository",
         change: {
           actions: ["create"],
-          after: {
-            project: "bazoria-uat-lnlabs",
-            location: "europe-west3",
-            repository_id: "bazoria-uat-containers",
-            format: "DOCKER",
-            mode: "STANDARD_REPOSITORY",
-            labels: {
-              environment: "uat",
-              managed_by: "terraform",
-              purpose: "container-images",
-            },
-            docker_config: [],
-            cleanup_policies: [],
-          },
+          after: uatArtifactRepositoryAfter(),
         },
       },
       {
@@ -609,6 +647,95 @@ describe("Terraform foundation plan contract", () => {
         secretCatalog,
       }),
     ).toEqual({ changes: 3, environment: "uat", root: "platform" });
+  });
+
+  it("accepts an in-place change that only adds reviewed dry-run cleanup", () => {
+    const after = uatArtifactRepositoryAfter();
+    const before = {
+      ...after,
+      cleanup_policy_dry_run: false,
+      cleanup_policies: [],
+    };
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          "module.artifact_registry_foundation.google_artifact_registry_repository.containers",
+        type: "google_artifact_registry_repository",
+        change: { actions: ["update"], before, after },
+      },
+    ];
+
+    expect(
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "platform",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+        artifactCatalog,
+        secretCatalog,
+      }),
+    ).toEqual({ changes: 1, environment: "uat", root: "platform" });
+  });
+
+  it("rejects destructive Artifact Registry cleanup activation", () => {
+    const after = uatArtifactRepositoryAfter();
+    after.cleanup_policy_dry_run = false;
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          "module.artifact_registry_foundation.google_artifact_registry_repository.containers",
+        type: "google_artifact_registry_repository",
+        change: { actions: ["create"], after },
+      },
+    ];
+
+    expect(() =>
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "platform",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+        artifactCatalog,
+        secretCatalog,
+      }),
+    ).toThrow("cleanup policy differs");
+  });
+
+  it("accepts only Artifact Registry Data Write audit logging", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address: "google_project_iam_audit_config.artifact_registry_data_write",
+        type: "google_project_iam_audit_config",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            service: "artifactregistry.googleapis.com",
+            audit_log_config: [{ log_type: "DATA_WRITE", exempted_members: [] }],
+          },
+        },
+      },
+    ];
+
+    expect(
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "bootstrap",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+        artifactCatalog,
+        secretCatalog,
+      }),
+    ).toEqual({ changes: 1, environment: "uat", root: "bootstrap" });
   });
 
   it("rejects a cross-environment Artifact Registry writer", () => {

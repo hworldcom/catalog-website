@@ -78,3 +78,14 @@ module "identity_foundation" {
 
   depends_on = [module.bootstrap_services]
 }
+
+resource "google_project_iam_audit_config" "artifact_registry_data_write" {
+  project = var.project_id
+  service = "artifactregistry.googleapis.com"
+
+  audit_log_config {
+    log_type = "DATA_WRITE"
+  }
+
+  depends_on = [module.bootstrap_services]
+}

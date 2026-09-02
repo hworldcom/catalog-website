@@ -61,6 +61,7 @@
     "infra:foundation:plan:check": "node ./scripts/terraform/foundation-plan-contract.mjs",
     "infra:identity:check": "node ./scripts/terraform/identity-contract.mjs",
     "infra:artifact:check": "node ./scripts/terraform/artifact-contract.mjs",
+    "infra:artifact:cleanup:preview": "node ./scripts/terraform/artifact-cleanup-preview.mjs",
     "infra:runtime:check": "node ./scripts/terraform/runtime-contract.mjs",
     "infra:edge:check": "node ./scripts/terraform/edge-contract.mjs",
     "infra:monitoring:check": "node ./scripts/terraform/monitoring-contract.mjs",
