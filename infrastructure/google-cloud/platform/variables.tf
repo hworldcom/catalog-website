@@ -45,6 +45,35 @@ variable "runtime_configuration" {
   default = null
 }
 
+variable "monitoring_configuration" {
+  description = "Optional operational alert activation using existing matching-project notification channels."
+  type = object({
+    alerting_enabled           = bool
+    notification_channel_names = list(string)
+  })
+  default = null
+
+  validation {
+    condition = var.monitoring_configuration == null || (
+      length(var.monitoring_configuration.notification_channel_names) > 0 &&
+      alltrue([
+        for channel in var.monitoring_configuration.notification_channel_names : can(regex(
+          "^projects/${var.project_id}/notificationChannels/[A-Za-z0-9_-]+$",
+          channel,
+        ))
+      ])
+    )
+    error_message = "Monitoring requires at least one full notification-channel resource name from the matching project."
+  }
+}
+
+check "monitoring_requires_runtime" {
+  assert {
+    condition     = var.monitoring_configuration == null || var.runtime_configuration != null
+    error_message = "Operational monitoring can be enabled only with a digest-bound runtime deployment."
+  }
+}
+
 variable "state_bucket_name" {
   description = "Environment state bucket created by bootstrap."
   type        = string

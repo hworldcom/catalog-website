@@ -39,6 +39,7 @@ const schema = z
     BAZORIA_PRODUCT_PUBLICATION_ITEM_TIMEOUT_SECONDS: positiveInteger.default(30),
     BAZORIA_PRODUCT_PUBLICATION_WORKER_DEADLINE_SECONDS: positiveInteger.default(240),
     BAZORIA_PRODUCT_PUBLICATION_CLAIM_TIMEOUT_SECONDS: positiveInteger.default(360),
+    BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS: positiveInteger.optional(),
     SUPABASE_URL: absoluteHttpUrl,
     SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1),
     BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: secureUrl,
@@ -46,6 +47,16 @@ const schema = z
     PORT: z.coerce.number().int().min(1).max(65_535).default(8_080),
   })
   .superRefine((settings, context) => {
+    if (
+      settings.BAZORIA_DEPLOYMENT_ENVIRONMENT !== "local" &&
+      settings.BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS"],
+        message: "is required outside local development",
+      });
+    }
     const boundedWorkSeconds =
       Math.ceil(
         settings.BAZORIA_PRODUCT_PUBLICATION_MAXIMUM_IMAGE_COUNT /
@@ -77,6 +88,7 @@ export type ProductActivationWorkerConfig = ProductActivationExecutionConfig & {
   serviceRoleKey: string;
   taskAudience: string;
   taskServiceAccount: string;
+  taskMaximumAttempts: number;
   port: number;
 };
 
@@ -102,6 +114,7 @@ export function readProductActivationWorkerConfig(
     serviceRoleKey: result.data.SUPABASE_SERVICE_ROLE_KEY,
     taskAudience: result.data.BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE,
     taskServiceAccount: result.data.BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT,
+    taskMaximumAttempts: result.data.BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS ?? 10,
     port: result.data.PORT,
   };
 }

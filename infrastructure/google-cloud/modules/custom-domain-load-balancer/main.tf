@@ -20,9 +20,11 @@ locals {
   http_forwarding_rule   = "${local.resource_prefix}-${var.edge_contract.resourceSuffixes.httpForwardingRule}"
 
   labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    purpose     = "website-edge"
+    environment   = var.environment
+    service_role  = "edge"
+    managed_by    = "terraform"
+    release_owner = "bazoria_web"
+    purpose       = "website-edge"
   }
 }
 
@@ -76,6 +78,7 @@ resource "google_compute_global_address" "website" {
   address_type = "EXTERNAL"
   ip_version   = var.edge_contract.ipVersion
   description  = "Fixed ${var.environment} Bazoria website address."
+  labels       = local.labels
 
   lifecycle {
     prevent_destroy = true
@@ -239,6 +242,7 @@ resource "google_compute_global_forwarding_rule" "https" {
   ip_protocol           = "TCP"
   port_range            = tostring(var.edge_contract.ports.https)
   target                = google_compute_target_https_proxy.website.id
+  labels                = local.labels
 }
 
 resource "google_compute_global_forwarding_rule" "http" {
@@ -251,4 +255,5 @@ resource "google_compute_global_forwarding_rule" "http" {
   ip_protocol           = "TCP"
   port_range            = tostring(var.edge_contract.ports.http)
   target                = google_compute_target_http_proxy.redirect.id
+  labels                = local.labels
 }

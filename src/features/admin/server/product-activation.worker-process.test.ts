@@ -114,6 +114,8 @@ function serviceFixture(
   return new ProductActivationWorkerService({
     identityVerifier: { verify: vi.fn(async () => ({ email: "task@example.com" })) },
     expectedServiceAccount: "task@example.com",
+    deploymentEnvironment: "local",
+    taskMaximumAttempts: 10,
     getRepository: vi.fn(async () => ({
       recordDispatchResult: vi.fn(async (input) => ({
         result: "recorded" as const,
@@ -142,6 +144,7 @@ function config(): ProductActivationWorkerConfig {
     serviceRoleKey: "secret",
     taskAudience: "https://activation.example.com/",
     taskServiceAccount: "task@example.com",
+    taskMaximumAttempts: 10,
     port: 0,
   };
 }

@@ -195,6 +195,11 @@ function validateSource() {
     'member   = "allUsers"',
     'ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"',
     'uri_override_enforce_mode = "ALWAYS"',
+    "BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS = tostring(var.runtime_contract.queue.maximumAttempts)",
+    'service_role  = "web"',
+    'service_role  = "activation_worker"',
+    'service_role  = "reconciliation"',
+    'release_owner = "bazoria_web"',
     "deletion_protection = true",
   ]) {
     assertRuntime(moduleSource.includes(required), `runtime module is missing ${required}`);

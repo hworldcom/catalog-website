@@ -8,6 +8,29 @@ locals {
   scheduler_name           = "${local.resource_prefix}-${var.runtime_contract.resourceSuffixes.reconciliationScheduler}"
   worker_url               = "https://${local.worker_name}-${var.project_number}.${var.region}.run.app"
   worker_host              = trimprefix(local.worker_url, "https://")
+  resource_labels = {
+    website = {
+      environment   = var.environment
+      service_role  = "web"
+      managed_by    = "terraform"
+      release_owner = "bazoria_web"
+      purpose       = "website"
+    }
+    worker = {
+      environment   = var.environment
+      service_role  = "activation_worker"
+      managed_by    = "terraform"
+      release_owner = "bazoria_web"
+      purpose       = "product-activation-worker"
+    }
+    reconciliation = {
+      environment   = var.environment
+      service_role  = "reconciliation"
+      managed_by    = "terraform"
+      release_owner = "bazoria_web"
+      purpose       = "product-activation-reconciliation"
+    }
+  }
 
   supabase_secret_parts   = split("/", var.runtime_configuration.supabase_service_role_secret_version)
   openai_secret_parts     = split("/", var.runtime_configuration.openai_api_key_secret_version)
@@ -59,9 +82,10 @@ locals {
     local.common_plain_environment,
     local.publication_plain_environment,
     {
-      BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE        = local.worker_url
-      BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT = var.service_account_emails.task_invoker
-      PORT                                             = "8080"
+      BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE         = local.worker_url
+      BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS = tostring(var.runtime_contract.queue.maximumAttempts)
+      BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT  = var.service_account_emails.task_invoker
+      PORT                                              = "8080"
     },
   )
   reconciliation_plain_environment = merge(
@@ -209,13 +233,10 @@ resource "google_cloud_run_v2_service" "website" {
   ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   deletion_protection = true
 
-  labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    purpose     = "website"
-  }
+  labels = local.resource_labels.website
 
   template {
+    labels                           = local.resource_labels.website
     service_account                  = var.service_account_emails.website
     timeout                          = "${var.runtime_contract.website.timeoutSeconds}s"
     max_instance_request_concurrency = var.runtime_contract.website.concurrency
@@ -305,13 +326,10 @@ resource "google_cloud_run_v2_service" "worker" {
   ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"
   deletion_protection = true
 
-  labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    purpose     = "product-activation-worker"
-  }
+  labels = local.resource_labels.worker
 
   template {
+    labels                           = local.resource_labels.worker
     service_account                  = var.service_account_emails.worker
     timeout                          = "${var.runtime_contract.worker.timeoutSeconds}s"
     max_instance_request_concurrency = var.runtime_contract.worker.concurrency
@@ -401,13 +419,10 @@ resource "google_cloud_run_v2_job" "reconciliation" {
   name                = local.reconciliation_job_name
   deletion_protection = true
 
-  labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    purpose     = "product-activation-reconciliation"
-  }
+  labels = local.resource_labels.reconciliation
 
   template {
+    labels      = local.resource_labels.reconciliation
     task_count  = var.runtime_contract.reconciliation.taskCount
     parallelism = var.runtime_contract.reconciliation.parallelism
 

@@ -12,12 +12,27 @@ import {
 import { readProductActivationReconciliationConfig } from "./product-activation-reconciliation.config";
 import {
   ProductActivationReconciliationService,
+  type ProductActivationReconciliationSummary,
   type ProductActivationReconciliationRowLog,
 } from "./product-activation-reconciliation.service";
 import {
   SupabaseProductActivationRepository,
   type ProductActivationAdministrator,
+  type ProductActivationDispatchHealth,
 } from "./product-activation.repository";
+
+type ReconciliationCycleService = {
+  run(): Promise<ProductActivationReconciliationSummary>;
+};
+
+type ReconciliationHealthRepository = {
+  readDispatchHealth(): Promise<ProductActivationDispatchHealth>;
+};
+
+export type ProductActivationReconciliationCycleOptions = {
+  now?: () => number;
+  write?: (payload: Record<string, unknown>) => void;
+};
 
 export async function runProductActivationReconciliationCommand(): Promise<number> {
   let config;
@@ -50,13 +65,7 @@ export async function runProductActivationReconciliationCommand(): Promise<numbe
       maximumEnqueueAttemptMs: config.maximumEnqueueAttemptMs,
       writeRowLog,
     });
-    const summary = await service.run();
-    write({
-      event: "product_activation_reconciliation_finished",
-      severity: summary.stillPending > 0 || summary.failed > 0 ? "error" : "info",
-      ...summary,
-    });
-    return summary.stillPending > 0 || summary.failed > 0 ? 1 : 0;
+    return runProductActivationReconciliationCycle(service, repository);
   } catch (error) {
     write({
       event: "product_activation_reconciliation_failed",
@@ -68,12 +77,56 @@ export async function runProductActivationReconciliationCommand(): Promise<numbe
   }
 }
 
+export async function runProductActivationReconciliationCycle(
+  service: ReconciliationCycleService,
+  repository: ReconciliationHealthRepository,
+  options: ProductActivationReconciliationCycleOptions = {},
+): Promise<number> {
+  const summary = await service.run();
+  const health = await repository.readDispatchHealth();
+  const healthFields = reconciliationHealthFields(health, options.now?.() ?? Date.now());
+  const failed = summary.stillPending > 0 || summary.failed > 0;
+  (options.write ?? write)({
+    event: "product_activation_reconciliation_finished",
+    severity: failed ? "error" : "info",
+    ...summary,
+    ...healthFields,
+  });
+  return failed ? 1 : 0;
+}
+
+export function reconciliationHealthFields(
+  health: ProductActivationDispatchHealth,
+  now: number,
+): { pendingCount: number; oldestPendingAgeMs: number } {
+  if (health.pendingCount === 0 && health.oldestPendingCreatedAt === null) {
+    return { pendingCount: 0, oldestPendingAgeMs: 0 };
+  }
+  if (health.pendingCount < 1 || health.oldestPendingCreatedAt === null) {
+    throw new Error("product_activation_dispatch_health_invalid");
+  }
+  const oldestPendingAt = Date.parse(health.oldestPendingCreatedAt);
+  if (!Number.isFinite(oldestPendingAt)) {
+    throw new Error("product_activation_dispatch_health_invalid");
+  }
+  return {
+    pendingCount: health.pendingCount,
+    oldestPendingAgeMs: Math.max(0, now - oldestPendingAt),
+  };
+}
+
 function writeRowLog(entry: ProductActivationReconciliationRowLog): void {
   write(entry);
 }
 
 function write(payload: Record<string, unknown>): void {
-  process.stdout.write(`${JSON.stringify(payload)}\n`);
+  process.stdout.write(
+    `${JSON.stringify({
+      timestamp: new Date().toISOString(),
+      service: "bazoria_product_activation_reconciliation",
+      ...payload,
+    })}\n`,
+  );
 }
 
 function exceptionClass(error: unknown): string {

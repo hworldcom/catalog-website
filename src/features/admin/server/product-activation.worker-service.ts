@@ -35,12 +35,16 @@ export type ProductActivationWorkerLog = {
   outcome: string;
   durationMs: number;
   errorCode?: string;
+  retryCount?: number;
+  retryLimitReached?: boolean;
 };
 
 export type ProductActivationWorkerServiceDependencies =
   ProductActivationTaskRuntimeDependencies & {
     identityVerifier: TaskIdentityVerifier;
+    deploymentEnvironment: "local" | "uat" | "production";
     expectedServiceAccount: string;
+    taskMaximumAttempts: number;
     log?: (entry: ProductActivationWorkerLog) => void;
     now?: () => number;
   };
@@ -79,12 +83,14 @@ export class ProductActivationWorkerService {
     const startedAt = this.now();
     const identity = await this.authenticate(request.headers, startedAt);
     if (identity.statusCode) return identity;
-    if (!this.ready) return this.unavailable(startedAt, "shutting_down");
+    const retry = this.readRetryContext(request.headers, startedAt);
+    if ("statusCode" in retry) return retry;
+    if (!this.ready) return this.unavailable(startedAt, "shutting_down", retry);
 
-    const payload = await this.readPayload(request, startedAt);
+    const payload = await this.readPayload(request, startedAt, retry);
     if (!("runId" in payload)) return payload;
-    if (!this.ready) return this.unavailable(startedAt, "shutting_down", payload);
-    if (this.activeTask) return this.unavailable(startedAt, "process_busy", payload);
+    if (!this.ready) return this.unavailable(startedAt, "shutting_down", retry, payload);
+    if (this.activeTask) return this.unavailable(startedAt, "process_busy", retry, payload);
 
     let releaseActive!: () => void;
     const active = new Promise<void>((resolve) => {
@@ -92,7 +98,7 @@ export class ProductActivationWorkerService {
     });
     this.activeTask = active;
     try {
-      return await this.execute(payload, startedAt);
+      return await this.execute(payload, startedAt, retry);
     } finally {
       releaseActive();
       if (this.activeTask === active) this.activeTask = null;
@@ -127,6 +133,7 @@ export class ProductActivationWorkerService {
   private async readPayload(
     request: ProductActivationWorkerRequest,
     startedAt: number,
+    retry: ProductActivationRetryContext,
   ): Promise<ProductActivationDispatchPayload | ProductActivationWorkerResponse> {
     if (!isJsonContentType(request.headers.get("content-type"))) {
       return this.invalid(startedAt, "unsupported_content_type");
@@ -147,7 +154,7 @@ export class ProductActivationWorkerService {
       if (error instanceof ProductActivationTaskBodyTooLargeError) {
         return this.invalid(startedAt, "streamed_body_too_large");
       }
-      return this.unavailable(startedAt, "body_read_failed");
+      return this.unavailable(startedAt, "body_read_failed", retry);
     }
 
     let value: unknown;
@@ -164,6 +171,7 @@ export class ProductActivationWorkerService {
   private async execute(
     payload: ProductActivationDispatchPayload,
     startedAt: number,
+    retry: ProductActivationRetryContext,
   ): Promise<ProductActivationWorkerResponse> {
     let repository: Pick<ProductActivationRepository, "recordDispatchResult">;
     try {
@@ -173,13 +181,13 @@ export class ProductActivationWorkerService {
         (repair.result !== "recorded" && repair.result !== "replay") ||
         repair.dispatchStatus !== "dispatched"
       ) {
-        return this.finished(payload, startedAt, "dispatch_no_work", 204);
+        return this.finished(payload, startedAt, "dispatch_no_work", retry, 204);
       }
     } catch (error) {
       if (error instanceof ProductActivationError && PERMANENT_DISPATCH_ERRORS.has(error.code)) {
-        return this.finished(payload, startedAt, "dispatch_no_work", 204, error.code);
+        return this.finished(payload, startedAt, "dispatch_no_work", retry, 204, error.code);
       }
-      return this.unavailable(startedAt, "dispatch_repair_failed", payload);
+      return this.unavailable(startedAt, "dispatch_repair_failed", retry, payload);
     }
 
     try {
@@ -190,12 +198,13 @@ export class ProductActivationWorkerService {
             payload,
             startedAt,
             result.status,
+            retry,
             204,
             "errorCode" in result ? result.errorCode : undefined,
           )
-        : this.unavailable(startedAt, result.status, payload);
+        : this.unavailable(startedAt, result.status, retry, payload);
     } catch {
-      return this.unavailable(startedAt, "worker_exception", payload);
+      return this.unavailable(startedAt, "worker_exception", retry, payload);
     }
   }
 
@@ -228,6 +237,7 @@ export class ProductActivationWorkerService {
   private unavailable(
     startedAt: number,
     outcome: string,
+    retry: ProductActivationRetryContext,
     payload?: ProductActivationDispatchPayload,
   ): ProductActivationWorkerResponse {
     this.log({
@@ -237,6 +247,8 @@ export class ProductActivationWorkerService {
       outcome,
       durationMs: this.duration(startedAt),
       errorCode: "product_moderation_activation_unavailable",
+      retryCount: retry.retryCount,
+      retryLimitReached: retry.retryCount >= this.dependencies.taskMaximumAttempts - 1,
     });
     return { statusCode: 503 };
   }
@@ -245,6 +257,7 @@ export class ProductActivationWorkerService {
     payload: ProductActivationDispatchPayload,
     startedAt: number,
     outcome: string,
+    retry: ProductActivationRetryContext,
     statusCode: 204,
     errorCode?: string,
   ): ProductActivationWorkerResponse {
@@ -254,6 +267,8 @@ export class ProductActivationWorkerService {
       ...payload,
       outcome,
       durationMs: this.duration(startedAt),
+      retryCount: retry.retryCount,
+      retryLimitReached: false,
       ...(errorCode ? { errorCode } : {}),
     });
     return { statusCode };
@@ -262,7 +277,46 @@ export class ProductActivationWorkerService {
   private duration(startedAt: number): number {
     return Math.max(0, this.now() - startedAt);
   }
+
+  private readRetryContext(
+    headers: Headers,
+    startedAt: number,
+  ): ProductActivationRetryContext | ProductActivationWorkerResponse {
+    const value = headers.get("x-cloudtasks-taskretrycount");
+    if (value === null && this.dependencies.deploymentEnvironment === "local") {
+      return { retryCount: 0 };
+    }
+    if (value === null || !/^\d+$/.test(value)) {
+      return this.invalidRetryCount(
+        startedAt,
+        value === null ? "missing_retry_count" : "invalid_retry_count",
+      );
+    }
+    const retryCount = Number(value);
+    if (!Number.isSafeInteger(retryCount)) {
+      return this.invalidRetryCount(startedAt, "invalid_retry_count");
+    }
+    return { retryCount };
+  }
+
+  private invalidRetryCount(
+    startedAt: number,
+    outcome: "missing_retry_count" | "invalid_retry_count",
+  ): ProductActivationWorkerResponse {
+    this.log({
+      event: "product_activation_task_invalid",
+      severity: "error",
+      outcome,
+      durationMs: this.duration(startedAt),
+      errorCode: "product_activation_task_invalid",
+    });
+    return { statusCode: 503 };
+  }
 }
+
+type ProductActivationRetryContext = {
+  retryCount: number;
+};
 
 class ProductActivationTaskBodyTooLargeError extends Error {}
 

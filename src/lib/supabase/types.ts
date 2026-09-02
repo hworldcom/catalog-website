@@ -4278,6 +4278,13 @@ export type Database = {
           submission_owned: boolean;
         }[];
       };
+      read_product_activation_dispatch_health: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          oldest_pending_created_at: string | null;
+          pending_count: number;
+        }[];
+      };
       read_product_moderation_edit_state: {
         Args: { p_expected_seller_id: string; p_product_id: string };
         Returns: {

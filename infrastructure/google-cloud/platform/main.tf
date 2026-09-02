@@ -3,6 +3,7 @@ locals {
   artifact_catalog         = jsondecode(file("${path.module}/../artifact-catalog.json"))
   edge_catalog             = jsondecode(file("${path.module}/../edge-catalog.json"))
   identity_catalog         = jsondecode(file("${path.module}/../identity-catalog.json"))
+  monitoring_catalog       = jsondecode(file("${path.module}/../monitoring-catalog.json"))
   runtime_catalog          = jsondecode(file("${path.module}/../runtime-catalog.json"))
   secret_catalog           = jsondecode(file("${path.module}/../secret-catalog.json"))
   service_catalog          = jsondecode(file("${path.module}/../service-catalog.json"))
@@ -127,5 +128,29 @@ module "custom_domain_load_balancer" {
   depends_on = [
     module.platform_services,
     module.runtime_activation_platform,
+  ]
+}
+
+module "operational_monitoring" {
+  for_each = var.runtime_configuration == null || var.monitoring_configuration == null ? {} : { enabled = var.monitoring_configuration }
+
+  source = "../modules/operational-monitoring"
+
+  alerting_enabled           = each.value.alerting_enabled
+  canonical_origin           = var.runtime_configuration.canonical_origin
+  environment                = var.environment
+  expected_canonical_origin  = local.runtime_catalog.canonicalOrigins[var.environment]
+  monitoring_contract        = local.monitoring_catalog
+  notification_channel_names = each.value.notification_channel_names
+  project_id                 = var.project_id
+  reconciliation_job_name    = module.runtime_activation_platform["enabled"].runtime_inventory.reconciliation.name
+  region                     = var.region
+  website_service_name       = module.runtime_activation_platform["enabled"].runtime_inventory.website.name
+  worker_service_name        = module.runtime_activation_platform["enabled"].runtime_inventory.worker.name
+
+  depends_on = [
+    module.platform_services,
+    module.runtime_activation_platform,
+    module.custom_domain_load_balancer,
   ]
 }

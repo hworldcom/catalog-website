@@ -66,6 +66,23 @@ run "uat_runtime_plan_matches_reviewed_contract" {
   }
 
   assert {
+    condition = one([
+      for environment_variable in google_cloud_run_v2_service.worker.template[0].containers[0].env :
+      environment_variable.value
+      if environment_variable.name == "BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS"
+    ]) == "10"
+    error_message = "The worker maximum-attempt setting must come from the queue contract."
+  }
+
+  assert {
+    condition = (
+      google_cloud_run_v2_service.worker.labels.service_role == "activation_worker" &&
+      google_cloud_run_v2_service.worker.template[0].labels.release_owner == "bazoria_web"
+    )
+    error_message = "The worker service and revision labels differ."
+  }
+
+  assert {
     condition     = google_cloud_run_v2_service_iam_member.worker_invoker.member == "serviceAccount:baz-uat-task-invoker@bazoria-uat-lnlabs.iam.gserviceaccount.com"
     error_message = "Only the matching task invoker may invoke the worker."
   }

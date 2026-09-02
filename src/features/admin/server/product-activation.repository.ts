@@ -30,6 +30,11 @@ export interface ProductActivationAdministrator {
   ) => Promise<{ data: unknown; error: { message: string; code?: string } | null }>;
 }
 
+export type ProductActivationDispatchHealth = {
+  pendingCount: number;
+  oldestPendingCreatedAt: string | null;
+};
+
 export interface ProductActivationRepository {
   decide(input: {
     submissionId: string;
@@ -140,6 +145,7 @@ export interface ProductActivationRepository {
     limit: number,
   ): Promise<ProductActivationDispatchPayload[]>;
   listPendingDispatches(limit: number): Promise<ProductActivationDispatchPayload[]>;
+  readDispatchHealth(): Promise<ProductActivationDispatchHealth>;
 }
 
 const decisionRowSchema = z.object({
@@ -173,6 +179,20 @@ const recoveryRowSchema = z.object({
   dispatch_status: z.enum(["pending", "dispatched", "failed"]),
   dispatch_required: z.boolean(),
 });
+
+const dispatchHealthRowSchema = z
+  .object({
+    pending_count: z.number().int().nonnegative(),
+    oldest_pending_created_at: z.string().datetime({ offset: true }).nullable(),
+  })
+  .superRefine((row, context) => {
+    if ((row.pending_count === 0) !== (row.oldest_pending_created_at === null)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pending count and oldest timestamp are inconsistent",
+      });
+    }
+  });
 
 const activationItemSchema = z.object({
   productDraftImageId: z.string().uuid(),
@@ -632,6 +652,22 @@ export class SupabaseProductActivationRepository implements ProductActivationRep
       runId: row.run_id,
       dispatchGeneration: row.dispatch_generation,
     }));
+  }
+
+  async readDispatchHealth(): Promise<ProductActivationDispatchHealth> {
+    const response = await this.administrator.rpc("read_product_activation_dispatch_health", {});
+    if (response.error) throw productActivationDatabaseError(response.error);
+    const rows = z.array(dispatchHealthRowSchema).length(1).safeParse(response.data);
+    if (!rows.success) {
+      console.error("[Product activation] Database response was invalid.", {
+        operation: "read_product_activation_dispatch_health",
+      });
+      throw productActivationError("product_moderation_activation_unavailable");
+    }
+    return {
+      pendingCount: rows.data[0].pending_count,
+      oldestPendingCreatedAt: rows.data[0].oldest_pending_created_at,
+    };
   }
 
   private claimCleanup(

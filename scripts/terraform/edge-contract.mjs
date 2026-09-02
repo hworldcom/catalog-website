@@ -92,6 +92,8 @@ function validateSource() {
     'resource "google_compute_global_forwarding_rule" "http"',
     'certificate_map = "//certificatemanager.googleapis.com/',
     "https_redirect         = true",
+    'service_role  = "edge"',
+    'release_owner = "bazoria_web"',
   ]) {
     assertEdge(moduleSource.includes(required), `edge module is missing ${required}`);
   }
@@ -107,6 +109,10 @@ function validateSource() {
   assertEdge(
     (moduleSource.match(/prevent_destroy\s*=\s*true/g) ?? []).length === 5,
     "fixed address and Certificate Manager resources must be destruction-protected",
+  );
+  assertEdge(
+    (moduleSource.match(/labels\s*=\s*local\.labels/g) ?? []).length === 7,
+    "every label-capable edge resource must use the reviewed ownership labels",
   );
   assertEdge(
     platformSource.includes('module "custom_domain_load_balancer"') &&

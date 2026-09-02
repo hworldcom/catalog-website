@@ -17,6 +17,7 @@ describe("readProductActivationWorkerConfig", () => {
       serviceRoleKey: "server-secret",
       taskAudience: "https://activation.example.com",
       taskServiceAccount: "task-caller@example.iam.gserviceaccount.com",
+      taskMaximumAttempts: 10,
       port: 8_080,
     });
   });
@@ -42,12 +43,24 @@ describe("readProductActivationWorkerConfig", () => {
     );
   });
 
+  it("uses the reviewed maximum attempts for local development when omitted", () => {
+    expect(
+      readProductActivationWorkerConfig({
+        ...environment(),
+        BAZORIA_DEPLOYMENT_ENVIRONMENT: "local",
+        BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS: undefined,
+      }).taskMaximumAttempts,
+    ).toBe(10);
+  });
+
   it.each([
     [{ PORT: "0" }, "PORT"],
     [{ PORT: "65536" }, "PORT"],
     [{ BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: "http://activation.example.com" }, "https"],
     [{ BAZORIA_PRODUCT_PUBLICATION_WORKER_DEADLINE_SECONDS: "200" }, "configured bounded work"],
     [{ BAZORIA_PRODUCT_PUBLICATION_CLAIM_TIMEOUT_SECONDS: "299" }, "worker deadline"],
+    [{ BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS: "0" }, "greater than 0"],
+    [{ BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS: undefined }, "required outside"],
   ] as const)("rejects invalid worker settings", (override, expected) => {
     expect(() => readProductActivationWorkerConfig({ ...environment(), ...override })).toThrow(
       expected,
@@ -67,6 +80,7 @@ function environment(): Record<string, string | undefined> {
     SUPABASE_SERVICE_ROLE_KEY: "server-secret",
     BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: "https://activation.example.com",
     BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT: "task-caller@example.iam.gserviceaccount.com",
+    BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS: "10",
     PORT: "8080",
   };
 }

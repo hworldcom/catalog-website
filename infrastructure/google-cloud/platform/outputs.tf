@@ -27,3 +27,8 @@ output "edge_inventory" {
   description = "Non-secret load-balancer and DNS inventory, or null before a digest-bound release."
   value       = try(module.custom_domain_load_balancer["enabled"].edge_inventory, null)
 }
+
+output "monitoring_inventory" {
+  description = "Non-secret metrics, alerts, checks, and notification-channel resource names, or null before activation."
+  value       = try(module.operational_monitoring["enabled"].monitoring_inventory, null)
+}

@@ -212,6 +212,7 @@ function validateTerraformSource() {
     "platform",
     "modules/runtime-activation-platform",
     "modules/custom-domain-load-balancer",
+    "modules/operational-monitoring",
   ]) {
     const versions = readFileSync(join(infrastructureRoot, root, "versions.tf"), "utf8");
     const lock = readFileSync(join(infrastructureRoot, root, ".terraform.lock.hcl"), "utf8");

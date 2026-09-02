@@ -89,6 +89,15 @@ run "uat_edge_plan_matches_reviewed_contract" {
   }
 
   assert {
+    condition = (
+      google_compute_global_address.website.labels.service_role == "edge" &&
+      google_compute_global_forwarding_rule.https.labels.release_owner == "bazoria_web" &&
+      google_certificate_manager_certificate.website.labels.environment == "uat"
+    )
+    error_message = "Label-capable edge resources must use the reviewed ownership labels."
+  }
+
+  assert {
     condition     = output.edge_inventory.canonical_origin == "https://uat2026.bazoria.pl"
     error_message = "The UAT edge inventory origin differs."
   }

@@ -103,4 +103,9 @@ run "uat_platform_enables_only_reviewed_services" {
     condition     = output.edge_inventory == null
     error_message = "The checked-in platform variables must not create edge resources before release input is provided."
   }
+
+  assert {
+    condition     = output.monitoring_inventory == null
+    error_message = "The checked-in platform variables must not create monitoring before runtime and notification channels are provided."
+  }
 }

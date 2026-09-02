@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "notificationChannelSource": "terraform_input",
+  "resourceSuffixes": {
+    "workerErrorsMetric": "activation-worker-errors",
+    "reconciliationFailuresMetric": "activation-reconciliation-failures",
+    "reconciliationSuccessesMetric": "activation-reconciliation-successes",
+    "retryLimitMetric": "activation-retry-limit",
+    "pendingAgeMetric": "activation-oldest-pending-age-ms"
+  },
+  "website5xx": {
+    "metricType": "run.googleapis.com/request_count",
+    "resourceType": "cloud_run_revision",
+    "responseCodeClass": "5xx",
+    "ratioThreshold": 0.05,
+    "minimumRequestCount": 20,
+    "alignmentWindowSeconds": 300,
+    "severity": "ERROR"
+  },
+  "workerErrors": {
+    "service": "bazoria_product_activation_worker",
+    "event": "product_activation_task_finished",
+    "resourceType": "cloud_run_revision",
+    "thresholdCount": 3,
+    "alignmentWindowSeconds": 300,
+    "severity": "ERROR"
+  },
+  "pendingAge": {
+    "service": "bazoria_product_activation_reconciliation",
+    "event": "product_activation_reconciliation_finished",
+    "field": "oldestPendingAgeMs",
+    "resourceType": "cloud_run_job",
+    "alignmentWindowSeconds": 60,
+    "warningThresholdMs": 300000,
+    "criticalThresholdMs": 900000,
+    "warningSeverity": "WARNING",
+    "criticalSeverity": "CRITICAL"
+  },
+  "reconciliationFailures": {
+    "service": "bazoria_product_activation_reconciliation",
+    "event": "product_activation_reconciliation_failed",
+    "resourceType": "cloud_run_job",
+    "alignmentWindowSeconds": 300,
+    "warningThresholdCount": 1,
+    "criticalThresholdCount": 2,
+    "warningSeverity": "WARNING",
+    "criticalSeverity": "CRITICAL"
+  },
+  "reconciliationHeartbeat": {
+    "service": "bazoria_product_activation_reconciliation",
+    "event": "product_activation_reconciliation_finished",
+    "resourceType": "cloud_run_job",
+    "absenceSeconds": 300,
+    "severity": "ERROR"
+  },
+  "retryLimit": {
+    "service": "bazoria_product_activation_worker",
+    "event": "product_activation_task_finished",
+    "field": "retryLimitReached",
+    "resourceType": "cloud_run_revision",
+    "thresholdCount": 1,
+    "alignmentWindowSeconds": 300,
+    "severity": "CRITICAL"
+  },
+  "uptime": {
+    "metricType": "monitoring.googleapis.com/uptime_check/check_passed",
+    "resourceType": "uptime_url",
+    "periodSeconds": 60,
+    "timeoutSeconds": 10,
+    "failureDurationSeconds": 120,
+    "minimumFailedRegions": 2,
+    "severity": "CRITICAL",
+    "checks": {
+      "health": {
+        "path": "/healthz",
+        "status": 204,
+        "contentMarker": null
+      },
+      "catalog": {
+        "path": "/?lang=EN&audience=women",
+        "status": 200,
+        "contentMarker": "bazoria-public-catalog-v1"
+      }
+    }
+  }
+}

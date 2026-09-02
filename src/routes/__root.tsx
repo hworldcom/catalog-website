@@ -29,6 +29,8 @@ const rootSearchSchema = z.object({
   audience: publicAudienceSchema,
 });
 
+export const BAZORIA_UPTIME_MARKER = "bazoria-public-catalog-v1";
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -95,6 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "bazoria-uptime-marker", content: BAZORIA_UPTIME_MARKER },
       { title: "Bazoria — Wholesale Discovery for Retailers & Resellers" },
       {
         name: "description",

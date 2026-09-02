@@ -151,6 +151,39 @@ describe("SupabaseProductActivationRepository", () => {
     });
   });
 
+  it("maps the complete pending-dispatch health snapshot", async () => {
+    const rpc = vi.fn(async () => ({
+      data: [
+        {
+          pending_count: 12,
+          oldest_pending_created_at: "2026-09-02T10:00:00.000Z",
+        },
+      ],
+      error: null,
+    }));
+    const repository = new SupabaseProductActivationRepository({ rpc });
+
+    await expect(repository.readDispatchHealth()).resolves.toEqual({
+      pendingCount: 12,
+      oldestPendingCreatedAt: "2026-09-02T10:00:00.000Z",
+    });
+    expect(rpc).toHaveBeenCalledWith("read_product_activation_dispatch_health", {});
+  });
+
+  it.each([
+    [],
+    [{ pending_count: 0, oldest_pending_created_at: "2026-09-02T10:00:00.000Z" }],
+    [{ pending_count: 1, oldest_pending_created_at: null }],
+  ])("rejects malformed pending-dispatch health rows", async (data) => {
+    const repository = new SupabaseProductActivationRepository({
+      rpc: vi.fn(async () => ({ data, error: null })),
+    });
+
+    await expect(repository.readDispatchHealth()).rejects.toMatchObject({
+      code: "product_moderation_activation_unavailable",
+    });
+  });
+
   it("falls through an activation-stale result to a cleanup claim", async () => {
     const rpc = vi
       .fn()

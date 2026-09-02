@@ -17,7 +17,10 @@ describe("runtime role configuration isolation", () => {
   it("validates the worker without browser or Cloud Tasks queue settings", () => {
     const environment = workerEnvironment();
 
-    expect(readProductActivationWorkerConfig(environment).port).toBe(8080);
+    const config = readProductActivationWorkerConfig(environment);
+
+    expect(config.port).toBe(8080);
+    expect(config.taskMaximumAttempts).toBe(10);
     expect(environment.SUPABASE_PUBLISHABLE_KEY).toBeUndefined();
     expect(environment.BAZORIA_PRODUCT_PUBLICATION_TASK_QUEUE).toBeUndefined();
   });
@@ -71,6 +74,7 @@ function workerEnvironment(): Record<string, string | undefined> {
   return {
     ...baseEnvironment(),
     BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: "https://worker.example.com",
+    BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS: "10",
     BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT: "task@example.com",
     PORT: "8080",
   };

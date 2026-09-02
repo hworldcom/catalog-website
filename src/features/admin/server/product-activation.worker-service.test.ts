@@ -97,6 +97,44 @@ describe("ProductActivationWorkerService routing and identity", () => {
 });
 
 describe("ProductActivationWorkerService request validation", () => {
+  it.each([null, "invalid", "9007199254740992"])(
+    "retries a hosted task with invalid retry count %s before reading its body",
+    async (retryCount) => {
+      const fixture = serviceFixture();
+      const response = await fixture.service.handle(
+        request("POST", PRODUCT_ACTIVATION_TASK_PATH, { retryCount }),
+      );
+
+      expect(response.statusCode).toBe(503);
+      expect(fixture.getRepository).not.toHaveBeenCalled();
+      expect(fixture.logs).toContainEqual(
+        expect.objectContaining({
+          event: "product_activation_task_invalid",
+          severity: "error",
+        }),
+      );
+    },
+  );
+
+  it("uses retry count zero only for a missing local development header", async () => {
+    const fixture = serviceFixture({ deploymentEnvironment: "local" });
+
+    expect(
+      (
+        await fixture.service.handle(
+          request("POST", PRODUCT_ACTIVATION_TASK_PATH, { retryCount: null }),
+        )
+      ).statusCode,
+    ).toBe(204);
+    expect(fixture.logs).toContainEqual(
+      expect.objectContaining({
+        event: "product_activation_task_finished",
+        retryCount: 0,
+        retryLimitReached: false,
+      }),
+    );
+  });
+
   it.each([
     [{ contentType: null }, "unsupported_content_type"],
     [{ contentType: "text/plain" }, "unsupported_content_type"],
@@ -230,6 +268,40 @@ describe("ProductActivationWorkerService dispatch and worker mapping", () => {
     expect((await fixture.service.handle(taskRequest())).statusCode).toBe(503);
   });
 
+  it("marks only an unsuccessful final configured attempt as reaching the retry limit", async () => {
+    const failed = serviceFixture({ repositoryError: new Error("database unavailable") });
+    expect(
+      (
+        await failed.service.handle(
+          request("POST", PRODUCT_ACTIVATION_TASK_PATH, { retryCount: "9" }),
+        )
+      ).statusCode,
+    ).toBe(503);
+    expect(failed.logs).toContainEqual(
+      expect.objectContaining({
+        event: "product_activation_task_finished",
+        retryCount: 9,
+        retryLimitReached: true,
+      }),
+    );
+
+    const succeeded = serviceFixture();
+    expect(
+      (
+        await succeeded.service.handle(
+          request("POST", PRODUCT_ACTIVATION_TASK_PATH, { retryCount: "9" }),
+        )
+      ).statusCode,
+    ).toBe(204);
+    expect(succeeded.logs).toContainEqual(
+      expect.objectContaining({
+        event: "product_activation_task_finished",
+        retryCount: 9,
+        retryLimitReached: false,
+      }),
+    );
+  });
+
   it("admits at most one valid task and never reads the busy task from the database", async () => {
     let release!: () => void;
     const running = new Promise<ProductActivationWorkerResult>((resolve) => {
@@ -267,6 +339,8 @@ function serviceFixture(
     workerResult?: ProductActivationWorkerResult;
     workerError?: Error;
     workerPromise?: Promise<ProductActivationWorkerResult>;
+    deploymentEnvironment?: "local" | "uat" | "production";
+    taskMaximumAttempts?: number;
   } = {},
 ) {
   const identityVerifier = options.identityVerifier ?? {
@@ -297,7 +371,9 @@ function serviceFixture(
     logs,
     service: new ProductActivationWorkerService({
       identityVerifier,
+      deploymentEnvironment: options.deploymentEnvironment ?? "uat",
       expectedServiceAccount: "task-caller@example.iam.gserviceaccount.com",
+      taskMaximumAttempts: options.taskMaximumAttempts ?? 10,
       getRepository,
       createWorker,
       log: (entry) => logs.push(entry),
@@ -312,6 +388,7 @@ function request(
     authorization?: string | null;
     contentType?: string | null;
     contentLength?: string;
+    retryCount?: string | null;
     bodyText?: string;
     body?: AsyncIterable<Uint8Array>;
   } = {},
@@ -322,6 +399,10 @@ function request(
   if (options.contentType === undefined) headers.set("content-type", "application/json");
   else if (options.contentType !== null) headers.set("content-type", options.contentType);
   if (options.contentLength !== undefined) headers.set("content-length", options.contentLength);
+  if (options.retryCount === undefined) headers.set("x-cloudtasks-taskretrycount", "0");
+  else if (options.retryCount !== null) {
+    headers.set("x-cloudtasks-taskretrycount", options.retryCount);
+  }
   const bodyText = options.bodyText ?? JSON.stringify(payload);
   return {
     method,

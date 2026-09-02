@@ -40,7 +40,7 @@ export async function startProductActivationWorkerProcess(
   const service = dependencies.service ?? createService(config);
   const sockets = new Set<Socket>();
   const server = createServer((request, response) => {
-    void handleNodeRequest(service, request, response);
+    void handleNodeRequest(service, config, request, response);
   });
   server.requestTimeout = config.workerDeadlineMs + 30_000;
   server.on("connection", (socket) => {
@@ -67,12 +67,15 @@ function createService(config: ProductActivationWorkerConfig): ProductActivation
   return new ProductActivationWorkerService({
     ...createProductActivationTaskRuntimeDependencies(config),
     identityVerifier: new GoogleTaskIdentityVerifier(config.taskAudience),
+    deploymentEnvironment: config.deploymentEnvironment,
     expectedServiceAccount: config.taskServiceAccount,
+    taskMaximumAttempts: config.taskMaximumAttempts,
   });
 }
 
 async function handleNodeRequest(
   service: ProductActivationWorkerService,
+  config: ProductActivationWorkerConfig,
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
@@ -80,13 +83,26 @@ async function handleNodeRequest(
     const result = await service.handle(toWorkerRequest(request));
     writeNodeResponse(response, result);
   } catch {
-    writeProductActivationWorkerLog({
-      event: "product_activation_task_finished",
-      severity: "error",
-      outcome: "http_handler_exception",
-      durationMs: 0,
-      errorCode: "product_moderation_activation_unavailable",
-    });
+    const retryCount = unexpectedFailureRetryCount(request.headers, config.deploymentEnvironment);
+    writeProductActivationWorkerLog(
+      retryCount === null
+        ? {
+            event: "product_activation_task_invalid",
+            severity: "error",
+            outcome: "invalid_retry_count",
+            durationMs: 0,
+            errorCode: "product_activation_task_invalid",
+          }
+        : {
+            event: "product_activation_task_finished",
+            severity: "error",
+            outcome: "http_handler_exception",
+            durationMs: 0,
+            errorCode: "product_moderation_activation_unavailable",
+            retryCount,
+            retryLimitReached: retryCount >= config.taskMaximumAttempts - 1,
+          },
+    );
     writeNodeResponse(response, { statusCode: 503 });
   }
 }
@@ -186,7 +202,20 @@ function writeStartupFailure(errorCode: string): void {
     outcome: "startup_failed",
     durationMs: 0,
     errorCode,
+    retryCount: 0,
+    retryLimitReached: false,
   });
+}
+
+function unexpectedFailureRetryCount(
+  headers: IncomingMessage["headers"],
+  deploymentEnvironment: ProductActivationWorkerConfig["deploymentEnvironment"],
+): number | null {
+  const value = headers["x-cloudtasks-taskretrycount"];
+  if (value === undefined && deploymentEnvironment === "local") return 0;
+  if (Array.isArray(value) || value === undefined || !/^\d+$/.test(value)) return null;
+  const retryCount = Number(value);
+  return Number.isSafeInteger(retryCount) ? retryCount : null;
 }
 
 const entryPath = process.argv[1]

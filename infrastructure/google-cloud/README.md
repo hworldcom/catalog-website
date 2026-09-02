@@ -54,6 +54,7 @@ cd /Users/hoangdeveloper/catalog-website
 npm run infra:foundation:check
 npm run infra:identity:check
 npm run infra:artifact:check
+npm run infra:monitoring:check
 npm run infra:terraform:validate
 ```
 
@@ -436,6 +437,46 @@ npm run infra:terraform:validate
 
 No DNS change, certificate issuance, public traffic, or hosted Terraform apply
 occurs until the guided `0038f` deployment.
+
+## Plan-Only Operational Monitoring
+
+Ticket `0038e5a` adds an opt-in monitoring module alongside the digest-bound
+runtime and custom-domain edge. It defines five environment-isolated
+log-derived metrics, ten alert policies, and two public HTTPS checks. The
+health check requires exactly HTTP 204 from `/healthz`; the catalog check
+requires exactly HTTP 200 and the bounded `bazoria-public-catalog-v1` marker
+from `/?lang=EN&audience=women`.
+
+The module activates only when both `runtime_configuration` and
+`monitoring_configuration` are supplied. Checked-in environment variable files
+omit both, so repository validation cannot create monitoring resources. A
+hosted release must provide an enabled monitoring configuration with one or
+more existing, verified channel resource names from the same project:
+
+```hcl
+monitoring_configuration = {
+  alerting_enabled = true
+  notification_channel_names = [
+    "projects/PROJECT_ID/notificationChannels/CHANNEL_ID",
+  ]
+}
+```
+
+Terraform rejects an empty list, duplicate channels, cross-project channels,
+and direct `run.app` uptime origins. It never creates an email channel or
+receives a recipient address. Create and verify the channels in Cloud
+Monitoring before the first real plan, then run one bounded UAT test
+notification after apply. A reviewed maintenance plan may temporarily set
+`alerting_enabled` to `false`; direct console changes are configuration drift.
+
+Validate the complete monitoring catalog and both synthetic environment plans
+with:
+
+```bash
+cd /Users/hoangdeveloper/catalog-website
+npm run infra:monitoring:check
+npm run infra:terraform:validate
+```
 
 ## Applied Inventory
 
