@@ -478,10 +478,106 @@ npm run infra:monitoring:check
 npm run infra:terraform:validate
 ```
 
+## Operator-Managed Billing Budgets
+
+Ticket `0038e5b` defines a separate `budget` Terraform root. It is deliberately
+absent from every GitHub workflow and from the ordinary platform root. A human
+operator plans and applies it with their own Google Cloud credentials so that
+Terraform, release, runtime, scheduler, and task identities never receive
+billing-account permissions.
+
+The operator needs `roles/billing.costsManager` on billing account
+`014CA9-692646-D9E4CE`, plus `roles/monitoring.viewer` and permission
+`serviceusage.services.use` in the target project. User Application Default
+Credentials (ADC) are required because the Google provider uses the target
+project as its quota project:
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+gcloud auth application-default set-quota-project PROJECT_ID
+```
+
+Before every plan, select a reviewed positive amount, confirm the billing
+account's three-letter currency code, and obtain one to five existing enabled
+and verified email-channel resource names from the target project. Put only
+those changing values in a temporary file outside the repository:
+
+```bash
+cat > /tmp/bazoria-ENV-budget-reviewed.tfvars.json <<'JSON'
+{
+  "currency_code": "CURRENCY",
+  "monthly_amount": 100,
+  "notification_channel_names": [
+    "projects/PROJECT_ID/notificationChannels/CHANNEL_ID"
+  ]
+}
+JSON
+```
+
+The placeholder values above are not approved deployment values. Review the
+amount, currency, and channels before continuing. Run the fail-closed channel
+preflight before Terraform:
+
+```bash
+cd /Users/hoangdeveloper/catalog-website
+npm run infra:budget:preflight -- \
+  --environment-file infrastructure/google-cloud/environments/ENV/budget.tfvars.json \
+  --review-file /tmp/bazoria-ENV-budget-reviewed.tfvars.json
+```
+
+The preflight reads only each channel's name, type, enabled state, and
+verification status. It does not print or persist recipient addresses. Then
+produce an isolated plan:
+
+```bash
+export TF_DATA_DIR="$PWD/.terraform-data/budget-ENV"
+terraform -chdir=infrastructure/google-cloud/budget init \
+  -input=false \
+  -backend-config="../environments/ENV/budget.gcs.tfbackend"
+terraform -chdir=infrastructure/google-cloud/budget plan \
+  -input=false \
+  -lock-timeout=60s \
+  -var-file="../environments/ENV/budget.tfvars.json" \
+  -var-file="/tmp/bazoria-ENV-budget-reviewed.tfvars.json" \
+  -out="/tmp/bazoria-ENV-budget.tfplan"
+terraform -chdir=infrastructure/google-cloud/budget show \
+  -no-color \
+  "/tmp/bazoria-ENV-budget.tfplan"
+```
+
+The Cloud Billing Budget application programming interface (API) is free to
+use. The budget is alerts-only and does not cap or stop normal Google Cloud
+spend; existing services continue to create their normal variable charges.
+Remote state also retains a small object and operation footprint. Review those
+facts and the complete plan, then request explicit approval before running:
+
+```bash
+terraform -chdir=infrastructure/google-cloud/budget apply \
+  "/tmp/bazoria-ENV-budget.tfplan"
+```
+
+After apply, verify in Cloud Billing > Budgets & alerts that the budget has the
+exact project, monthly amount, actual-spend thresholds of 50, 80, and 100
+percent, billing-account ownership, API deletion protection, and only the
+reviewed email channels. Cloud Monitoring has no generic test action for email
+channels. Their enabled and verified state is checked by the preflight; actual
+budget email delivery is confirmed when a real threshold is crossed. Do not
+create a synthetic spend or disposable alert policy merely to force a message.
+
+Validate the budget source, operator boundary, preflight, and mock plans with:
+
+```bash
+cd /Users/hoangdeveloper/catalog-website
+npm run infra:budget:check
+npm run test:node22 -- scripts/terraform/budget-contract.test.ts
+npm run infra:terraform:validate
+```
+
 ## Applied Inventory
 
-After both roots are applied in both environments, write each non-secret output
-to a temporary file:
+After the bootstrap and platform roots are applied in both environments, write
+each non-secret output to a temporary file:
 
 ```bash
 terraform -chdir=infrastructure/google-cloud/bootstrap output \

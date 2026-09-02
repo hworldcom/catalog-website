@@ -55,6 +55,7 @@ jobs:
         run: >-
           npm run test --
           scripts/terraform/artifact-contract.test.ts
+          scripts/terraform/budget-contract.test.ts
           scripts/terraform/foundation-contract.test.ts
           scripts/terraform/foundation-plan-contract.test.ts
           scripts/terraform/identity-contract.test.ts
