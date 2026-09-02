@@ -80,7 +80,7 @@ SELECT is(
     SELECT count(*)::integer
     FROM supabase_migrations.schema_migrations
   ),
-  77,
+  78,
   'the complete ordered migration history is registered'
 );
 
@@ -88,7 +88,7 @@ SELECT ok(
   EXISTS (
     SELECT 1
     FROM supabase_migrations.schema_migrations
-    WHERE version::text = '20260831120000'
+    WHERE version::text = '20260902120000'
   ),
   'the latest local migration is registered'
 );
