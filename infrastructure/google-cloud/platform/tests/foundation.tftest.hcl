@@ -36,4 +36,40 @@ run "uat_platform_enables_only_reviewed_services" {
     condition     = module.platform_services.services_retained_on_destroy
     error_message = "Platform APIs must remain enabled when removed from Terraform state."
   }
+
+  assert {
+    condition = jsonencode(sort(keys(module.secret_foundation.secret_containers))) == jsonencode([
+      "openaiApiKey",
+      "supabaseServiceRole",
+    ])
+    error_message = "The platform must create only the reviewed secret containers."
+  }
+
+  assert {
+    condition = jsonencode(module.secret_foundation.secret_containers.openaiApiKey) == jsonencode({
+      accessor_members = [
+        "serviceAccount:baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+      ]
+      name          = "projects/bazoria-uat-lnlabs/secrets/bazoria-uat-openai-api-key"
+      purpose_label = "openai-api-key"
+      replication   = "europe-west3"
+      secret_id     = "bazoria-uat-openai-api-key"
+    })
+    error_message = "The OpenAI secret container or access differs."
+  }
+
+  assert {
+    condition = jsonencode(module.secret_foundation.secret_containers.supabaseServiceRole) == jsonencode({
+      accessor_members = [
+        "serviceAccount:baz-uat-activation-worker@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+        "serviceAccount:baz-uat-reconciliation@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+        "serviceAccount:baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+      ]
+      name          = "projects/bazoria-uat-lnlabs/secrets/bazoria-uat-supabase-service-role"
+      purpose_label = "supabase-service-role"
+      replication   = "europe-west3"
+      secret_id     = "bazoria-uat-supabase-service-role"
+    })
+    error_message = "The Supabase secret container or access differs."
+  }
 }

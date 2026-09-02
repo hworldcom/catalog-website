@@ -3,7 +3,8 @@
   "generatedFrom": [
     "identity-catalog.json",
     "reviewed-administrator-access.json",
-    "reviewed-environments.json"
+    "reviewed-environments.json",
+    "secret-catalog.json"
   ],
   "environments": {
     "uat": {
@@ -99,6 +100,33 @@
           "roles": ["roles/iam.workloadIdentityUser"]
         },
         {
+          "access": "direct",
+          "ownerTicket": "0038e2b",
+          "principal": "serviceAccount:baz-uat-activation-worker@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "reason": "Read only the reviewed matching-environment runtime secret payloads.",
+          "resources": ["projects/bazoria-uat-lnlabs/secrets/bazoria-uat-supabase-service-role"],
+          "roles": ["roles/secretmanager.secretAccessor"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2b",
+          "principal": "serviceAccount:baz-uat-reconciliation@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "reason": "Read only the reviewed matching-environment runtime secret payloads.",
+          "resources": ["projects/bazoria-uat-lnlabs/secrets/bazoria-uat-supabase-service-role"],
+          "roles": ["roles/secretmanager.secretAccessor"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2b",
+          "principal": "serviceAccount:baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "reason": "Read only the reviewed matching-environment runtime secret payloads.",
+          "resources": [
+            "projects/bazoria-uat-lnlabs/secrets/bazoria-uat-openai-api-key",
+            "projects/bazoria-uat-lnlabs/secrets/bazoria-uat-supabase-service-role"
+          ],
+          "roles": ["roles/secretmanager.secretAccessor"]
+        },
+        {
           "access": "inherited",
           "ownerTicket": "0038e1",
           "principal": "user:hoang@lnlabs.xyz",
@@ -115,6 +143,18 @@
         }
       },
       "projectId": "bazoria-uat-lnlabs",
+      "secretContainers": {
+        "openaiApiKey": {
+          "accessorServiceAccountKeys": ["web"],
+          "name": "projects/bazoria-uat-lnlabs/secrets/bazoria-uat-openai-api-key",
+          "secretId": "bazoria-uat-openai-api-key"
+        },
+        "supabaseServiceRole": {
+          "accessorServiceAccountKeys": ["activationWorker", "reconciliation", "web"],
+          "name": "projects/bazoria-uat-lnlabs/secrets/bazoria-uat-supabase-service-role",
+          "secretId": "bazoria-uat-supabase-service-role"
+        }
+      },
       "serviceAccounts": {
         "activationWorker": {
           "accountId": "baz-uat-activation-worker",
@@ -246,6 +286,33 @@
           "roles": ["roles/iam.workloadIdentityUser"]
         },
         {
+          "access": "direct",
+          "ownerTicket": "0038e2b",
+          "principal": "serviceAccount:baz-prod-activation-worker@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "reason": "Read only the reviewed matching-environment runtime secret payloads.",
+          "resources": ["projects/bazoria-prod-lnlabs/secrets/bazoria-prod-supabase-service-role"],
+          "roles": ["roles/secretmanager.secretAccessor"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2b",
+          "principal": "serviceAccount:baz-prod-reconciliation@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "reason": "Read only the reviewed matching-environment runtime secret payloads.",
+          "resources": ["projects/bazoria-prod-lnlabs/secrets/bazoria-prod-supabase-service-role"],
+          "roles": ["roles/secretmanager.secretAccessor"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2b",
+          "principal": "serviceAccount:baz-prod-web@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "reason": "Read only the reviewed matching-environment runtime secret payloads.",
+          "resources": [
+            "projects/bazoria-prod-lnlabs/secrets/bazoria-prod-openai-api-key",
+            "projects/bazoria-prod-lnlabs/secrets/bazoria-prod-supabase-service-role"
+          ],
+          "roles": ["roles/secretmanager.secretAccessor"]
+        },
+        {
           "access": "inherited",
           "ownerTicket": "0038e1",
           "principal": "user:hoang@lnlabs.xyz",
@@ -262,6 +329,18 @@
         }
       },
       "projectId": "bazoria-prod-lnlabs",
+      "secretContainers": {
+        "openaiApiKey": {
+          "accessorServiceAccountKeys": ["web"],
+          "name": "projects/bazoria-prod-lnlabs/secrets/bazoria-prod-openai-api-key",
+          "secretId": "bazoria-prod-openai-api-key"
+        },
+        "supabaseServiceRole": {
+          "accessorServiceAccountKeys": ["activationWorker", "reconciliation", "web"],
+          "name": "projects/bazoria-prod-lnlabs/secrets/bazoria-prod-supabase-service-role",
+          "secretId": "bazoria-prod-supabase-service-role"
+        }
+      },
       "serviceAccounts": {
         "activationWorker": {
           "accountId": "baz-prod-activation-worker",

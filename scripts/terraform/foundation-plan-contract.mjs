@@ -33,6 +33,13 @@ function identityAddressIsAllowed(address) {
   ].some((pattern) => pattern.test(address));
 }
 
+function platformAddressIsAllowed(address) {
+  return [
+    /^module\.secret_foundation\.google_secret_manager_secret\.secrets\["(openaiApiKey|supabaseServiceRole)"\]$/,
+    /^module\.secret_foundation\.google_secret_manager_secret_iam_member\.accessors\["[^"\n]+"\]$/,
+  ].some((pattern) => pattern.test(address));
+}
+
 function expectedIdentityValues(environment, reviewed, identityCatalog) {
   const abbreviation = environmentAbbreviation(environment);
   const repositoryName = reviewed.githubRepository.split("/")[1];
@@ -56,6 +63,41 @@ function expectedIdentityValues(environment, reviewed, identityCatalog) {
     subject: `repo:${reviewed.githubOwner}@${reviewed.githubOwnerId}/${repositoryName}@${reviewed.githubRepositoryId}:environment:${environment}`,
     terraformPrincipal: `serviceAccount:${emails.terraform}`,
   };
+}
+
+function expectedSecretValues(environment, reviewed, identityCatalog, secretCatalog) {
+  const abbreviation = environmentAbbreviation(environment);
+  const serviceAccountEmails = Object.fromEntries(
+    Object.entries(identityCatalog.serviceAccounts).map(([key, value]) => [
+      key,
+      `baz-${abbreviation}-${value.suffix}@${reviewed.projectId}.iam.gserviceaccount.com`,
+    ]),
+  );
+  const containers = Object.fromEntries(
+    Object.entries(secretCatalog.secrets).map(([key, value]) => {
+      const secretId = `bazoria-${abbreviation}-${value.suffix}`;
+      return [
+        key,
+        {
+          members: value.accessorServiceAccountKeys.map(
+            (accountKey) => `serviceAccount:${serviceAccountEmails[accountKey]}`,
+          ),
+          name: `projects/${reviewed.projectId}/secrets/${secretId}`,
+          purposeLabel: value.purposeLabel,
+          secretId,
+        },
+      ];
+    }),
+  );
+  const bindings = Object.fromEntries(
+    Object.entries(containers).flatMap(([secretKey, secret]) =>
+      secret.members.map((member) => [
+        `${secretKey}/${member}`,
+        { member, secretKey, secretId: secret.secretId, secretName: secret.name },
+      ]),
+    ),
+  );
+  return { bindings, containers };
 }
 
 function isReviewedProviderSubjectUpdate(resource, environment, reviewed, expectedIdentity) {
@@ -95,6 +137,7 @@ export function validateFoundationPlan({
   inventory,
   serviceCatalog,
   identityCatalog,
+  secretCatalog,
 }) {
   assertPlan(["uat", "production"].includes(environment), "environment is invalid");
   assertPlan(["bootstrap", "platform"].includes(root), "root is invalid");
@@ -104,6 +147,10 @@ export function validateFoundationPlan({
   assertPlan(Boolean(reviewed), "environment is not in the reviewed inventory");
   assertPlan(Boolean(identityCatalog), "identity catalog is required");
   const expectedIdentity = expectedIdentityValues(environment, reviewed, identityCatalog);
+  const expectedSecrets =
+    root === "platform"
+      ? expectedSecretValues(environment, reviewed, identityCatalog, secretCatalog)
+      : undefined;
   const serialized = JSON.stringify(plan);
   for (const pattern of [
     /sb_secret_[A-Za-z0-9_-]+/,
@@ -137,7 +184,8 @@ export function validateFoundationPlan({
     );
     assertPlan(
       allowedAddresses.has(resource.address) ||
-        (root === "bootstrap" && identityAddressIsAllowed(resource.address)),
+        (root === "bootstrap" && identityAddressIsAllowed(resource.address)) ||
+        (root === "platform" && platformAddressIsAllowed(resource.address)),
       `unknown resource ${resource.address}`,
     );
     assertPlan(!actions.includes("delete"), `${resource.address} would delete a resource`);
@@ -237,6 +285,38 @@ export function validateFoundationPlan({
         "Terraform state principal differs",
       );
     }
+    if (resource.address.includes("google_secret_manager_secret.secrets")) {
+      const secret = expectedSecrets?.containers[resource.index];
+      assertPlan(Boolean(secret), `${resource.address} has an unknown secret purpose`);
+      assertPlan(after.secret_id === secret.secretId, `${resource.address} secret ID differs`);
+      assertPlan(
+        isDeepStrictEqual(after.labels, {
+          environment,
+          managed_by: "terraform",
+          purpose: secret.purposeLabel,
+        }),
+        `${resource.address} labels differ`,
+      );
+      const replicas = after.replication?.[0]?.user_managed?.[0]?.replicas ?? [];
+      assertPlan(replicas.length === 1, `${resource.address} replica count differs`);
+      assertPlan(
+        replicas[0].location === secretCatalog.replicationRegion,
+        `${resource.address} replication region differs`,
+      );
+    }
+    if (resource.address.includes("google_secret_manager_secret_iam_member.accessors")) {
+      const binding = expectedSecrets?.bindings[resource.index];
+      assertPlan(Boolean(binding), `${resource.address} has an unknown secret accessor`);
+      assertPlan(
+        after.role === "roles/secretmanager.secretAccessor",
+        `${resource.address} role differs`,
+      );
+      assertPlan(after.member === binding.member, `${resource.address} member differs`);
+      assertPlan(
+        [binding.secretId, binding.secretName].includes(after.secret_id),
+        `${resource.address} secret differs`,
+      );
+    }
     if (resource.address.endsWith("google_iam_workload_identity_pool.github")) {
       assertPlan(after.workload_identity_pool_id === expectedIdentity.poolId, "pool ID differs");
     }
@@ -310,6 +390,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       ),
       identityCatalog: JSON.parse(
         readFileSync(join(infrastructureRoot, "identity-catalog.json"), "utf8"),
+      ),
+      secretCatalog: JSON.parse(
+        readFileSync(join(infrastructureRoot, "secret-catalog.json"), "utf8"),
       ),
     });
     process.stdout.write(`${JSON.stringify({ status: "passed", ...result })}\n`);

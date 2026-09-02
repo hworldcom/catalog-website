@@ -2,6 +2,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { validateSecretCatalog } from "./secret-contract.mjs";
+
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const infrastructureRoot = join(repositoryRoot, "infrastructure/google-cloud");
 const matrixPath = join(infrastructureRoot, "inventory/reviewed-identity-access.json");
@@ -82,6 +84,25 @@ function serviceAccountInventory(environment, projectId, catalog) {
             accountId,
             email,
             name: `projects/${projectId}/serviceAccounts/${email}`,
+          },
+        ];
+      }),
+  );
+}
+
+function secretContainerInventory(environment, projectId, catalog) {
+  const abbreviation = environmentAbbreviation(environment);
+  return Object.fromEntries(
+    Object.entries(catalog.secrets)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, value]) => {
+        const secretId = `bazoria-${abbreviation}-${value.suffix}`;
+        return [
+          key,
+          {
+            accessorServiceAccountKeys: [...value.accessorServiceAccountKeys],
+            name: `projects/${projectId}/secrets/${secretId}`,
+            secretId,
           },
         ];
       }),
@@ -212,13 +233,19 @@ export function validateIdentityCatalog(catalog) {
   }
 }
 
-export function buildIdentityAccessMatrix({ reviewed, catalog, administratorAccess }) {
+export function buildIdentityAccessMatrix({
+  reviewed,
+  catalog,
+  secretCatalog,
+  administratorAccess,
+}) {
   const environments = {};
 
   for (const environment of environmentNames) {
     const value = reviewed.environments[environment];
     const abbreviation = environmentAbbreviation(environment);
     const accounts = serviceAccountInventory(environment, value.projectId, catalog);
+    const secretContainers = secretContainerInventory(environment, value.projectId, secretCatalog);
     const terraformPrincipal = `serviceAccount:${accounts.terraform.email}`;
     const stateBucket = `buckets/${value.stateBucket}`;
     const poolName = `projects/${value.projectNumber}/locations/global/workloadIdentityPools/bazoria-${abbreviation}-github`;
@@ -278,6 +305,22 @@ export function buildIdentityAccessMatrix({ reviewed, catalog, administratorAcce
           reason: `Allow only the reviewed ${provider.workflowFile} provider role to impersonate its account.`,
         }),
       ),
+      ...expectedServiceAccountKeys.flatMap((accountKey) => {
+        const resources = Object.values(secretContainers)
+          .filter((secret) => secret.accessorServiceAccountKeys.includes(accountKey))
+          .map((secret) => secret.name);
+        return resources.length === 0
+          ? []
+          : [
+              binding({
+                principal: `serviceAccount:${accounts[accountKey].email}`,
+                roles: ["roles/secretmanager.secretAccessor"],
+                resources,
+                ownerTicket: "0038e2b",
+                reason: "Read only the reviewed matching-environment runtime secret payloads.",
+              }),
+            ];
+      }),
       ...administratorAccess.environments[environment].projectInheritedStateAccess.map((entry) =>
         binding({
           principal: entry.principal,
@@ -302,6 +345,7 @@ export function buildIdentityAccessMatrix({ reviewed, catalog, administratorAcce
         ),
       },
       projectId: value.projectId,
+      secretContainers,
       serviceAccounts: accounts,
     };
   }
@@ -312,6 +356,7 @@ export function buildIdentityAccessMatrix({ reviewed, catalog, administratorAcce
       "identity-catalog.json",
       "reviewed-administrator-access.json",
       "reviewed-environments.json",
+      "secret-catalog.json",
     ],
     environments,
   };
@@ -386,9 +431,16 @@ export function validateIdentityContract() {
   const administratorAccess = readJson(
     join(infrastructureRoot, "inventory/reviewed-administrator-access.json"),
   );
+  const secretCatalog = readJson(join(infrastructureRoot, "secret-catalog.json"));
   validateIdentityCatalog(catalog);
+  validateSecretCatalog(secretCatalog, catalog);
   validateSource();
-  const expectedMatrix = buildIdentityAccessMatrix({ reviewed, catalog, administratorAccess });
+  const expectedMatrix = buildIdentityAccessMatrix({
+    reviewed,
+    catalog,
+    secretCatalog,
+    administratorAccess,
+  });
   const actualMatrix = readJson(matrixPath);
   assertIdentity(
     JSON.stringify(actualMatrix) === JSON.stringify(expectedMatrix),
@@ -410,16 +462,37 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const administratorAccess = readJson(
       join(infrastructureRoot, "inventory/reviewed-administrator-access.json"),
     );
+    const secretCatalog = readJson(join(infrastructureRoot, "secret-catalog.json"));
     if (process.argv.includes("--print-matrix")) {
       validateIdentityCatalog(catalog);
+      validateSecretCatalog(secretCatalog, catalog);
       process.stdout.write(
-        `${JSON.stringify(buildIdentityAccessMatrix({ reviewed, catalog, administratorAccess }), null, 2)}\n`,
+        `${JSON.stringify(
+          buildIdentityAccessMatrix({
+            reviewed,
+            catalog,
+            secretCatalog,
+            administratorAccess,
+          }),
+          null,
+          2,
+        )}\n`,
       );
     } else if (process.argv.includes("--write-matrix")) {
       validateIdentityCatalog(catalog);
+      validateSecretCatalog(secretCatalog, catalog);
       writeFileSync(
         matrixPath,
-        `${JSON.stringify(buildIdentityAccessMatrix({ reviewed, catalog, administratorAccess }), null, 2)}\n`,
+        `${JSON.stringify(
+          buildIdentityAccessMatrix({
+            reviewed,
+            catalog,
+            secretCatalog,
+            administratorAccess,
+          }),
+          null,
+          2,
+        )}\n`,
         { mode: 0o644 },
       );
       process.stdout.write(`${JSON.stringify({ status: "written", matrixPath })}\n`);

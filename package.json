@@ -57,7 +57,7 @@
     "qa:description-generation-provider": "tsx --env-file=.env src/features/product-draft-description-generation/server/product-draft-description-generation-provider.command.ts",
     "preqa:container-runtime": "node ./scripts/check-node-version.cjs",
     "qa:container-runtime": "node ./scripts/qa-container-runtime.mjs",
-    "infra:foundation:check": "node ./scripts/terraform/foundation-contract.mjs && node ./scripts/terraform/identity-contract.mjs",
+    "infra:foundation:check": "node ./scripts/terraform/foundation-contract.mjs && node ./scripts/terraform/identity-contract.mjs && node ./scripts/terraform/secret-contract.mjs",
     "infra:foundation:plan:check": "node ./scripts/terraform/foundation-plan-contract.mjs",
     "infra:identity:check": "node ./scripts/terraform/identity-contract.mjs",
     "infra:terraform:validate": "bash ./scripts/terraform/validate-foundation.sh",

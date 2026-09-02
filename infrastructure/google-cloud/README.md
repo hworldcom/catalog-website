@@ -274,6 +274,45 @@ federated Terraform identity manages only the separately initialized platform
 root and cannot edit its own trust, custom roles, project grants, or state
 bucket policy.
 
+## Secret Containers And Runtime Access
+
+Ticket `0038e2b` adds two protected, matching-environment Secret Manager
+containers to the platform root:
+
+- `bazoria-uat-supabase-service-role` and
+  `bazoria-prod-supabase-service-role`;
+- `bazoria-uat-openai-api-key` and `bazoria-prod-openai-api-key`.
+
+Each container uses one user-managed replica in `europe-west3`, carries only
+the `environment`, `managed_by`, and `purpose` labels, and has Terraform
+`prevent_destroy` protection. The website, activation worker, and
+reconciliation accounts can access the matching Supabase secret. Only the
+website account can access the matching OpenAI secret. The Terraform,
+artifact-release, task-invoker, scheduler, anonymous, public, and
+other-environment identities receive no payload access.
+
+Terraform creates containers and access policies only. It must never create,
+read, output, or store a secret version or payload. Plan and apply the platform
+root one environment at a time using the commands in **Platform Plan And
+Apply**, and obtain separate approval for each saved plan.
+
+After an environment apply, add each initial value from a trusted operator
+terminal without placing the value in a command argument, repository file, or
+Terraform variable:
+
+```bash
+read -r -s BAZORIA_SECRET_VALUE
+printf '%s' "${BAZORIA_SECRET_VALUE}" | gcloud secrets versions add SECRET_NAME \
+  --project=PROJECT_ID \
+  --data-file=-
+unset BAZORIA_SECRET_VALUE
+```
+
+Replace `SECRET_NAME` and `PROJECT_ID` with the reviewed matching-environment
+container and project. Do not paste payloads into chat. Record the explicit
+enabled version resource name for later runtime deployment; runtime
+configuration must never reference `latest`.
+
 ## Applied Inventory
 
 After both roots are applied in both environments, write each non-secret output

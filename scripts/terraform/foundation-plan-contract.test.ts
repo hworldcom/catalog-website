@@ -45,6 +45,22 @@ const serviceCatalog = {
   platform: ["run.googleapis.com"],
 };
 
+const secretCatalog = {
+  replicationRegion: "europe-west3",
+  secrets: {
+    openaiApiKey: {
+      suffix: "openai-api-key",
+      purposeLabel: "openai-api-key",
+      accessorServiceAccountKeys: ["web"],
+    },
+    supabaseServiceRole: {
+      suffix: "supabase-service-role",
+      purposeLabel: "supabase-service-role",
+      accessorServiceAccountKeys: ["web"],
+    },
+  },
+};
+
 function createPlan() {
   return {
     terraform_version: "1.15.9",
@@ -423,5 +439,98 @@ describe("Terraform foundation plan contract", () => {
         identityCatalog,
       }),
     ).toThrow("would perform an unreviewed update");
+  });
+
+  it("accepts a reviewed regional secret container and accessor", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address: 'module.secret_foundation.google_secret_manager_secret.secrets["openaiApiKey"]',
+        index: "openaiApiKey",
+        type: "google_secret_manager_secret",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            secret_id: "bazoria-uat-openai-api-key",
+            labels: {
+              environment: "uat",
+              managed_by: "terraform",
+              purpose: "openai-api-key",
+            },
+            replication: [
+              {
+                user_managed: [
+                  {
+                    replicas: [{ location: "europe-west3" }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      {
+        address:
+          'module.secret_foundation.google_secret_manager_secret_iam_member.accessors["openaiApiKey/serviceAccount:baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com"]',
+        index: "openaiApiKey/serviceAccount:baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+        type: "google_secret_manager_secret_iam_member",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            secret_id: "bazoria-uat-openai-api-key",
+            role: "roles/secretmanager.secretAccessor",
+            member: "serviceAccount:baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          },
+        },
+      },
+    ];
+
+    expect(
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "platform",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+        secretCatalog,
+      }),
+    ).toEqual({ changes: 2, environment: "uat", root: "platform" });
+  });
+
+  it("rejects an unreviewed secret accessor", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          'module.secret_foundation.google_secret_manager_secret_iam_member.accessors["openaiApiKey/serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com"]',
+        index:
+          "openaiApiKey/serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+        type: "google_secret_manager_secret_iam_member",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            secret_id: "bazoria-uat-openai-api-key",
+            role: "roles/secretmanager.secretAccessor",
+            member: "serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          },
+        },
+      },
+    ];
+
+    expect(() =>
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "platform",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+        secretCatalog,
+      }),
+    ).toThrow("unknown secret accessor");
   });
 });
