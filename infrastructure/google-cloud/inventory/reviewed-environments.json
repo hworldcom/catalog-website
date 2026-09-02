@@ -9,6 +9,10 @@
       "projectNumber": "145571383840",
       "organizationId": "33779488200",
       "billingAccountId": "014CA9-692646-D9E4CE",
+      "githubOwner": "hworldcom",
+      "githubOwnerId": "144285964",
+      "githubRepository": "hworldcom/catalog-website",
+      "githubRepositoryId": "1313750742",
       "region": "europe-west3",
       "stateBucket": "bazoria-uat-lnlabs-tfstate",
       "bootstrapOperatorPrincipal": "user:hoang@lnlabs.xyz"
@@ -18,6 +22,10 @@
       "projectNumber": "787649115343",
       "organizationId": "33779488200",
       "billingAccountId": "014CA9-692646-D9E4CE",
+      "githubOwner": "hworldcom",
+      "githubOwnerId": "144285964",
+      "githubRepository": "hworldcom/catalog-website",
+      "githubRepositoryId": "1313750742",
       "region": "europe-west3",
       "stateBucket": "bazoria-prod-lnlabs-tfstate",
       "bootstrapOperatorPrincipal": "user:hoang@lnlabs.xyz"

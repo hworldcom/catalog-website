@@ -22,7 +22,14 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-function requireMatchingOutput(environment, bootstrap, platform, reviewed, serviceCatalog) {
+function requireMatchingOutput(
+  environment,
+  bootstrap,
+  platform,
+  reviewed,
+  serviceCatalog,
+  identityAccess,
+) {
   for (const output of [bootstrap, platform]) {
     if (
       output.environment !== environment ||
@@ -41,6 +48,19 @@ function requireMatchingOutput(environment, bootstrap, platform, reviewed, servi
     JSON.stringify(platform.enabled_services) !== JSON.stringify(serviceCatalog.platform)
   ) {
     throw new Error(`terraform_foundation_inventory_service_mismatch: ${environment}`);
+  }
+
+  const reviewedIdentity = identityAccess.environments[environment];
+  if (
+    JSON.stringify(bootstrap.identity.service_accounts) !==
+      JSON.stringify(reviewedIdentity.serviceAccounts) ||
+    bootstrap.identity.federation.pool.name !== reviewedIdentity.federation.pool ||
+    bootstrap.identity.federation.providers.artifact.name !==
+      reviewedIdentity.federation.providers.artifact ||
+    bootstrap.identity.federation.providers.terraform.name !==
+      reviewedIdentity.federation.providers.terraform
+  ) {
+    throw new Error(`terraform_foundation_inventory_identity_mismatch: ${environment}`);
   }
 }
 
@@ -63,6 +83,9 @@ try {
   const reviewedAccess = readJson(
     join(infrastructureRoot, "inventory/reviewed-administrator-access.json"),
   );
+  const identityAccess = readJson(
+    join(infrastructureRoot, "inventory/reviewed-identity-access.json"),
+  );
   const serviceCatalog = readJson(join(infrastructureRoot, "service-catalog.json"));
   const environments = {};
 
@@ -70,23 +93,33 @@ try {
     const bootstrap = readJson(args[`${environment}-bootstrap`]);
     const platform = readJson(args[`${environment}-platform`]);
     const reviewed = reviewedInventory.environments[environment];
-    requireMatchingOutput(environment, bootstrap, platform, reviewed, serviceCatalog);
+    requireMatchingOutput(
+      environment,
+      bootstrap,
+      platform,
+      reviewed,
+      serviceCatalog,
+      identityAccess,
+    );
     environments[environment] = {
       project: bootstrap.project,
       state: {
         bucket: bootstrap.state_bucket,
         bootstrapPrefix: bootstrap.state_prefix,
         platformPrefix: platform.state_prefix,
+        directBindings: bootstrap.direct_state_bindings,
         directPrincipals: bootstrap.direct_state_principals,
         inheritedAdministratorAccess:
           reviewedAccess.environments[environment].projectInheritedStateAccess,
       },
+      identity: bootstrap.identity,
+      reviewedAccessBindings: identityAccess.environments[environment].bindings,
       enabledServices: [...bootstrap.enabled_services, ...platform.enabled_services].sort(),
     };
   }
 
   const inventory = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     terraformVersion: reviewedInventory.terraformVersion,
     googleProviderConstraint: reviewedInventory.googleProviderConstraint,

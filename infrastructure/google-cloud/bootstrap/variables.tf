@@ -13,6 +13,46 @@ variable "environment" {
   type        = string
 }
 
+variable "github_owner" {
+  description = "Reviewed GitHub repository owner."
+  type        = string
+
+  validation {
+    condition     = var.github_owner == "hworldcom"
+    error_message = "github_owner must be hworldcom."
+  }
+}
+
+variable "github_owner_id" {
+  description = "Immutable numeric GitHub owner identifier."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_owner_id))
+    error_message = "github_owner_id must be numeric."
+  }
+}
+
+variable "github_repository" {
+  description = "Reviewed GitHub owner and repository."
+  type        = string
+
+  validation {
+    condition     = var.github_repository == "hworldcom/catalog-website"
+    error_message = "github_repository must be hworldcom/catalog-website."
+  }
+}
+
+variable "github_repository_id" {
+  description = "Immutable numeric GitHub repository identifier."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_id))
+    error_message = "github_repository_id must be numeric."
+  }
+}
+
 variable "organization_id" {
   description = "Expected organization identifier."
   type        = string

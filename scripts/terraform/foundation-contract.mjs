@@ -72,6 +72,19 @@ export function validateEnvironmentIsolation(inventory) {
       /^(user|group):[^\s]+@[^\s]+$/.test(value.bootstrapOperatorPrincipal),
       `${environment} bootstrap operator is invalid`,
     );
+    assertContract(
+      value.githubRepository === "hworldcom/catalog-website",
+      `${environment} GitHub repository is invalid`,
+    );
+    assertContract(value.githubOwner === "hworldcom", `${environment} GitHub owner is invalid`);
+    assertContract(
+      /^\d+$/.test(value.githubRepositoryId),
+      `${environment} GitHub repository identifier is invalid`,
+    );
+    assertContract(
+      /^\d+$/.test(value.githubOwnerId),
+      `${environment} GitHub owner identifier is invalid`,
+    );
   }
 
   const uat = environments.uat;
@@ -103,6 +116,10 @@ function validateEnvironmentFiles(inventory) {
           billing_account_id: expectedBase.billing_account_id,
           bootstrap_operator_principal: reviewed.bootstrapOperatorPrincipal,
           environment: expectedBase.environment,
+          github_owner: reviewed.githubOwner,
+          github_owner_id: reviewed.githubOwnerId,
+          github_repository: reviewed.githubRepository,
+          github_repository_id: reviewed.githubRepositoryId,
           organization_id: expectedBase.organization_id,
           project_id: expectedBase.project_id,
           project_number: expectedBase.project_number,

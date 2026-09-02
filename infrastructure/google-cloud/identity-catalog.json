@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "github": {
+    "repository": "hworldcom/catalog-website",
+    "repositoryId": "1313750742",
+    "owner": "hworldcom",
+    "ownerId": "144285964",
+    "branchRef": "refs/heads/main",
+    "acceptedEvents": ["push", "workflow_dispatch"],
+    "providers": {
+      "artifact": {
+        "providerId": "artifact-main",
+        "deploymentRole": "artifact",
+        "serviceAccountKey": "artifactRelease",
+        "workflowFile": "artifact-release.yml"
+      },
+      "terraform": {
+        "providerId": "terraform-main",
+        "deploymentRole": "terraform",
+        "serviceAccountKey": "terraform",
+        "workflowFile": "terraform-environment.yml"
+      }
+    }
+  },
+  "serviceAccounts": {
+    "activationWorker": {
+      "suffix": "activation-worker",
+      "displayName": "Activation worker runtime",
+      "description": "Runs private product activation tasks.",
+      "terraformCanActAs": true,
+      "canActAsTaskInvoker": false
+    },
+    "artifactRelease": {
+      "suffix": "artifact-release",
+      "displayName": "Artifact release",
+      "description": "Publishes reviewed container artifacts.",
+      "terraformCanActAs": false,
+      "canActAsTaskInvoker": false
+    },
+    "reconciliation": {
+      "suffix": "reconciliation",
+      "displayName": "Reconciliation runtime",
+      "description": "Reconciles durable product activation dispatches.",
+      "terraformCanActAs": true,
+      "canActAsTaskInvoker": true
+    },
+    "scheduler": {
+      "suffix": "scheduler",
+      "displayName": "Scheduler invocation",
+      "description": "Invokes only the product activation reconciliation job.",
+      "terraformCanActAs": true,
+      "canActAsTaskInvoker": false
+    },
+    "taskInvoker": {
+      "suffix": "task-invoker",
+      "displayName": "Cloud Tasks invocation",
+      "description": "Authenticates Cloud Tasks requests to the activation worker.",
+      "terraformCanActAs": true,
+      "canActAsTaskInvoker": false
+    },
+    "terraform": {
+      "suffix": "terraform",
+      "displayName": "Terraform deployment",
+      "description": "Plans and applies the matching environment platform root.",
+      "terraformCanActAs": false,
+      "canActAsTaskInvoker": false
+    },
+    "web": {
+      "suffix": "web",
+      "displayName": "Website runtime",
+      "description": "Runs the public Bazoria website service.",
+      "terraformCanActAs": true,
+      "canActAsTaskInvoker": true
+    }
+  },
+  "terraformProjectRoles": [
+    "roles/browser",
+    "roles/certificatemanager.editor",
+    "roles/cloudscheduler.admin",
+    "roles/cloudtasks.admin",
+    "roles/compute.loadBalancerAdmin",
+    "roles/logging.configWriter",
+    "roles/monitoring.editor",
+    "roles/run.admin",
+    "roles/serviceusage.serviceUsageConsumer"
+  ],
+  "customRoles": {
+    "artifactRepositoryAdmin": {
+      "roleId": "BazoriaArtifactRepositoryAdmin",
+      "title": "Bazoria Artifact Repository Admin",
+      "description": "Manages repository infrastructure without artifact data access.",
+      "permissions": [
+        "artifactregistry.locations.get",
+        "artifactregistry.locations.list",
+        "artifactregistry.repositories.create",
+        "artifactregistry.repositories.get",
+        "artifactregistry.repositories.getIamPolicy",
+        "artifactregistry.repositories.list",
+        "artifactregistry.repositories.setIamPolicy",
+        "artifactregistry.repositories.update"
+      ]
+    },
+    "secretContainerAdmin": {
+      "roleId": "BazoriaSecretContainerAdmin",
+      "title": "Bazoria Secret Container Admin",
+      "description": "Manages secret containers without secret-version access.",
+      "permissions": [
+        "secretmanager.locations.get",
+        "secretmanager.locations.list",
+        "secretmanager.secrets.create",
+        "secretmanager.secrets.get",
+        "secretmanager.secrets.getIamPolicy",
+        "secretmanager.secrets.list",
+        "secretmanager.secrets.setIamPolicy",
+        "secretmanager.secrets.update"
+      ]
+    }
+  }
+}

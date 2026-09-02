@@ -1,0 +1,62 @@
+name: Artifact release identity verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Protected environment to verify
+        required: true
+        type: choice
+        options:
+          - uat
+          - production
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: artifact-release-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify ${{ inputs.environment }} artifact identity
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Authenticate as the artifact-release identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_SERVICE_ACCOUNT }}
+          create_credentials_file: false
+          token_format: access_token
+          access_token_lifetime: 300s
+
+      - name: Attempt forbidden Terraform-role impersonation
+        id: forbidden-terraform-role
+        continue-on-error: true
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.BAZORIA_GOOGLE_TERRAFORM_SERVICE_ACCOUNT }}
+          create_credentials_file: false
+          token_format: access_token
+          access_token_lifetime: 300s
+
+      - name: Assert cross-role impersonation was denied
+        env:
+          FORBIDDEN_OUTCOME: ${{ steps.forbidden-terraform-role.outcome }}
+        run: |
+          if [[ "${FORBIDDEN_OUTCOME}" != "failure" ]]; then
+            printf 'Artifact provider unexpectedly impersonated the Terraform account.\n' >&2
+            exit 1
+          fi

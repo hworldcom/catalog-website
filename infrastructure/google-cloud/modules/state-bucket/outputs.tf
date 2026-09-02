@@ -5,7 +5,24 @@ output "bucket_name" {
 
 output "direct_principals" {
   description = "Direct state principals managed during bootstrap."
-  value       = [google_storage_bucket_iam_member.bootstrap_operator.member]
+  value = sort(distinct(concat(
+    [google_storage_bucket_iam_member.bootstrap_operator.member],
+    [for binding in google_storage_bucket_iam_member.terraform_identity : binding.member],
+  )))
+}
+
+output "direct_bindings" {
+  description = "Direct state-bucket bindings managed during bootstrap."
+  value = concat(
+    [{
+      member = google_storage_bucket_iam_member.bootstrap_operator.member
+      role   = google_storage_bucket_iam_member.bootstrap_operator.role
+    }],
+    [for binding in google_storage_bucket_iam_member.terraform_identity : {
+      member = binding.member
+      role   = binding.role
+    }],
+  )
 }
 
 output "security_contract" {

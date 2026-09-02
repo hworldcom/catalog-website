@@ -28,6 +28,7 @@ supabase/.temp/
 supabase/.branches/
 .terraform/
 .terraform-data/
+gha-creds-*.json
 *.tfstate
 *.tfstate.*
 *.tfplan

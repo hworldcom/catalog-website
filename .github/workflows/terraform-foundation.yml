@@ -3,7 +3,9 @@ name: Terraform foundation
 on:
   pull_request:
     paths:
+      - ".github/workflows/artifact-release.yml"
       - ".github/workflows/terraform-foundation.yml"
+      - ".github/workflows/terraform-environment.yml"
       - ".terraform-version"
       - "infrastructure/google-cloud/**"
       - "scripts/terraform/**"
@@ -13,7 +15,9 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/artifact-release.yml"
       - ".github/workflows/terraform-foundation.yml"
+      - ".github/workflows/terraform-environment.yml"
       - ".terraform-version"
       - "infrastructure/google-cloud/**"
       - "scripts/terraform/**"
@@ -52,6 +56,7 @@ jobs:
           npm run test --
           scripts/terraform/foundation-contract.test.ts
           scripts/terraform/foundation-plan-contract.test.ts
+          scripts/terraform/identity-contract.test.ts
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd

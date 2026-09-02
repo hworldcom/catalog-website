@@ -34,8 +34,11 @@ The reported version must be `1.15.9` before running repository commands.
   infrastructure tickets.
 - `modules/` contains reusable modules without environment defaults.
 - `environments/` contains reviewed non-secret inputs and backend settings.
+- `identity-catalog.json` is the exact service-account, custom-role, and GitHub
+  federation contract shared by both environments.
 - `inventory/` contains reviewed external identifiers and, after apply, the
-  generated non-secret applied inventory.
+  generated non-secret applied inventory. `reviewed-identity-access.json`
+  records every direct and inherited identity binding in scope.
 
 Google Container Analysis is not enabled. Ticket `0038f` owns the repository
 container vulnerability scan.
@@ -47,6 +50,7 @@ Validation does not contact UAT or production:
 ```bash
 cd /Users/hoangdeveloper/catalog-website
 npm run infra:foundation:check
+npm run infra:identity:check
 npm run infra:terraform:validate
 ```
 
@@ -84,6 +88,11 @@ gcloud billing projects describe bazoria-prod-lnlabs \
 
 Expected organization: `33779488200`. Expected billing account:
 `014CA9-692646-D9E4CE`. Billing must be enabled for both projects.
+
+The reviewed GitHub source is repository `hworldcom/catalog-website`, numeric
+repository identifier `1313750742`, owned by `hworldcom`, numeric owner
+identifier `144285964`. Federation conditions require both names and both
+numeric identifiers.
 
 ## Initial Bootstrap Plan
 
@@ -199,6 +208,69 @@ npm run infra:foundation:plan:check -- \
 
 Apply only the reviewed saved plan. Repeat with a distinct production data
 directory and the production backend and variable files.
+
+## Identity Foundation Plan And Apply
+
+Ticket `0038e2a` extends the operator-controlled bootstrap root with seven
+environment-specific service accounts, two protected custom roles, a GitHub
+Workload Identity Federation pool, separate Terraform and artifact providers,
+and the reviewed impersonation and state-bucket bindings. It does not create
+service-account keys, secrets, registries, queues, runtimes, jobs, or
+schedulers.
+
+Because bootstrap state is already remote, plan UAT directly against its
+remote backend:
+
+```bash
+cd /Users/hoangdeveloper/catalog-website
+export TF_DATA_DIR="$PWD/.terraform-data/bootstrap-uat"
+node scripts/terraform/configure-bootstrap-backend.mjs \
+  --mode gcs \
+  --environment uat
+terraform -chdir=infrastructure/google-cloud/bootstrap init \
+  -reconfigure \
+  -input=false \
+  -backend-config=../environments/uat/bootstrap.gcs.tfbackend
+terraform -chdir=infrastructure/google-cloud/bootstrap plan \
+  -input=false \
+  -var-file=../environments/uat/bootstrap.tfvars.json \
+  -out=/tmp/bazoria-uat-identity.tfplan
+terraform -chdir=infrastructure/google-cloud/bootstrap show \
+  -json /tmp/bazoria-uat-identity.tfplan \
+  > /tmp/bazoria-uat-identity.tfplan.json
+npm run infra:foundation:plan:check -- \
+  --plan /tmp/bazoria-uat-identity.tfplan.json \
+  --environment uat \
+  --root bootstrap
+```
+
+Review the complete plan and obtain explicit approval immediately before
+applying its saved plan. After UAT apply, verify the seven service accounts,
+custom roles, Workload Identity Federation resources, state bindings, and lack
+of user-managed keys. Then repeat the plan, approval, apply, and verification
+sequence for production using its own `TF_DATA_DIR`, backend, variable file,
+and `/tmp/bazoria-production-identity.tfplan` output. Never apply both
+environments from one initialized Terraform directory.
+
+After an environment apply, set these non-secret variables on the matching
+protected GitHub environment:
+
+- `BAZORIA_GOOGLE_TERRAFORM_WORKLOAD_IDENTITY_PROVIDER`;
+- `BAZORIA_GOOGLE_TERRAFORM_SERVICE_ACCOUNT`;
+- `BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER`; and
+- `BAZORIA_GOOGLE_ARTIFACT_SERVICE_ACCOUNT`.
+
+Use the exact values from the bootstrap `foundation_inventory` output. Run
+`terraform-environment.yml` to prove the Terraform identity can read the
+matching platform state and produce a read-only plan. Run
+`artifact-release.yml` to prove the artifact identity cannot impersonate the
+Terraform account and vice versa. Allow five minutes for new federation policy
+to propagate before treating a failed first attempt as a configuration defect.
+
+Bootstrap identity and trust changes remain operator-controlled. The
+federated Terraform identity manages only the separately initialized platform
+root and cannot edit its own trust, custom roles, project grants, or state
+bucket policy.
 
 ## Applied Inventory
 

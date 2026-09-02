@@ -27,3 +27,14 @@ resource "google_storage_bucket_iam_member" "bootstrap_operator" {
   role   = "roles/storage.objectAdmin"
   member = var.bootstrap_operator_principal
 }
+
+resource "google_storage_bucket_iam_member" "terraform_identity" {
+  for_each = toset([
+    "roles/storage.bucketViewer",
+    "roles/storage.objectAdmin",
+  ])
+
+  bucket = google_storage_bucket.state.name
+  role   = each.value
+  member = var.terraform_identity_principal
+}

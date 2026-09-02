@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": [
+    "identity-catalog.json",
+    "reviewed-administrator-access.json",
+    "reviewed-environments.json"
+  ],
+  "environments": {
+    "uat": {
+      "bindings": [
+        {
+          "access": "direct",
+          "ownerTicket": "0038e1",
+          "principal": "user:hoang@lnlabs.xyz",
+          "reason": "Break-glass access to the environment state bucket.",
+          "resources": ["buckets/bazoria-uat-lnlabs-tfstate"],
+          "roles": ["roles/storage.objectAdmin"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "reason": "Manage only the reviewed environment platform resources.",
+          "resources": ["projects/bazoria-uat-lnlabs"],
+          "roles": [
+            "projects/bazoria-uat-lnlabs/roles/BazoriaArtifactRepositoryAdmin",
+            "projects/bazoria-uat-lnlabs/roles/BazoriaSecretContainerAdmin",
+            "roles/browser",
+            "roles/certificatemanager.editor",
+            "roles/cloudscheduler.admin",
+            "roles/cloudtasks.admin",
+            "roles/compute.loadBalancerAdmin",
+            "roles/logging.configWriter",
+            "roles/monitoring.editor",
+            "roles/run.admin",
+            "roles/serviceusage.serviceUsageConsumer"
+          ]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "reason": "Read bucket metadata and manage matching environment Terraform state objects.",
+          "resources": ["buckets/bazoria-uat-lnlabs-tfstate"],
+          "roles": ["roles/storage.bucketViewer", "roles/storage.objectAdmin"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "reason": "Attach only the reviewed runtime and invocation identities to managed resources.",
+          "resources": [
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-activation-worker@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-reconciliation@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-scheduler@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-task-invoker@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.serviceAccountUser"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-uat-reconciliation@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "reason": "Attach the dedicated task identity to an activation task.",
+          "resources": [
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-task-invoker@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.serviceAccountUser"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "reason": "Attach the dedicated task identity to an activation task.",
+          "resources": [
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-task-invoker@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.serviceAccountUser"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "principalSet://iam.googleapis.com/projects/145571383840/locations/global/workloadIdentityPools/bazoria-uat-github/attribute.deployment_role/artifact",
+          "reason": "Allow only the reviewed artifact-release.yml provider role to impersonate its account.",
+          "resources": [
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-artifact-release@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.workloadIdentityUser"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "principalSet://iam.googleapis.com/projects/145571383840/locations/global/workloadIdentityPools/bazoria-uat-github/attribute.deployment_role/terraform",
+          "reason": "Allow only the reviewed terraform-environment.yml provider role to impersonate its account.",
+          "resources": [
+            "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.workloadIdentityUser"]
+        },
+        {
+          "access": "inherited",
+          "ownerTicket": "0038e1",
+          "principal": "user:hoang@lnlabs.xyz",
+          "reason": "operator break-glass exception; removal is deferred until a replacement break-glass group and role are reviewed",
+          "resources": ["project:bazoria-uat-lnlabs"],
+          "roles": ["roles/owner"]
+        }
+      ],
+      "federation": {
+        "pool": "projects/145571383840/locations/global/workloadIdentityPools/bazoria-uat-github",
+        "providers": {
+          "artifact": "projects/145571383840/locations/global/workloadIdentityPools/bazoria-uat-github/providers/artifact-main",
+          "terraform": "projects/145571383840/locations/global/workloadIdentityPools/bazoria-uat-github/providers/terraform-main"
+        }
+      },
+      "projectId": "bazoria-uat-lnlabs",
+      "serviceAccounts": {
+        "activationWorker": {
+          "accountId": "baz-uat-activation-worker",
+          "email": "baz-uat-activation-worker@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-activation-worker@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+        },
+        "artifactRelease": {
+          "accountId": "baz-uat-artifact-release",
+          "email": "baz-uat-artifact-release@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-artifact-release@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+        },
+        "reconciliation": {
+          "accountId": "baz-uat-reconciliation",
+          "email": "baz-uat-reconciliation@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-reconciliation@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+        },
+        "scheduler": {
+          "accountId": "baz-uat-scheduler",
+          "email": "baz-uat-scheduler@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-scheduler@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+        },
+        "taskInvoker": {
+          "accountId": "baz-uat-task-invoker",
+          "email": "baz-uat-task-invoker@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-task-invoker@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+        },
+        "terraform": {
+          "accountId": "baz-uat-terraform",
+          "email": "baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+        },
+        "web": {
+          "accountId": "baz-uat-web",
+          "email": "baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-uat-lnlabs/serviceAccounts/baz-uat-web@bazoria-uat-lnlabs.iam.gserviceaccount.com"
+        }
+      }
+    },
+    "production": {
+      "bindings": [
+        {
+          "access": "direct",
+          "ownerTicket": "0038e1",
+          "principal": "user:hoang@lnlabs.xyz",
+          "reason": "Break-glass access to the environment state bucket.",
+          "resources": ["buckets/bazoria-prod-lnlabs-tfstate"],
+          "roles": ["roles/storage.objectAdmin"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-prod-terraform@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "reason": "Manage only the reviewed environment platform resources.",
+          "resources": ["projects/bazoria-prod-lnlabs"],
+          "roles": [
+            "projects/bazoria-prod-lnlabs/roles/BazoriaArtifactRepositoryAdmin",
+            "projects/bazoria-prod-lnlabs/roles/BazoriaSecretContainerAdmin",
+            "roles/browser",
+            "roles/certificatemanager.editor",
+            "roles/cloudscheduler.admin",
+            "roles/cloudtasks.admin",
+            "roles/compute.loadBalancerAdmin",
+            "roles/logging.configWriter",
+            "roles/monitoring.editor",
+            "roles/run.admin",
+            "roles/serviceusage.serviceUsageConsumer"
+          ]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-prod-terraform@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "reason": "Read bucket metadata and manage matching environment Terraform state objects.",
+          "resources": ["buckets/bazoria-prod-lnlabs-tfstate"],
+          "roles": ["roles/storage.bucketViewer", "roles/storage.objectAdmin"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-prod-terraform@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "reason": "Attach only the reviewed runtime and invocation identities to managed resources.",
+          "resources": [
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-activation-worker@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-reconciliation@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-scheduler@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-task-invoker@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-web@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.serviceAccountUser"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-prod-reconciliation@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "reason": "Attach the dedicated task identity to an activation task.",
+          "resources": [
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-task-invoker@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.serviceAccountUser"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "serviceAccount:baz-prod-web@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "reason": "Attach the dedicated task identity to an activation task.",
+          "resources": [
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-task-invoker@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.serviceAccountUser"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "principalSet://iam.googleapis.com/projects/787649115343/locations/global/workloadIdentityPools/bazoria-prod-github/attribute.deployment_role/artifact",
+          "reason": "Allow only the reviewed artifact-release.yml provider role to impersonate its account.",
+          "resources": [
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-artifact-release@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.workloadIdentityUser"]
+        },
+        {
+          "access": "direct",
+          "ownerTicket": "0038e2a",
+          "principal": "principalSet://iam.googleapis.com/projects/787649115343/locations/global/workloadIdentityPools/bazoria-prod-github/attribute.deployment_role/terraform",
+          "reason": "Allow only the reviewed terraform-environment.yml provider role to impersonate its account.",
+          "resources": [
+            "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-terraform@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+          ],
+          "roles": ["roles/iam.workloadIdentityUser"]
+        },
+        {
+          "access": "inherited",
+          "ownerTicket": "0038e1",
+          "principal": "user:hoang@lnlabs.xyz",
+          "reason": "operator break-glass exception; removal is deferred until a replacement break-glass group and role are reviewed",
+          "resources": ["project:bazoria-prod-lnlabs"],
+          "roles": ["roles/owner"]
+        }
+      ],
+      "federation": {
+        "pool": "projects/787649115343/locations/global/workloadIdentityPools/bazoria-prod-github",
+        "providers": {
+          "artifact": "projects/787649115343/locations/global/workloadIdentityPools/bazoria-prod-github/providers/artifact-main",
+          "terraform": "projects/787649115343/locations/global/workloadIdentityPools/bazoria-prod-github/providers/terraform-main"
+        }
+      },
+      "projectId": "bazoria-prod-lnlabs",
+      "serviceAccounts": {
+        "activationWorker": {
+          "accountId": "baz-prod-activation-worker",
+          "email": "baz-prod-activation-worker@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-activation-worker@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+        },
+        "artifactRelease": {
+          "accountId": "baz-prod-artifact-release",
+          "email": "baz-prod-artifact-release@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-artifact-release@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+        },
+        "reconciliation": {
+          "accountId": "baz-prod-reconciliation",
+          "email": "baz-prod-reconciliation@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-reconciliation@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+        },
+        "scheduler": {
+          "accountId": "baz-prod-scheduler",
+          "email": "baz-prod-scheduler@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-scheduler@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+        },
+        "taskInvoker": {
+          "accountId": "baz-prod-task-invoker",
+          "email": "baz-prod-task-invoker@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-task-invoker@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+        },
+        "terraform": {
+          "accountId": "baz-prod-terraform",
+          "email": "baz-prod-terraform@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-terraform@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+        },
+        "web": {
+          "accountId": "baz-prod-web",
+          "email": "baz-prod-web@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          "name": "projects/bazoria-prod-lnlabs/serviceAccounts/baz-prod-web@bazoria-prod-lnlabs.iam.gserviceaccount.com"
+        }
+      }
+    }
+  }
+}

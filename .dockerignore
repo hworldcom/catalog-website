@@ -19,5 +19,6 @@ deployment/fixtures/uat
 .vercel
 coverage
 node_modules
+gha-creds-*.json
 supabase/.temp
 tickets

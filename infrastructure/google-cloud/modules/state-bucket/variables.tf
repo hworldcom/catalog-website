@@ -37,3 +37,13 @@ variable "state_bucket_name" {
     error_message = "state_bucket_name must be a valid Google Cloud Storage bucket name."
   }
 }
+
+variable "terraform_identity_principal" {
+  description = "Matching environment Terraform service-account principal."
+  type        = string
+
+  validation {
+    condition     = can(regex("^serviceAccount:baz-(uat|prod)-terraform@[^[:space:]]+\\.iam\\.gserviceaccount\\.com$", var.terraform_identity_principal))
+    error_message = "terraform_identity_principal must be the matching Bazoria Terraform service account."
+  }
+}
