@@ -22,3 +22,8 @@ output "runtime_inventory" {
   description = "Non-secret runtime inventory, or null before the first digest-bound release."
   value       = try(module.runtime_activation_platform["enabled"].runtime_inventory, null)
 }
+
+output "edge_inventory" {
+  description = "Non-secret load-balancer and DNS inventory, or null before a digest-bound release."
+  value       = try(module.custom_domain_load_balancer["enabled"].edge_inventory, null)
+}

@@ -15,9 +15,10 @@ node "${repository_root}/scripts/terraform/identity-contract.mjs"
 node "${repository_root}/scripts/terraform/secret-contract.mjs"
 node "${repository_root}/scripts/terraform/artifact-contract.mjs"
 node "${repository_root}/scripts/terraform/runtime-contract.mjs"
+node "${repository_root}/scripts/terraform/edge-contract.mjs"
 terraform -chdir="${repository_root}/infrastructure/google-cloud" fmt -check -recursive
 
-for root in bootstrap platform modules/runtime-activation-platform; do
+for root in bootstrap platform modules/runtime-activation-platform modules/custom-domain-load-balancer; do
   data_directory="${root//\//-}"
   export TF_DATA_DIR="${repository_root}/.terraform-data/${data_directory}"
   terraform -chdir="${repository_root}/infrastructure/google-cloud/${root}" init -backend=false -input=false

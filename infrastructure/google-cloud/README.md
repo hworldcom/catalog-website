@@ -402,6 +402,41 @@ npm run infra:terraform:validate
 The synthetic digest exists only in Terraform tests and must never be passed to
 a hosted plan or apply.
 
+## Plan-Only Custom-Domain Edge Infrastructure
+
+Ticket `0038e4` adds a second opt-in module alongside the digest-bound runtime.
+It defines one isolated global external Application Load Balancer per
+environment, including a fixed IPv4 address, regional serverless network
+endpoint group, HTTPS routing, permanent HTTP redirect, TLS 1.2 policy, and a
+Google-managed Certificate Manager certificate.
+
+The module activates only when `runtime_configuration` creates the matching
+website service. Checked-in UAT and production variable files therefore remain
+inert until `0038f` supplies a real immutable image and reviewed runtime values.
+
+Certificate validation uses one global `PER_PROJECT_RECORD` authorization per
+environment. Terraform outputs the exact home.pl `A` and `CNAME` records,
+including a trailing-dot canonical-name value, and commands for checking DNS,
+certificate state, HTTPS, and the HTTP redirect. Terraform never modifies
+home.pl.
+
+Cloud CDN remains disabled. Unknown hosts are redirected to the environment's
+canonical host instead of being forwarded to the application, and HTTP
+redirects preserve the original path and query. Fixed addresses and all
+Certificate Manager resources are protected from ordinary destruction in both
+environments.
+
+Validate the edge contract and synthetic UAT and production plans with:
+
+```bash
+cd /Users/hoangdeveloper/catalog-website
+npm run infra:edge:check
+npm run infra:terraform:validate
+```
+
+No DNS change, certificate issuance, public traffic, or hosted Terraform apply
+occurs until the guided `0038f` deployment.
+
 ## Applied Inventory
 
 After both roots are applied in both environments, write each non-secret output

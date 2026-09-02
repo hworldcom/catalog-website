@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "loadBalancingScheme": "EXTERNAL_MANAGED",
+  "networkTier": "PREMIUM",
+  "ipVersion": "IPV4",
+  "ports": {
+    "http": 80,
+    "https": 443
+  },
+  "backend": {
+    "protocol": "HTTP",
+    "enableCdn": false,
+    "timeoutSeconds": 120
+  },
+  "certificate": {
+    "location": "global",
+    "authorizationType": "PER_PROJECT_RECORD",
+    "scope": "DEFAULT"
+  },
+  "tls": {
+    "profile": "MODERN",
+    "minimumVersion": "TLS_1_2"
+  },
+  "redirect": {
+    "responseCode": "MOVED_PERMANENTLY_DEFAULT",
+    "stripQuery": false
+  },
+  "resourceSuffixes": {
+    "address": "web-ip",
+    "networkEndpointGroup": "web-neg",
+    "backend": "web-backend",
+    "httpsUrlMap": "web-https",
+    "httpUrlMap": "web-http-redirect",
+    "httpsProxy": "web-https-proxy",
+    "httpProxy": "web-http-proxy",
+    "tlsPolicy": "web-tls",
+    "dnsAuthorization": "web-dns-auth",
+    "certificate": "web-cert",
+    "certificateMap": "web-cert-map",
+    "certificateMapEntry": "web-cert-entry",
+    "httpsForwardingRule": "web-https-forwarding",
+    "httpForwardingRule": "web-http-forwarding"
+  }
+}

@@ -1,6 +1,7 @@
 locals {
   environment_abbreviation = var.environment == "production" ? "prod" : "uat"
   artifact_catalog         = jsondecode(file("${path.module}/../artifact-catalog.json"))
+  edge_catalog             = jsondecode(file("${path.module}/../edge-catalog.json"))
   identity_catalog         = jsondecode(file("${path.module}/../identity-catalog.json"))
   runtime_catalog          = jsondecode(file("${path.module}/../runtime-catalog.json"))
   secret_catalog           = jsondecode(file("${path.module}/../secret-catalog.json"))
@@ -107,5 +108,24 @@ module "runtime_activation_platform" {
     module.platform_services,
     module.secret_foundation,
     module.artifact_registry_foundation,
+  ]
+}
+
+module "custom_domain_load_balancer" {
+  for_each = var.runtime_configuration == null ? {} : { enabled = var.runtime_configuration }
+
+  source = "../modules/custom-domain-load-balancer"
+
+  canonical_origin          = each.value.canonical_origin
+  edge_contract             = local.edge_catalog
+  environment               = var.environment
+  expected_canonical_origin = local.runtime_catalog.canonicalOrigins[var.environment]
+  project_id                = var.project_id
+  region                    = var.region
+  website_service_name      = module.runtime_activation_platform["enabled"].runtime_inventory.website.name
+
+  depends_on = [
+    module.platform_services,
+    module.runtime_activation_platform,
   ]
 }

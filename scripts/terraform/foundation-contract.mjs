@@ -207,7 +207,12 @@ function validateTerraformSource() {
     "root .terraform-version differs from the reviewed version",
   );
 
-  for (const root of ["bootstrap", "platform", "modules/runtime-activation-platform"]) {
+  for (const root of [
+    "bootstrap",
+    "platform",
+    "modules/runtime-activation-platform",
+    "modules/custom-domain-load-balancer",
+  ]) {
     const versions = readFileSync(join(infrastructureRoot, root, "versions.tf"), "utf8");
     const lock = readFileSync(join(infrastructureRoot, root, ".terraform.lock.hcl"), "utf8");
     assertContract(
