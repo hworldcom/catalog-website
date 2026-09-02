@@ -29,7 +29,15 @@ const identityCatalog = {
   customRoles: {
     secretContainerAdmin: { roleId: "BazoriaSecretContainerAdmin", permissions: [] },
   },
-  github: { providers: {} },
+  github: {
+    providers: {
+      terraform: {
+        providerId: "terraform-main",
+        deploymentRole: "terraform",
+        workflowFile: "terraform-environment.yml",
+      },
+    },
+  },
 };
 
 const serviceCatalog = {
@@ -145,6 +153,35 @@ describe("Terraform foundation plan contract", () => {
     ).toEqual({ changes: 1, environment: "uat", root: "bootstrap" });
   });
 
+  it("accepts Google's normalized state-bucket identifier", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          'module.state_bucket.google_storage_bucket_iam_member.terraform_identity["roles/storage.bucketViewer"]',
+        change: {
+          actions: ["no-op"],
+          after: {
+            bucket: "b/bazoria-uat-lnlabs-tfstate",
+            role: "roles/storage.bucketViewer",
+            member: "serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          },
+        },
+      },
+    ];
+
+    expect(
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "bootstrap",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+      }),
+    ).toEqual({ changes: 1, environment: "uat", root: "bootstrap" });
+  });
+
   it("rejects an unreviewed Terraform identity role", () => {
     const plan = createPlan();
     plan.resource_changes = [
@@ -235,5 +272,156 @@ describe("Terraform foundation plan contract", () => {
         identityCatalog,
       }),
     ).toThrow("unknown custom role key");
+  });
+
+  it("accepts the repository immutable subject", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          'module.identity_foundation.google_iam_workload_identity_pool_provider.github["terraform"]',
+        type: "google_iam_workload_identity_pool_provider",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            workload_identity_pool_provider_id: "terraform-main",
+            attribute_condition:
+              "assertion.repository == 'hworldcom/catalog-website' && assertion.repository_id == '1313750742' && assertion.repository_owner == 'hworldcom' && assertion.repository_owner_id == '144285964' && assertion.environment == 'uat' && assertion.sub == 'repo:hworldcom@144285964/catalog-website@1313750742:environment:uat' && assertion.ref == 'refs/heads/main' && assertion.workflow_ref == 'hworldcom/catalog-website/.github/workflows/terraform-environment.yml@refs/heads/main'",
+            attribute_mapping: {
+              "attribute.deployment_role": "'terraform'",
+            },
+          },
+        },
+      },
+    ];
+
+    expect(
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "bootstrap",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+      }),
+    ).toEqual({ changes: 1, environment: "uat", root: "bootstrap" });
+  });
+
+  it("rejects the legacy name-only subject", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          'module.identity_foundation.google_iam_workload_identity_pool_provider.github["terraform"]',
+        type: "google_iam_workload_identity_pool_provider",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            workload_identity_pool_provider_id: "terraform-main",
+            attribute_condition:
+              "assertion.repository == 'hworldcom/catalog-website' && assertion.repository_id == '1313750742' && assertion.repository_owner == 'hworldcom' && assertion.repository_owner_id == '144285964' && assertion.environment == 'uat' && assertion.sub == 'repo:hworldcom/catalog-website:environment:uat' && assertion.ref == 'refs/heads/main' && assertion.workflow_ref == 'hworldcom/catalog-website/.github/workflows/terraform-environment.yml@refs/heads/main'",
+            attribute_mapping: {
+              "attribute.deployment_role": "'terraform'",
+            },
+          },
+        },
+      },
+    ];
+
+    expect(() =>
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "bootstrap",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+      }),
+    ).toThrow(
+      "condition omits repo:hworldcom@144285964/catalog-website@1313750742:environment:uat",
+    );
+  });
+
+  it("accepts an in-place migration to the repository immutable subject", () => {
+    const plan = createPlan();
+    const sharedProvider = {
+      project: "bazoria-uat-lnlabs",
+      workload_identity_pool_provider_id: "terraform-main",
+      attribute_mapping: {
+        "attribute.deployment_role": "'terraform'",
+      },
+    };
+    plan.resource_changes = [
+      {
+        address:
+          'module.identity_foundation.google_iam_workload_identity_pool_provider.github["terraform"]',
+        type: "google_iam_workload_identity_pool_provider",
+        change: {
+          actions: ["update"],
+          before: {
+            ...sharedProvider,
+            attribute_condition:
+              "assertion.repository == 'hworldcom/catalog-website' && assertion.repository_id == '1313750742' && assertion.repository_owner == 'hworldcom' && assertion.repository_owner_id == '144285964' && assertion.environment == 'uat' && assertion.sub == 'repo:hworldcom/catalog-website:environment:uat' && assertion.ref == 'refs/heads/main' && assertion.workflow_ref == 'hworldcom/catalog-website/.github/workflows/terraform-environment.yml@refs/heads/main'",
+          },
+          after: {
+            ...sharedProvider,
+            attribute_condition:
+              "assertion.repository == 'hworldcom/catalog-website' && assertion.repository_id == '1313750742' && assertion.repository_owner == 'hworldcom' && assertion.repository_owner_id == '144285964' && assertion.environment == 'uat' && assertion.sub == 'repo:hworldcom@144285964/catalog-website@1313750742:environment:uat' && assertion.ref == 'refs/heads/main' && assertion.workflow_ref == 'hworldcom/catalog-website/.github/workflows/terraform-environment.yml@refs/heads/main'",
+          },
+        },
+      },
+    ];
+
+    expect(
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "bootstrap",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+      }),
+    ).toEqual({ changes: 1, environment: "uat", root: "bootstrap" });
+  });
+
+  it("rejects a provider update that changes more than the subject condition", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          'module.identity_foundation.google_iam_workload_identity_pool_provider.github["terraform"]',
+        type: "google_iam_workload_identity_pool_provider",
+        change: {
+          actions: ["update"],
+          before: {
+            project: "bazoria-uat-lnlabs",
+            display_name: "Terraform",
+            workload_identity_pool_provider_id: "terraform-main",
+            attribute_condition:
+              "assertion.sub == 'repo:hworldcom/catalog-website:environment:uat'",
+          },
+          after: {
+            project: "bazoria-uat-lnlabs",
+            display_name: "Changed Terraform provider",
+            workload_identity_pool_provider_id: "terraform-main",
+            attribute_condition:
+              "assertion.sub == 'repo:hworldcom@144285964/catalog-website@1313750742:environment:uat'",
+          },
+        },
+      },
+    ];
+
+    expect(() =>
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "bootstrap",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+      }),
+    ).toThrow("would perform an unreviewed update");
   });
 });

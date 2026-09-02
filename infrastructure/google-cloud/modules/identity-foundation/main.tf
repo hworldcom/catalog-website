@@ -1,6 +1,8 @@
 locals {
   environment_abbreviation = var.environment == "production" ? "prod" : "uat"
   pool_id                  = "bazoria-${local.environment_abbreviation}-github"
+  github_repository_name   = split("/", var.github_repository)[1]
+  github_subject           = "repo:${var.github_owner}@${var.github_owner_id}/${local.github_repository_name}@${var.github_repository_id}:environment:${var.environment}"
   service_account_ids = {
     for key, value in var.service_accounts : key => "baz-${local.environment_abbreviation}-${value.suffix}"
   }
@@ -120,7 +122,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "assertion.repository_owner == '${var.github_owner}'",
     "assertion.repository_owner_id == '${var.github_owner_id}'",
     "assertion.environment == '${var.environment}'",
-    "assertion.sub == 'repo:${var.github_repository}:environment:${var.environment}'",
+    "assertion.sub == '${local.github_subject}'",
     "assertion.ref == '${var.github_branch_ref}'",
     "assertion.event_name in [${join(", ", [for event in sort(tolist(var.github_accepted_events)) : "'${event}'"])}]",
     "assertion.workflow_ref == '${var.github_repository}/.github/workflows/${each.value.workflow_file}@${var.github_branch_ref}'",

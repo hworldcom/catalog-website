@@ -3,8 +3,10 @@
   "github": {
     "repository": "hworldcom/catalog-website",
     "repositoryId": "1313750742",
+    "repositoryCreatedAt": "2026-07-27T11:12:46Z",
     "owner": "hworldcom",
     "ownerId": "144285964",
+    "subjectFormat": "immutable-owner-and-repository-ids",
     "branchRef": "refs/heads/main",
     "acceptedEvents": ["push", "workflow_dispatch"],
     "providers": {

@@ -103,8 +103,16 @@ export function validateIdentityCatalog(catalog) {
   assertIdentity(catalog.schemaVersion === 1, "identity catalog schema differs");
   assertIdentity(catalog.github.repository === "hworldcom/catalog-website", "repository differs");
   assertIdentity(catalog.github.repositoryId === "1313750742", "repository ID differs");
+  assertIdentity(
+    catalog.github.repositoryCreatedAt === "2026-07-27T11:12:46Z",
+    "repository creation time differs",
+  );
   assertIdentity(catalog.github.owner === "hworldcom", "repository owner differs");
   assertIdentity(catalog.github.ownerId === "144285964", "repository owner ID differs");
+  assertIdentity(
+    catalog.github.subjectFormat === "immutable-owner-and-repository-ids",
+    "repository subject format differs",
+  );
   assertIdentity(catalog.github.branchRef === "refs/heads/main", "trusted branch differs");
   assertIdentity(
     JSON.stringify(sorted(catalog.github.acceptedEvents)) ===
@@ -347,6 +355,12 @@ function validateSource() {
   assertIdentity(
     moduleSource.includes("prevent_destroy = true"),
     "protected identities lack prevent_destroy",
+  );
+  assertIdentity(
+    moduleSource.includes(
+      'github_subject           = "repo:${var.github_owner}@${var.github_owner_id}/${local.github_repository_name}@${var.github_repository_id}:environment:${var.environment}"',
+    ),
+    "identity module does not require the immutable GitHub subject",
   );
 
   validateWorkflow(

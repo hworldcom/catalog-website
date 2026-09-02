@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -34,6 +35,7 @@ function identityAddressIsAllowed(address) {
 
 function expectedIdentityValues(environment, reviewed, identityCatalog) {
   const abbreviation = environmentAbbreviation(environment);
+  const repositoryName = reviewed.githubRepository.split("/")[1];
   const accountIds = Object.fromEntries(
     Object.entries(identityCatalog.serviceAccounts).map(([key, value]) => [
       key,
@@ -51,8 +53,39 @@ function expectedIdentityValues(environment, reviewed, identityCatalog) {
     accountIds,
     emails,
     poolId: `bazoria-${abbreviation}-github`,
+    subject: `repo:${reviewed.githubOwner}@${reviewed.githubOwnerId}/${repositoryName}@${reviewed.githubRepositoryId}:environment:${environment}`,
     terraformPrincipal: `serviceAccount:${emails.terraform}`,
   };
+}
+
+function isReviewedProviderSubjectUpdate(resource, environment, reviewed, expectedIdentity) {
+  if (
+    resource.change?.actions?.length !== 1 ||
+    resource.change.actions[0] !== "update" ||
+    !/^module\.identity_foundation\.google_iam_workload_identity_pool_provider\.github\["(artifact|terraform)"\]$/.test(
+      resource.address,
+    )
+  ) {
+    return false;
+  }
+
+  const before = structuredClone(resource.change.before ?? {});
+  const after = structuredClone(resource.change.after ?? {});
+  const beforeCondition = before.attribute_condition;
+  const afterCondition = after.attribute_condition;
+  delete before.attribute_condition;
+  delete after.attribute_condition;
+
+  const legacySubject = `repo:${reviewed.githubRepository}:environment:${environment}`;
+  return (
+    typeof beforeCondition === "string" &&
+    beforeCondition.includes(legacySubject) &&
+    !beforeCondition.includes(expectedIdentity.subject) &&
+    typeof afterCondition === "string" &&
+    afterCondition.includes(expectedIdentity.subject) &&
+    !afterCondition.includes(legacySubject) &&
+    isDeepStrictEqual(before, after)
+  );
 }
 
 export function validateFoundationPlan({
@@ -96,15 +129,25 @@ export function validateFoundationPlan({
 
   for (const resource of plan.resource_changes ?? []) {
     const actions = resource.change?.actions ?? [];
+    const reviewedProviderSubjectUpdate = isReviewedProviderSubjectUpdate(
+      resource,
+      environment,
+      reviewed,
+      expectedIdentity,
+    );
     assertPlan(
       allowedAddresses.has(resource.address) ||
         (root === "bootstrap" && identityAddressIsAllowed(resource.address)),
       `unknown resource ${resource.address}`,
     );
     assertPlan(!actions.includes("delete"), `${resource.address} would delete a resource`);
-    assertPlan(!actions.includes("update"), `${resource.address} would update a resource`);
     assertPlan(
-      actions.every((action) => ["create", "no-op", "read"].includes(action)),
+      !actions.includes("update") || reviewedProviderSubjectUpdate,
+      `${resource.address} would perform an unreviewed update`,
+    );
+    assertPlan(
+      reviewedProviderSubjectUpdate ||
+        actions.every((action) => ["create", "no-op", "read"].includes(action)),
       `${resource.address} has an unsupported action`,
     );
 
@@ -181,7 +224,10 @@ export function validateFoundationPlan({
       );
     }
     if (resource.address.includes("google_storage_bucket_iam_member.terraform_identity")) {
-      assertPlan(after.bucket === reviewed.stateBucket, "Terraform state bucket differs");
+      assertPlan(
+        [reviewed.stateBucket, `b/${reviewed.stateBucket}`].includes(after.bucket),
+        "Terraform state bucket differs",
+      );
       assertPlan(
         ["roles/storage.bucketViewer", "roles/storage.objectAdmin"].includes(after.role),
         "Terraform state role differs",
@@ -207,6 +253,7 @@ export function validateFoundationPlan({
         environment,
         "refs/heads/main",
         provider.workflowFile,
+        expectedIdentity.subject,
       ]) {
         assertPlan(
           after.attribute_condition.includes(expectedValue),

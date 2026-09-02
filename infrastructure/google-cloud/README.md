@@ -92,7 +92,9 @@ Expected organization: `33779488200`. Expected billing account:
 The reviewed GitHub source is repository `hworldcom/catalog-website`, numeric
 repository identifier `1313750742`, owned by `hworldcom`, numeric owner
 identifier `144285964`. Federation conditions require both names and both
-numeric identifiers.
+numeric identifiers. Because the repository was created on July 27, 2026, the
+condition also requires GitHub's immutable subject form, such as
+`repo:hworldcom@144285964/catalog-website@1313750742:environment:uat`.
 
 ## Initial Bootstrap Plan
 
