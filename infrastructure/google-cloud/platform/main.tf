@@ -1,5 +1,6 @@
 locals {
   environment_abbreviation = var.environment == "production" ? "prod" : "uat"
+  artifact_catalog         = jsondecode(file("${path.module}/../artifact-catalog.json"))
   identity_catalog         = jsondecode(file("${path.module}/../identity-catalog.json"))
   secret_catalog           = jsondecode(file("${path.module}/../secret-catalog.json"))
   service_catalog          = jsondecode(file("${path.module}/../service-catalog.json"))
@@ -17,6 +18,21 @@ locals {
       purpose_label = secret.purposeLabel
       secret_id     = "bazoria-${local.environment_abbreviation}-${secret.suffix}"
     }
+  }
+  artifact_repository = {
+    format         = local.artifact_catalog.repository.format
+    immutable_tags = local.artifact_catalog.repository.immutableTags
+    mode           = local.artifact_catalog.repository.mode
+    purpose_label  = local.artifact_catalog.repository.purposeLabel
+    reader_members = toset([
+      for account_key in local.artifact_catalog.repository.readerServiceAccountKeys :
+      "serviceAccount:${local.service_account_emails[account_key]}"
+    ])
+    repository_id = "bazoria-${local.environment_abbreviation}-${local.artifact_catalog.repository.suffix}"
+    writer_members = toset([
+      for account_key in local.artifact_catalog.repository.writerServiceAccountKeys :
+      "serviceAccount:${local.service_account_emails[account_key]}"
+    ])
   }
 }
 
@@ -47,6 +63,17 @@ module "secret_foundation" {
   project_id  = var.project_id
   region      = var.region
   secrets     = local.secrets
+
+  depends_on = [module.platform_services]
+}
+
+module "artifact_registry_foundation" {
+  source = "../modules/artifact-registry-foundation"
+
+  environment = var.environment
+  project_id  = var.project_id
+  region      = var.region
+  repository  = local.artifact_repository
 
   depends_on = [module.platform_services]
 }

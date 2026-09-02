@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "region": "europe-west3",
+  "repository": {
+    "format": "DOCKER",
+    "immutableTags": false,
+    "mode": "STANDARD_REPOSITORY",
+    "purposeLabel": "container-images",
+    "readerServiceAccountKeys": ["terraform"],
+    "suffix": "containers",
+    "writerServiceAccountKeys": ["artifactRelease"]
+  },
+  "inheritedServiceAgentRole": "roles/run.serviceAgent",
+  "reservedRuntimeImagePaths": ["permission-smoke"],
+  "smokeArtifact": {
+    "artifactType": "application/vnd.bazoria.permission-smoke.v1",
+    "deniedCrossEnvironmentPermissions": [
+      "artifactregistry.files.upload",
+      "artifactregistry.repositories.uploadArtifacts",
+      "artifactregistry.tags.create",
+      "artifactregistry.tags.update"
+    ],
+    "fixturePath": "infrastructure/google-cloud/fixtures/permission-smoke.json",
+    "imagePath": "permission-smoke",
+    "maxBytes": 1024,
+    "mediaType": "application/vnd.bazoria.permission-smoke.v1+json",
+    "orasSetupAction": "oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6",
+    "orasVersion": "1.3.3",
+    "tag": "latest"
+  }
+}

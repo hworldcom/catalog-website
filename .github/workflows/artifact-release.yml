@@ -32,7 +32,60 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install ORAS
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6
+        with:
+          version: 1.3.3
+
+      - name: Select the reviewed repository
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "${{ inputs.environment }}" in
+            uat)
+              project_id="bazoria-uat-lnlabs"
+              repository_id="bazoria-uat-containers"
+              other_project_id="bazoria-prod-lnlabs"
+              other_repository_id="bazoria-prod-containers"
+              ;;
+            production)
+              project_id="bazoria-prod-lnlabs"
+              repository_id="bazoria-prod-containers"
+              other_project_id="bazoria-uat-lnlabs"
+              other_repository_id="bazoria-uat-containers"
+              ;;
+            *)
+              printf 'Unsupported protected environment.\n' >&2
+              exit 1
+              ;;
+          esac
+
+          region="europe-west3"
+          registry_host="${region}-docker.pkg.dev"
+          repository_name="projects/${project_id}/locations/${region}/repositories/${repository_id}"
+          repository_path="${registry_host}/${project_id}/${repository_id}"
+          image_path="permission-smoke"
+
+          {
+            printf 'ARTIFACT_TYPE=application/vnd.bazoria.permission-smoke.v1\n'
+            printf 'FIXTURE_PATH=infrastructure/google-cloud/fixtures/permission-smoke.json\n'
+            printf 'IMAGE_PATH=%s\n' "${image_path}"
+            printf 'IMAGE_REFERENCE=%s/permission-smoke:latest\n' "${repository_path}"
+            printf 'MEDIA_TYPE=application/vnd.bazoria.permission-smoke.v1+json\n'
+            printf 'ORAS_REGISTRY_CONFIG=%s/oras-config.json\n' "${RUNNER_TEMP}"
+            printf 'OTHER_PROJECT_ID=%s\n' "${other_project_id}"
+            printf 'OTHER_REPOSITORY_ID=%s\n' "${other_repository_id}"
+            printf 'PROJECT_ID=%s\n' "${project_id}"
+            printf 'REGION=%s\n' "${region}"
+            printf 'REGISTRY_HOST=%s\n' "${registry_host}"
+            printf 'REPOSITORY_ID=%s\n' "${repository_id}"
+            printf 'REPOSITORY_NAME=%s\n' "${repository_name}"
+            printf 'REPOSITORY_PATH=%s\n' "${repository_path}"
+          } >> "${GITHUB_ENV}"
+
       - name: Authenticate as the artifact-release identity
+        id: artifact-auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
           workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER }}
@@ -55,8 +108,96 @@ jobs:
       - name: Assert cross-role impersonation was denied
         env:
           FORBIDDEN_OUTCOME: ${{ steps.forbidden-terraform-role.outcome }}
+        shell: bash
         run: |
+          set -euo pipefail
           if [[ "${FORBIDDEN_OUTCOME}" != "failure" ]]; then
             printf 'Artifact provider unexpectedly impersonated the Terraform account.\n' >&2
             exit 1
+          fi
+
+      - name: Assert opposite-environment write permissions are absent
+        env:
+          ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          request_path="projects/${OTHER_PROJECT_ID}/locations/${REGION}/repositories/${OTHER_REPOSITORY_ID}"
+          response_path="${RUNNER_TEMP}/opposite-repository-permissions.json"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --data '{"permissions":["artifactregistry.files.upload","artifactregistry.repositories.uploadArtifacts","artifactregistry.tags.create","artifactregistry.tags.update"]}' \
+            "https://artifactregistry.googleapis.com/v1/${request_path}:testIamPermissions" \
+            > "${response_path}"
+
+          if [[ "$(jq '.permissions // [] | length' "${response_path}")" != "0" ]]; then
+            printf 'Artifact identity has write access to the opposite environment repository.\n' >&2
+            exit 1
+          fi
+
+      - name: Authenticate ORAS to the matching registry
+        env:
+          ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "${ACCESS_TOKEN}" | oras login "${REGISTRY_HOST}" \
+            --username oauth2accesstoken \
+            --password-stdin \
+            --registry-config "${ORAS_REGISTRY_CONFIG}"
+
+      - name: Publish and verify the permission-smoke artifact
+        env:
+          ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          push_result="${RUNNER_TEMP}/permission-smoke-push.json"
+          oras push "${IMAGE_REFERENCE}" \
+            --artifact-type "${ARTIFACT_TYPE}" \
+            --format json \
+            --registry-config "${ORAS_REGISTRY_CONFIG}" \
+            "${FIXTURE_PATH}:${MEDIA_TYPE}" \
+            > "${push_result}"
+
+          digest="$(jq -er '.digest' "${push_result}")"
+          if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            printf 'ORAS returned an invalid artifact digest.\n' >&2
+            exit 1
+          fi
+
+          resolved_digest="$(oras resolve "${IMAGE_REFERENCE}" \
+            --registry-config "${ORAS_REGISTRY_CONFIG}")"
+          if [[ "${resolved_digest}" != "${digest}" ]]; then
+            printf 'The tagged artifact does not resolve to the pushed digest.\n' >&2
+            exit 1
+          fi
+
+          encoded_image="$(jq -rn --arg value "${IMAGE_PATH}@${digest}" '$value | @uri')"
+          metadata_path="${RUNNER_TEMP}/permission-smoke-metadata.json"
+          curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+            "https://artifactregistry.googleapis.com/v1/${REPOSITORY_NAME}/dockerImages/${encoded_image}" \
+            > "${metadata_path}"
+
+          expected_name="${REPOSITORY_NAME}/dockerImages/${IMAGE_PATH}@${digest}"
+          expected_uri="${REPOSITORY_PATH}/${IMAGE_PATH}@${digest}"
+          jq --exit-status \
+            --arg expected_name "${expected_name}" \
+            --arg expected_uri "${expected_uri}" \
+            '.name == $expected_name and .uri == $expected_uri' \
+            "${metadata_path}" > /dev/null
+
+      - name: Remove temporary registry credentials
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${REGISTRY_HOST:-}" && -n "${ORAS_REGISTRY_CONFIG:-}" ]]; then
+            oras logout "${REGISTRY_HOST}" \
+              --registry-config "${ORAS_REGISTRY_CONFIG}" >/dev/null 2>&1 || true
+            rm -f "${ORAS_REGISTRY_CONFIG}"
           fi

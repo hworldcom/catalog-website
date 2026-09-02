@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { validateFoundationPlan } from "./foundation-plan-contract.mjs";
 
+import artifactCatalog from "../../infrastructure/google-cloud/artifact-catalog.json";
+
 const inventory = {
   environments: {
     uat: {
@@ -22,6 +24,7 @@ const inventory = {
 
 const identityCatalog = {
   serviceAccounts: {
+    artifactRelease: { suffix: "artifact-release" },
     terraform: { suffix: "terraform" },
     web: { suffix: "web" },
   },
@@ -495,6 +498,7 @@ describe("Terraform foundation plan contract", () => {
         inventory,
         serviceCatalog,
         identityCatalog,
+        artifactCatalog,
         secretCatalog,
       }),
     ).toEqual({ changes: 2, environment: "uat", root: "platform" });
@@ -529,8 +533,116 @@ describe("Terraform foundation plan contract", () => {
         inventory,
         serviceCatalog,
         identityCatalog,
+        artifactCatalog,
         secretCatalog,
       }),
     ).toThrow("unknown secret accessor");
+  });
+
+  it("accepts the exact private Artifact Registry repository and direct access", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          "module.artifact_registry_foundation.google_artifact_registry_repository.containers",
+        type: "google_artifact_registry_repository",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            location: "europe-west3",
+            repository_id: "bazoria-uat-containers",
+            format: "DOCKER",
+            mode: "STANDARD_REPOSITORY",
+            labels: {
+              environment: "uat",
+              managed_by: "terraform",
+              purpose: "container-images",
+            },
+            docker_config: [],
+            cleanup_policies: [],
+          },
+        },
+      },
+      {
+        address:
+          'module.artifact_registry_foundation.google_artifact_registry_repository_iam_member.writers["serviceAccount:baz-uat-artifact-release@bazoria-uat-lnlabs.iam.gserviceaccount.com"]',
+        type: "google_artifact_registry_repository_iam_member",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            location: "europe-west3",
+            repository: "bazoria-uat-containers",
+            role: "roles/artifactregistry.writer",
+            member:
+              "serviceAccount:baz-uat-artifact-release@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          },
+        },
+      },
+      {
+        address:
+          'module.artifact_registry_foundation.google_artifact_registry_repository_iam_member.readers["serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com"]',
+        type: "google_artifact_registry_repository_iam_member",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            location: "europe-west3",
+            repository: "bazoria-uat-containers",
+            role: "roles/artifactregistry.reader",
+            member: "serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+          },
+        },
+      },
+    ];
+
+    expect(
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "platform",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+        artifactCatalog,
+        secretCatalog,
+      }),
+    ).toEqual({ changes: 3, environment: "uat", root: "platform" });
+  });
+
+  it("rejects a cross-environment Artifact Registry writer", () => {
+    const plan = createPlan();
+    plan.resource_changes = [
+      {
+        address:
+          'module.artifact_registry_foundation.google_artifact_registry_repository_iam_member.writers["serviceAccount:baz-prod-artifact-release@bazoria-prod-lnlabs.iam.gserviceaccount.com"]',
+        type: "google_artifact_registry_repository_iam_member",
+        change: {
+          actions: ["create"],
+          after: {
+            project: "bazoria-uat-lnlabs",
+            location: "europe-west3",
+            repository: "bazoria-uat-containers",
+            role: "roles/artifactregistry.writer",
+            member:
+              "serviceAccount:baz-prod-artifact-release@bazoria-prod-lnlabs.iam.gserviceaccount.com",
+          },
+        },
+      },
+    ];
+
+    expect(() =>
+      validateFoundationPlan({
+        plan,
+        environment: "uat",
+        root: "platform",
+        inventory,
+        serviceCatalog,
+        identityCatalog,
+        artifactCatalog,
+        secretCatalog,
+      }),
+    ).toThrow("unknown artifact writer");
   });
 });

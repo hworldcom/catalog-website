@@ -72,4 +72,25 @@ run "uat_platform_enables_only_reviewed_services" {
     })
     error_message = "The Supabase secret container or access differs."
   }
+
+  assert {
+    condition = jsonencode(module.artifact_registry_foundation.repository) == jsonencode({
+      format         = "DOCKER"
+      immutable_tags = false
+      location       = "europe-west3"
+      mode           = "STANDARD_REPOSITORY"
+      name           = "projects/bazoria-uat-lnlabs/locations/europe-west3/repositories/bazoria-uat-containers"
+      purpose_label  = "container-images"
+      reader_members = [
+        "serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+      ]
+      registry_host   = "europe-west3-docker.pkg.dev"
+      repository_id   = "bazoria-uat-containers"
+      repository_path = "europe-west3-docker.pkg.dev/bazoria-uat-lnlabs/bazoria-uat-containers"
+      writer_members = [
+        "serviceAccount:baz-uat-artifact-release@bazoria-uat-lnlabs.iam.gserviceaccount.com",
+      ]
+    })
+    error_message = "The private Artifact Registry repository or direct access differs."
+  }
 }

@@ -3,6 +3,8 @@ import { dirname, join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
+import { buildArtifactRepositoryInventory } from "./artifact-contract.mjs";
+
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const infrastructureRoot = join(repositoryRoot, "infrastructure/google-cloud");
 
@@ -37,6 +39,8 @@ function platformAddressIsAllowed(address) {
   return [
     /^module\.secret_foundation\.google_secret_manager_secret\.secrets\["(openaiApiKey|supabaseServiceRole)"\]$/,
     /^module\.secret_foundation\.google_secret_manager_secret_iam_member\.accessors\["[^"\n]+"\]$/,
+    /^module\.artifact_registry_foundation\.google_artifact_registry_repository\.containers$/,
+    /^module\.artifact_registry_foundation\.google_artifact_registry_repository_iam_member\.(readers|writers)\["serviceAccount:[^"\n]+"\]$/,
   ].some((pattern) => pattern.test(address));
 }
 
@@ -100,6 +104,20 @@ function expectedSecretValues(environment, reviewed, identityCatalog, secretCata
   return { bindings, containers };
 }
 
+function expectedArtifactValues(environment, reviewed, identityCatalog, artifactCatalog) {
+  const repository = buildArtifactRepositoryInventory({
+    environment,
+    reviewedEnvironment: reviewed,
+    identityCatalog,
+    artifactCatalog,
+  });
+  return {
+    repository,
+    readerMembers: new Set(repository.readerMembers),
+    writerMembers: new Set(repository.writerMembers),
+  };
+}
+
 function isReviewedProviderSubjectUpdate(resource, environment, reviewed, expectedIdentity) {
   if (
     resource.change?.actions?.length !== 1 ||
@@ -137,6 +155,7 @@ export function validateFoundationPlan({
   inventory,
   serviceCatalog,
   identityCatalog,
+  artifactCatalog,
   secretCatalog,
 }) {
   assertPlan(["uat", "production"].includes(environment), "environment is invalid");
@@ -150,6 +169,10 @@ export function validateFoundationPlan({
   const expectedSecrets =
     root === "platform"
       ? expectedSecretValues(environment, reviewed, identityCatalog, secretCatalog)
+      : undefined;
+  const expectedArtifacts =
+    root === "platform"
+      ? expectedArtifactValues(environment, reviewed, identityCatalog, artifactCatalog)
       : undefined;
   const serialized = JSON.stringify(plan);
   for (const pattern of [
@@ -317,6 +340,63 @@ export function validateFoundationPlan({
         `${resource.address} secret differs`,
       );
     }
+    if (resource.type === "google_artifact_registry_repository") {
+      const artifact = expectedArtifacts?.repository;
+      assertPlan(Boolean(artifact), `${resource.address} has no reviewed repository`);
+      assertPlan(after.location === artifact.location, `${resource.address} location differs`);
+      assertPlan(
+        after.repository_id === artifact.repositoryId,
+        `${resource.address} repository ID differs`,
+      );
+      assertPlan(after.format === artifact.format, `${resource.address} format differs`);
+      assertPlan(after.mode === artifact.mode, `${resource.address} mode differs`);
+      assertPlan(
+        isDeepStrictEqual(after.labels, {
+          environment,
+          managed_by: "terraform",
+          purpose: artifact.purposeLabel,
+        }),
+        `${resource.address} labels differ`,
+      );
+      assertPlan(
+        (after.docker_config ?? []).length === 0 ||
+          (after.docker_config.length === 1 &&
+            after.docker_config[0]?.immutable_tags === artifact.immutableTags),
+        `${resource.address} tag mutability differs`,
+      );
+      assertPlan(
+        (after.cleanup_policies ?? []).length === 0,
+        `${resource.address} has an early cleanup policy`,
+      );
+    }
+    if (resource.type === "google_artifact_registry_repository_iam_member") {
+      const artifact = expectedArtifacts?.repository;
+      assertPlan(Boolean(artifact), `${resource.address} has no reviewed repository binding`);
+      assertPlan(after.location === artifact.location, `${resource.address} location differs`);
+      assertPlan(
+        [artifact.repositoryId, artifact.name].includes(after.repository),
+        `${resource.address} repository differs`,
+      );
+      if (resource.address.includes(".writers[")) {
+        assertPlan(
+          after.role === "roles/artifactregistry.writer",
+          `${resource.address} writer role differs`,
+        );
+        assertPlan(
+          expectedArtifacts.writerMembers.has(after.member),
+          `${resource.address} has an unknown artifact writer`,
+        );
+      } else {
+        assertPlan(
+          after.role === "roles/artifactregistry.reader",
+          `${resource.address} reader role differs`,
+        );
+        assertPlan(
+          expectedArtifacts.readerMembers.has(after.member),
+          `${resource.address} has an unknown artifact reader`,
+        );
+      }
+    }
     if (resource.address.endsWith("google_iam_workload_identity_pool.github")) {
       assertPlan(after.workload_identity_pool_id === expectedIdentity.poolId, "pool ID differs");
     }
@@ -390,6 +470,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       ),
       identityCatalog: JSON.parse(
         readFileSync(join(infrastructureRoot, "identity-catalog.json"), "utf8"),
+      ),
+      artifactCatalog: JSON.parse(
+        readFileSync(join(infrastructureRoot, "artifact-catalog.json"), "utf8"),
       ),
       secretCatalog: JSON.parse(
         readFileSync(join(infrastructureRoot, "secret-catalog.json"), "utf8"),

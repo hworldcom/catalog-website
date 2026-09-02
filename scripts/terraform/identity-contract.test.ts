@@ -6,6 +6,7 @@ import {
   validateIdentityContract,
 } from "./identity-contract.mjs";
 
+import artifactCatalog from "../../infrastructure/google-cloud/artifact-catalog.json";
 import catalog from "../../infrastructure/google-cloud/identity-catalog.json";
 import administratorAccess from "../../infrastructure/google-cloud/inventory/reviewed-administrator-access.json";
 import reviewed from "../../infrastructure/google-cloud/inventory/reviewed-environments.json";
@@ -14,7 +15,7 @@ import secretCatalog from "../../infrastructure/google-cloud/secret-catalog.json
 describe("Terraform identity contract", () => {
   it("validates the checked-in identity foundation", () => {
     expect(validateIdentityContract()).toEqual({
-      bindings: 24,
+      bindings: 30,
       environments: ["uat", "production"],
     });
   });
@@ -23,6 +24,7 @@ describe("Terraform identity contract", () => {
     const matrix = buildIdentityAccessMatrix({
       reviewed,
       catalog,
+      artifactCatalog,
       secretCatalog,
       administratorAccess,
     });
@@ -36,6 +38,15 @@ describe("Terraform identity contract", () => {
     expect(matrix.environments.uat.secretContainers).not.toEqual(
       matrix.environments.production.secretContainers,
     );
+    expect(matrix.environments.uat.artifactRepository.repositoryPath).not.toBe(
+      matrix.environments.production.artifactRepository.repositoryPath,
+    );
+    expect(matrix.environments.uat.artifactRepository.inheritedCloudRunServiceAgent).toEqual({
+      principal:
+        "serviceAccount:service-145571383840@serverless-robot-prod.iam.gserviceaccount.com",
+      role: "roles/run.serviceAgent",
+      scope: "projects/bazoria-uat-lnlabs",
+    });
   });
 
   it("rejects a secret-version permission", () => {

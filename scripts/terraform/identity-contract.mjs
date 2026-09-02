@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { buildArtifactRepositoryInventory, validateArtifactCatalog } from "./artifact-contract.mjs";
 import { validateSecretCatalog } from "./secret-contract.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -236,6 +237,7 @@ export function validateIdentityCatalog(catalog) {
 export function buildIdentityAccessMatrix({
   reviewed,
   catalog,
+  artifactCatalog,
   secretCatalog,
   administratorAccess,
 }) {
@@ -245,6 +247,12 @@ export function buildIdentityAccessMatrix({
     const value = reviewed.environments[environment];
     const abbreviation = environmentAbbreviation(environment);
     const accounts = serviceAccountInventory(environment, value.projectId, catalog);
+    const artifactRepository = buildArtifactRepositoryInventory({
+      environment,
+      reviewedEnvironment: value,
+      identityCatalog: catalog,
+      artifactCatalog,
+    });
     const secretContainers = secretContainerInventory(environment, value.projectId, secretCatalog);
     const terraformPrincipal = `serviceAccount:${accounts.terraform.email}`;
     const stateBucket = `buckets/${value.stateBucket}`;
@@ -305,6 +313,29 @@ export function buildIdentityAccessMatrix({
           reason: `Allow only the reviewed ${provider.workflowFile} provider role to impersonate its account.`,
         }),
       ),
+      binding({
+        principal: artifactRepository.writerMembers[0],
+        roles: ["roles/artifactregistry.writer"],
+        resources: [artifactRepository.name],
+        ownerTicket: "0038e2c",
+        reason: "Publish reviewed artifacts only to the matching environment repository.",
+      }),
+      binding({
+        principal: artifactRepository.readerMembers[0],
+        roles: ["roles/artifactregistry.reader"],
+        resources: [artifactRepository.name],
+        ownerTicket: "0038e2c",
+        reason: "Validate and read the selected matching-environment image during deployment.",
+      }),
+      binding({
+        principal: artifactRepository.inheritedCloudRunServiceAgent.principal,
+        roles: [artifactRepository.inheritedCloudRunServiceAgent.role],
+        resources: [artifactRepository.inheritedCloudRunServiceAgent.scope],
+        access: "inherited",
+        ownerTicket: "0038e2c",
+        reason:
+          "Google-managed same-project Cloud Run service-agent access includes repository upload capability; it is not a Bazoria release path or direct repository grant.",
+      }),
       ...expectedServiceAccountKeys.flatMap((accountKey) => {
         const resources = Object.values(secretContainers)
           .filter((secret) => secret.accessorServiceAccountKeys.includes(accountKey))
@@ -334,6 +365,7 @@ export function buildIdentityAccessMatrix({
     ];
 
     environments[environment] = {
+      artifactRepository,
       bindings,
       federation: {
         pool: poolName,
@@ -353,6 +385,7 @@ export function buildIdentityAccessMatrix({
   return {
     schemaVersion: 1,
     generatedFrom: [
+      "artifact-catalog.json",
       "identity-catalog.json",
       "reviewed-administrator-access.json",
       "reviewed-environments.json",
@@ -431,13 +464,16 @@ export function validateIdentityContract() {
   const administratorAccess = readJson(
     join(infrastructureRoot, "inventory/reviewed-administrator-access.json"),
   );
+  const artifactCatalog = readJson(join(infrastructureRoot, "artifact-catalog.json"));
   const secretCatalog = readJson(join(infrastructureRoot, "secret-catalog.json"));
   validateIdentityCatalog(catalog);
+  validateArtifactCatalog(artifactCatalog, catalog);
   validateSecretCatalog(secretCatalog, catalog);
   validateSource();
   const expectedMatrix = buildIdentityAccessMatrix({
     reviewed,
     catalog,
+    artifactCatalog,
     secretCatalog,
     administratorAccess,
   });
@@ -462,15 +498,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const administratorAccess = readJson(
       join(infrastructureRoot, "inventory/reviewed-administrator-access.json"),
     );
+    const artifactCatalog = readJson(join(infrastructureRoot, "artifact-catalog.json"));
     const secretCatalog = readJson(join(infrastructureRoot, "secret-catalog.json"));
     if (process.argv.includes("--print-matrix")) {
       validateIdentityCatalog(catalog);
+      validateArtifactCatalog(artifactCatalog, catalog);
       validateSecretCatalog(secretCatalog, catalog);
       process.stdout.write(
         `${JSON.stringify(
           buildIdentityAccessMatrix({
             reviewed,
             catalog,
+            artifactCatalog,
             secretCatalog,
             administratorAccess,
           }),
@@ -480,6 +519,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       );
     } else if (process.argv.includes("--write-matrix")) {
       validateIdentityCatalog(catalog);
+      validateArtifactCatalog(artifactCatalog, catalog);
       validateSecretCatalog(secretCatalog, catalog);
       writeFileSync(
         matrixPath,
@@ -487,6 +527,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
           buildIdentityAccessMatrix({
             reviewed,
             catalog,
+            artifactCatalog,
             secretCatalog,
             administratorAccess,
           }),

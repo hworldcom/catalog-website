@@ -36,6 +36,8 @@ The reported version must be `1.15.9` before running repository commands.
 - `environments/` contains reviewed non-secret inputs and backend settings.
 - `identity-catalog.json` is the exact service-account, custom-role, and GitHub
   federation contract shared by both environments.
+- `artifact-catalog.json` is the exact private repository, direct access, and
+  permission-smoke contract shared by both environments.
 - `inventory/` contains reviewed external identifiers and, after apply, the
   generated non-secret applied inventory. `reviewed-identity-access.json`
   records every direct and inherited identity binding in scope.
@@ -51,6 +53,7 @@ Validation does not contact UAT or production:
 cd /Users/hoangdeveloper/catalog-website
 npm run infra:foundation:check
 npm run infra:identity:check
+npm run infra:artifact:check
 npm run infra:terraform:validate
 ```
 
@@ -312,6 +315,49 @@ Replace `SECRET_NAME` and `PROJECT_ID` with the reviewed matching-environment
 container and project. Do not paste payloads into chat. Record the explicit
 enabled version resource name for later runtime deployment; runtime
 configuration must never reference `latest`.
+
+## Artifact Registry And Release Verification
+
+Ticket `0038e2c` adds one protected private Docker repository per environment:
+
+- `bazoria-uat-containers` in `bazoria-uat-lnlabs`;
+- `bazoria-prod-containers` in `bazoria-prod-lnlabs`.
+
+Both repositories are standard regional repositories in `europe-west3` with
+Terraform `prevent_destroy` protection. No `allUsers` or
+`allAuthenticatedUsers` binding is allowed. The matching artifact-release
+service account is the only Bazoria-managed direct writer. The matching
+Terraform account is a direct reader so a later Cloud Run deployment can
+validate its selected image digest.
+
+The same-project Google-managed Cloud Run service agent keeps its inherited
+project-level `roles/run.serviceAgent` role. That predefined role includes an
+artifact upload capability. It is recorded separately in
+`reviewed-identity-access.json`; it is not a direct repository grant and is not
+used by the Bazoria release workflow.
+
+Plan and apply the platform root one environment at a time using **Platform
+Plan And Apply**. Before each apply, review the exact repository identifier,
+region, lifecycle protection, direct reader and writer, inherited service-agent
+entry, and the reserved `permission-smoke` path. Apply UAT only after explicit
+approval, verify it, and repeat the separately approved process for production.
+
+After an environment repository exists, run the protected
+`artifact-release.yml` workflow for that environment. It installs Open Container
+Initiative Registry As Storage (ORAS) `1.3.3`, proves the artifact identity
+cannot impersonate Terraform, and publishes the bounded checked-in fixture to:
+
+```text
+europe-west3-docker.pkg.dev/PROJECT_ID/REPOSITORY_ID/permission-smoke:latest
+```
+
+The workflow requires the push digest, the resolved tag digest, and Artifact
+Registry metadata to agree. It uses `testIamPermissions` against the opposite
+environment and requires all tested write permissions to be absent; it never
+attempts a cross-environment upload. The `permission-smoke` path is reserved for
+infrastructure verification and cannot be selected as a runtime image. Building
+the Bazoria application image and validating a runtime image digest are owned
+by later deployment tickets.
 
 ## Applied Inventory
 

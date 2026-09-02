@@ -54,6 +54,7 @@ jobs:
       - name: Test repository foundation contract
         run: >-
           npm run test --
+          scripts/terraform/artifact-contract.test.ts
           scripts/terraform/foundation-contract.test.ts
           scripts/terraform/foundation-plan-contract.test.ts
           scripts/terraform/identity-contract.test.ts

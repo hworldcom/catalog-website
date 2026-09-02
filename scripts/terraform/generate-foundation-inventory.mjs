@@ -22,6 +22,43 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
+function expectedSecretContainers(reviewedIdentity, secretCatalog) {
+  return Object.fromEntries(
+    Object.entries(reviewedIdentity.secretContainers).map(([key, secret]) => [
+      key,
+      {
+        accessor_members: secret.accessorServiceAccountKeys
+          .map(
+            (accountKey) => `serviceAccount:${reviewedIdentity.serviceAccounts[accountKey].email}`,
+          )
+          .sort(),
+        name: secret.name,
+        purpose_label: secretCatalog.secrets[key].purposeLabel,
+        replication: secretCatalog.replicationRegion,
+        secret_id: secret.secretId,
+      },
+    ]),
+  );
+}
+
+function expectedArtifactRepository(reviewedArtifact) {
+  return {
+    format: reviewedArtifact.format,
+    immutable_tags: reviewedArtifact.immutableTags,
+    inherited_cloud_run_service_agent: reviewedArtifact.inheritedCloudRunServiceAgent,
+    location: reviewedArtifact.location,
+    mode: reviewedArtifact.mode,
+    name: reviewedArtifact.name,
+    purpose_label: reviewedArtifact.purposeLabel,
+    reader_members: reviewedArtifact.readerMembers,
+    registry_host: reviewedArtifact.registryHost,
+    repository_id: reviewedArtifact.repositoryId,
+    repository_path: reviewedArtifact.repositoryPath,
+    reserved_runtime_image_paths: reviewedArtifact.reservedRuntimeImagePaths,
+    writer_members: reviewedArtifact.writerMembers,
+  };
+}
+
 function requireMatchingOutput(
   environment,
   bootstrap,
@@ -29,6 +66,7 @@ function requireMatchingOutput(
   reviewed,
   serviceCatalog,
   identityAccess,
+  secretCatalog,
 ) {
   for (const output of [bootstrap, platform]) {
     if (
@@ -62,6 +100,18 @@ function requireMatchingOutput(
   ) {
     throw new Error(`terraform_foundation_inventory_identity_mismatch: ${environment}`);
   }
+  if (
+    JSON.stringify(platform.secret_containers) !==
+    JSON.stringify(expectedSecretContainers(reviewedIdentity, secretCatalog))
+  ) {
+    throw new Error(`terraform_foundation_inventory_secret_mismatch: ${environment}`);
+  }
+  if (
+    JSON.stringify(platform.artifact_repository) !==
+    JSON.stringify(expectedArtifactRepository(reviewedIdentity.artifactRepository))
+  ) {
+    throw new Error(`terraform_foundation_inventory_artifact_mismatch: ${environment}`);
+  }
 }
 
 try {
@@ -87,6 +137,7 @@ try {
     join(infrastructureRoot, "inventory/reviewed-identity-access.json"),
   );
   const serviceCatalog = readJson(join(infrastructureRoot, "service-catalog.json"));
+  const secretCatalog = readJson(join(infrastructureRoot, "secret-catalog.json"));
   const environments = {};
 
   for (const environment of ["uat", "production"]) {
@@ -100,8 +151,10 @@ try {
       reviewed,
       serviceCatalog,
       identityAccess,
+      secretCatalog,
     );
     environments[environment] = {
+      artifactRepository: platform.artifact_repository,
       project: bootstrap.project,
       state: {
         bucket: bootstrap.state_bucket,
@@ -113,6 +166,7 @@ try {
           reviewedAccess.environments[environment].projectInheritedStateAccess,
       },
       identity: bootstrap.identity,
+      secretContainers: platform.secret_containers,
       reviewedAccessBindings: identityAccess.environments[environment].bindings,
       enabledServices: [...bootstrap.enabled_services, ...platform.enabled_services].sort(),
     };

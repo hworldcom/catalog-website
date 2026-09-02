@@ -13,6 +13,7 @@ fi
 node "${repository_root}/scripts/terraform/foundation-contract.mjs"
 node "${repository_root}/scripts/terraform/identity-contract.mjs"
 node "${repository_root}/scripts/terraform/secret-contract.mjs"
+node "${repository_root}/scripts/terraform/artifact-contract.mjs"
 terraform -chdir="${repository_root}/infrastructure/google-cloud" fmt -check -recursive
 
 for root in bootstrap platform; do
