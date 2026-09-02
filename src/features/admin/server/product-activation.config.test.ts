@@ -37,7 +37,7 @@ describe("readProductActivationConfig", () => {
       taskQueue: "product-activation",
       workerUrl: "https://activation.example.com",
       taskServiceAccount: "task-caller@bazoria-uat.iam.gserviceaccount.com",
-      taskAudience: "https://activation.example.com/",
+      taskAudience: "https://activation.example.com",
       taskDispatchDeadlineSeconds: 270,
       taskClientTimeoutMs: 10_000,
       taskMaximumRetryDurationSeconds: 420,

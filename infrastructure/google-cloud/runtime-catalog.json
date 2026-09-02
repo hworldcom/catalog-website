@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "region": "europe-west3",
+  "imagePath": "bazoria-web",
+  "resourceSuffixes": {
+    "website": "web",
+    "worker": "activation-worker",
+    "reconciliationJob": "activation-reconciliation",
+    "activationQueue": "product-activation",
+    "reconciliationScheduler": "activation-reconciliation"
+  },
+  "website": {
+    "cpu": "1",
+    "memory": "1Gi",
+    "concurrency": 8,
+    "minimumInstances": {
+      "uat": 0,
+      "production": 1
+    },
+    "maximumInstances": {
+      "uat": 2,
+      "production": 3
+    },
+    "timeoutSeconds": 120,
+    "healthPath": "/healthz"
+  },
+  "worker": {
+    "cpu": "1",
+    "memory": "1Gi",
+    "concurrency": 1,
+    "minimumInstances": 0,
+    "maximumInstances": 10,
+    "timeoutSeconds": 300,
+    "healthPath": "/health",
+    "command": ["npm"],
+    "args": ["run", "start:product-activation-worker"]
+  },
+  "reconciliation": {
+    "cpu": "1",
+    "memory": "512Mi",
+    "taskCount": 1,
+    "parallelism": 1,
+    "executionRetries": 2,
+    "timeoutSeconds": 120,
+    "applicationDeadlineSeconds": 60,
+    "batchSize": 100,
+    "command": ["npm"],
+    "args": ["run", "start:product-activation-reconciliation"]
+  },
+  "publication": {
+    "maximumImageCount": 20,
+    "itemConcurrency": 3,
+    "itemTimeoutSeconds": 30,
+    "workerDeadlineSeconds": 240,
+    "claimTimeoutSeconds": 360,
+    "taskClientTimeoutSeconds": 10
+  },
+  "queue": {
+    "maximumConcurrentDispatches": 10,
+    "maximumDispatchRate": 10,
+    "dispatchDeadlineSeconds": 270,
+    "maximumRetryDurationSeconds": 420,
+    "maximumAttempts": 10,
+    "minimumBackoffSeconds": 5,
+    "maximumBackoffSeconds": 60,
+    "targetPath": "/internal/tasks/activate-product-submission"
+  },
+  "scheduler": {
+    "schedule": "* * * * *",
+    "timeZone": "UTC",
+    "attemptDeadlineSeconds": 30,
+    "retryCount": 1,
+    "maximumRetryDurationSeconds": 30,
+    "minimumBackoffSeconds": 5,
+    "maximumBackoffSeconds": 10
+  },
+  "supabaseUrls": {
+    "uat": "https://mekobnkujzpzeiwmecyy.supabase.co",
+    "production": "https://njtgjrctfmtvackjmlww.supabase.co"
+  },
+  "canonicalOrigins": {
+    "uat": "https://uat2026.bazoria.pl",
+    "production": "https://bazoria.pl"
+  },
+  "descriptionGenerationModel": "gpt-5.4-nano"
+}

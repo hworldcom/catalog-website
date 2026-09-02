@@ -93,4 +93,9 @@ run "uat_platform_enables_only_reviewed_services" {
     })
     error_message = "The private Artifact Registry repository or direct access differs."
   }
+
+  assert {
+    condition     = output.runtime_inventory == null
+    error_message = "The checked-in platform variables must not create runtime resources before release input is provided."
+  }
 }

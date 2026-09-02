@@ -17,3 +17,8 @@ output "foundation_inventory" {
     state_prefix      = "terraform/platform"
   }
 }
+
+output "runtime_inventory" {
+  description = "Non-secret runtime inventory, or null before the first digest-bound release."
+  value       = try(module.runtime_activation_platform["enabled"].runtime_inventory, null)
+}

@@ -15,7 +15,7 @@ describe("readProductActivationWorkerConfig", () => {
       claimTimeoutSeconds: 360,
       supabaseUrl: "https://database.example.com",
       serviceRoleKey: "server-secret",
-      taskAudience: "https://activation.example.com/",
+      taskAudience: "https://activation.example.com",
       taskServiceAccount: "task-caller@example.iam.gserviceaccount.com",
       port: 8_080,
     });

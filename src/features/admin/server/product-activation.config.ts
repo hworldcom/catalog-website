@@ -16,7 +16,7 @@ const secureUrl = z
       context.addIssue({ code: z.ZodIssueCode.custom, message: "must use https" });
       return z.NEVER;
     }
-    return url.toString();
+    return url.toString().replace(/\/+$/, "");
   });
 
 const recoverySchema = z.object({
@@ -28,7 +28,7 @@ const cloudTasksSchema = z.object({
   GOOGLE_CLOUD_PROJECT: z.string().trim().min(1),
   BAZORIA_PRODUCT_PUBLICATION_TASK_LOCATION: z.string().trim().min(1),
   BAZORIA_PRODUCT_PUBLICATION_TASK_QUEUE: z.string().trim().min(1),
-  BAZORIA_PRODUCT_PUBLICATION_WORKER_URL: secureUrl.transform((value) => value.replace(/\/+$/, "")),
+  BAZORIA_PRODUCT_PUBLICATION_WORKER_URL: secureUrl,
   BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT: z.string().trim().email(),
   BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: secureUrl,
   BAZORIA_PRODUCT_PUBLICATION_TASK_DISPATCH_DEADLINE_SECONDS: positiveInteger.max(1_800),

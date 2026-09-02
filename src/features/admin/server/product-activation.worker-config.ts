@@ -28,7 +28,7 @@ const secureUrl = z
       context.addIssue({ code: z.ZodIssueCode.custom, message: "must use https" });
       return z.NEVER;
     }
-    return url.toString();
+    return url.toString().replace(/\/+$/, "");
   });
 
 const schema = z

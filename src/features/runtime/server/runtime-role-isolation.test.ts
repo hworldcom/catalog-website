@@ -58,7 +58,7 @@ function cloudEnvironment(): Record<string, string | undefined> {
     BAZORIA_PRODUCT_PUBLICATION_TASK_QUEUE: "product-activation",
     BAZORIA_PRODUCT_PUBLICATION_WORKER_URL: "https://worker.example.com",
     BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT: "task@example.com",
-    BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: "https://worker.example.com/",
+    BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: "https://worker.example.com",
     BAZORIA_PRODUCT_PUBLICATION_TASK_DISPATCH_DEADLINE_SECONDS: "270",
     BAZORIA_PRODUCT_PUBLICATION_TASK_CLIENT_TIMEOUT_SECONDS: "10",
     BAZORIA_PRODUCT_PUBLICATION_TASK_MAX_RETRY_DURATION_SECONDS: "420",
@@ -70,7 +70,7 @@ function cloudEnvironment(): Record<string, string | undefined> {
 function workerEnvironment(): Record<string, string | undefined> {
   return {
     ...baseEnvironment(),
-    BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: "https://worker.example.com/",
+    BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: "https://worker.example.com",
     BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT: "task@example.com",
     PORT: "8080",
   };

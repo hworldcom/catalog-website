@@ -7,6 +7,8 @@ const infrastructureRoot = join(repositoryRoot, "infrastructure/google-cloud");
 const environmentNames = ["uat", "production"];
 const terraformVersion = "1.15.9";
 const googleProviderConstraint = "~> 7.46.0";
+const publicWebsiteRuntimeModule =
+  "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf";
 
 function assertContract(condition, message) {
   if (!condition) {
@@ -31,6 +33,14 @@ function listFiles(path) {
     const child = join(path, entry);
     return statSync(child).isDirectory() ? listFiles(child) : [child];
   });
+}
+
+export function anonymousAccessIsAllowed(relativePath, source) {
+  const anonymousMemberCount = (source.match(/member\s*=\s*"allUsers"/g) ?? []).length;
+  return (
+    anonymousMemberCount === 0 ||
+    (relativePath === publicWebsiteRuntimeModule && anonymousMemberCount === 1)
+  );
 }
 
 export function validateEnvironmentIsolation(inventory) {
@@ -197,7 +207,7 @@ function validateTerraformSource() {
     "root .terraform-version differs from the reviewed version",
   );
 
-  for (const root of ["bootstrap", "platform"]) {
+  for (const root of ["bootstrap", "platform", "modules/runtime-activation-platform"]) {
     const versions = readFileSync(join(infrastructureRoot, root, "versions.tf"), "utf8");
     const lock = readFileSync(join(infrastructureRoot, root, ".terraform.lock.hcl"), "utf8");
     assertContract(
@@ -263,19 +273,17 @@ function validateTerraformSource() {
   ];
   for (const path of configurationFiles) {
     const source = readFileSync(path, "utf8");
+    const relativePath = relative(repositoryRoot, path);
     assertContract(
-      !source.includes("allUsers"),
-      `${relative(repositoryRoot, path)} grants anonymous access`,
+      anonymousAccessIsAllowed(relativePath, source),
+      `${relativePath} grants anonymous access outside the public website boundary`,
     );
     assertContract(
       !source.includes("allAuthenticatedUsers"),
-      `${relative(repositoryRoot, path)} grants public authenticated access`,
+      `${relativePath} grants public authenticated access`,
     );
     for (const pattern of forbiddenValuePatterns) {
-      assertContract(
-        !pattern.test(source),
-        `${relative(repositoryRoot, path)} contains a secret-shaped value`,
-      );
+      assertContract(!pattern.test(source), `${relativePath} contains a secret-shaped value`);
     }
   }
 }

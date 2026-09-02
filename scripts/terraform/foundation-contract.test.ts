@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  anonymousAccessIsAllowed,
   validateEnvironmentIsolation,
   validateFoundationContract,
 } from "./foundation-contract.mjs";
@@ -73,5 +74,20 @@ describe("Terraform foundation contract", () => {
     expect(() => validateEnvironmentIsolation(inventory)).toThrow(
       "production must use europe-west3",
     );
+  });
+
+  it("allows one anonymous invoker only in the public website runtime module", () => {
+    const runtimeModule = "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf";
+
+    expect(anonymousAccessIsAllowed(runtimeModule, 'member = "allUsers"')).toBe(true);
+    expect(
+      anonymousAccessIsAllowed(runtimeModule, 'member = "allUsers"\nmember = "allUsers"'),
+    ).toBe(false);
+    expect(
+      anonymousAccessIsAllowed(
+        "infrastructure/google-cloud/modules/other/main.tf",
+        'member = "allUsers"',
+      ),
+    ).toBe(false);
   });
 });

@@ -359,6 +359,49 @@ infrastructure verification and cannot be selected as a runtime image. Building
 the Bazoria application image and validating a runtime image digest are owned
 by later deployment tickets.
 
+## Plan-Only Cloud Run Activation Infrastructure
+
+Ticket `0038e3` adds an opt-in runtime module for the public website, private
+product-activation worker, reconciliation job, activation queue, and
+reconciliation scheduler. The normal checked-in UAT and production variable
+files omit `runtime_configuration`, so this ticket cannot deploy a placeholder
+image or change the already-applied foundation.
+
+The module accepts one image from the matching environment repository using an
+explicit `@sha256:` digest. It rejects mutable tags, another environment's
+repository, the reserved permission-smoke path, `latest` secret versions, and
+public or provider configuration belonging to another environment. The first
+real values and hosted apply remain owned by `0038f`.
+
+The worker uses the deterministic Cloud Run URL:
+
+```text
+https://bazoria-ENV-activation-worker-PROJECT_NUMBER.europe-west3.run.app
+```
+
+That same value is the task URL and OpenID Connect audience. The queue also
+enforces the private worker host, activation endpoint, task-invoker identity,
+rate, and retry policy. The application writes the reviewed 270-second
+dispatch deadline on every task because Cloud Tasks does not expose that value
+as queue configuration.
+
+Only the website and reconciliation identities receive queue-scoped
+`roles/cloudtasks.enqueuer` and `roles/cloudtasks.viewer`. The viewer grant is
+used only for the exact-name task lookup that resolves an ambiguous create.
+Only the task-invoker identity can invoke the worker, and only the scheduler
+identity can invoke the reconciliation job.
+
+Validate the inert platform root and the complete synthetic runtime plans with:
+
+```bash
+cd /Users/hoangdeveloper/catalog-website
+npm run infra:runtime:check
+npm run infra:terraform:validate
+```
+
+The synthetic digest exists only in Terraform tests and must never be passed to
+a hosted plan or apply.
+
 ## Applied Inventory
 
 After both roots are applied in both environments, write each non-secret output

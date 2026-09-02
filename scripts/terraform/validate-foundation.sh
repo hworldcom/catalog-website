@@ -14,10 +14,12 @@ node "${repository_root}/scripts/terraform/foundation-contract.mjs"
 node "${repository_root}/scripts/terraform/identity-contract.mjs"
 node "${repository_root}/scripts/terraform/secret-contract.mjs"
 node "${repository_root}/scripts/terraform/artifact-contract.mjs"
+node "${repository_root}/scripts/terraform/runtime-contract.mjs"
 terraform -chdir="${repository_root}/infrastructure/google-cloud" fmt -check -recursive
 
-for root in bootstrap platform; do
-  export TF_DATA_DIR="${repository_root}/.terraform-data/${root}"
+for root in bootstrap platform modules/runtime-activation-platform; do
+  data_directory="${root//\//-}"
+  export TF_DATA_DIR="${repository_root}/.terraform-data/${data_directory}"
   terraform -chdir="${repository_root}/infrastructure/google-cloud/${root}" init -backend=false -input=false
   terraform -chdir="${repository_root}/infrastructure/google-cloud/${root}" validate
   terraform -chdir="${repository_root}/infrastructure/google-cloud/${root}" test
