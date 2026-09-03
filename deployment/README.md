@@ -7,6 +7,13 @@ database connection strings.
 - `reference-data.json` is the exact category and product-audience baseline.
 - `environments/uat.json` records the isolated UAT project.
 - `environments/production.json` records the isolated production project.
+- `configuration-catalog.json` owns every environment variable, checked-in
+  release constant, consumer role, example policy, and browser-exposure rule.
+
+Run `npm run deployment:configuration:check` under Node.js 22.13.0 after
+changing runtime, release, fixture, migration, or local-tool configuration.
+Run `npm run deployment:browser-output:check` to build with synthetic
+server-secret sentinels and verify that none enter generated browser assets.
 
 Environment inventories are validated by the 0038c2 database and storage
 commands. Their `bootstrap` fields remain `null` until schema, reference data,

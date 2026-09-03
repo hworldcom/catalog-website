@@ -6,6 +6,11 @@ import {
   SupabaseAuthenticationError,
 } from "./request-authentication";
 
+const CONFIGURATION_AUDIT_ALLOWED_DYNAMIC_ENVIRONMENT_NAMES = [
+  "SUPABASE_URL",
+  "SUPABASE_PUBLISHABLE_KEY",
+] as const;
+
 const validToken = "header.payload.signature";
 const originalSupabaseUrl = process.env.SUPABASE_URL;
 const originalPublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;

@@ -4,6 +4,9 @@ import { createServer } from "node:net";
 
 const image = process.env.BAZORIA_CONTAINER_QA_IMAGE ?? "bazoria-web:0038a-qa";
 const containerPrefix = `bazoria-web-0038a-qa-${process.pid}`;
+const configurationCatalog = JSON.parse(
+  readFileSync("deployment/configuration-catalog.json", "utf8"),
+);
 
 try {
   assertFixtureBundleExcludedFromBuildContext();
@@ -118,6 +121,7 @@ async function runWebContainer(label, { expectedConfig }) {
     const runtimeConfig = await getJson(`${baseUrl}/api/runtime-config`);
     assertEqual(version, { releaseCommit: "qa-commit", buildId: "qa-build" }, "version");
     assertEqual(runtimeConfig, expectedConfig, `${label} runtime configuration`);
+    assertContainerBrowserBoundary(containerName, values);
     return { assetHash: browserAssetHash(containerName) };
   } finally {
     removeContainer(containerName);
@@ -134,6 +138,7 @@ async function runWorkerContainer() {
     BAZORIA_PRODUCT_PUBLICATION_ITEM_TIMEOUT_SECONDS: "30",
     BAZORIA_PRODUCT_PUBLICATION_WORKER_DEADLINE_SECONDS: "240",
     BAZORIA_PRODUCT_PUBLICATION_CLAIM_TIMEOUT_SECONDS: "360",
+    BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS: "10",
     SUPABASE_URL: "https://project.supabase.co",
     SUPABASE_SERVICE_ROLE_KEY: "qa-service-role-key",
     BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE: "https://worker.example.com/",
@@ -184,6 +189,7 @@ function assertFixtureBundleExcludedFromBuildContext() {
 function webEnvironment() {
   return {
     SUPABASE_SERVICE_ROLE_KEY: "qa-service-role-key",
+    OPENAI_API_KEY: "sk-qa-browser-boundary-sentinel-key",
     BAZORIA_PRODUCT_PUBLICATION_DISPATCH_MODE: "cloud_tasks",
     GOOGLE_CLOUD_PROJECT: "bazoria-uat",
     BAZORIA_PRODUCT_PUBLICATION_TASK_LOCATION: "europe-west3",
@@ -194,6 +200,55 @@ function webEnvironment() {
     BAZORIA_PRODUCT_PUBLICATION_TASK_DISPATCH_DEADLINE_SECONDS: "270",
     BAZORIA_PRODUCT_PUBLICATION_TASK_MAX_RETRY_DURATION_SECONDS: "420",
   };
+}
+
+function assertContainerBrowserBoundary(containerName, values) {
+  const entries = new Map(
+    configurationCatalog.environmentVariables.map((entry) => [entry.name, entry]),
+  );
+  const forbiddenNames = configurationCatalog.environmentVariables
+    .filter((entry) => entry.exposure.browserAssets === "forbidden")
+    .map((entry) => entry.name);
+  const forbiddenValues = Object.entries(values)
+    .filter(([name]) =>
+      ["server_secret", "protected_github_secret", "fixture_only_secret"].includes(
+        entries.get(name)?.valueClass,
+      ),
+    )
+    .map(([, value]) => value);
+  const payload = Buffer.from(JSON.stringify({ forbiddenNames, forbiddenValues })).toString(
+    "base64",
+  );
+  const result = execFileSyncWithStatus("docker", [
+    "exec",
+    containerName,
+    "node",
+    "-e",
+    `
+      const { readdirSync, readFileSync } = require("node:fs");
+      const { join } = require("node:path");
+      const contract = JSON.parse(Buffer.from(process.argv[1], "base64").toString("utf8"));
+      const files = [];
+      const visit = (root) => {
+        for (const entry of readdirSync(root, { withFileTypes: true })) {
+          const path = join(root, entry.name);
+          if (entry.isDirectory()) visit(path);
+          else if (entry.isFile()) files.push(path);
+        }
+      };
+      visit(".output/public");
+      for (const path of files) {
+        const contents = readFileSync(path);
+        for (const value of [...contract.forbiddenNames, ...contract.forbiddenValues]) {
+          if (contents.includes(Buffer.from(value))) process.exit(1);
+        }
+      }
+    `,
+    payload,
+  ]);
+  if (result.status !== 0) {
+    throw new Error("Container browser output contains a forbidden server name or value.");
+  }
 }
 
 function runDetachedContainer(containerName, port, values, command = []) {

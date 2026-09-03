@@ -7,6 +7,15 @@ import {
   preflightUatMarketplaceFixtureWorkflow,
 } from "./uat-marketplace-fixtures.workflow";
 
+export const CONFIGURATION_AUDIT_ALLOWED_DYNAMIC_ENVIRONMENT_NAMES = [
+  "BAZORIA_UAT_FIXTURE_VERIFY_RESULT_PATH",
+  "BAZORIA_UAT_FIXTURE_WORKFLOW_COMMIT",
+  "BAZORIA_UAT_FIXTURE_WORKFLOW_OPERATION",
+  "BAZORIA_UAT_FIXTURE_WORKFLOW_EXPECTED_PROJECT_REF",
+  "BAZORIA_UAT_FIXTURE_SUMMARY_JSON_PATH",
+  "BAZORIA_UAT_FIXTURE_SUMMARY_MARKDOWN_PATH",
+] as const;
+
 async function main(): Promise<void> {
   const action = process.argv[2];
   if (action === "preflight") {

@@ -12,9 +12,7 @@ const validInput = {
   currency_code: "PLN",
   environment: "uat",
   monthly_amount: 100,
-  notification_channel_names: [
-    "projects/bazoria-uat-lnlabs/notificationChannels/uat-email",
-  ],
+  notification_channel_names: ["projects/bazoria-uat-lnlabs/notificationChannels/uat-email"],
   project_id: "bazoria-uat-lnlabs",
   project_number: "145571383840",
 };
@@ -52,8 +50,9 @@ describe("operator-managed billing budget contract", () => {
       type: "email",
       verificationStatus: "VERIFIED",
     };
-    expect(() => validateNotificationChannelMetadata({ ...metadata, type: "sms" }, metadata.name))
-      .toThrow("type must be email");
+    expect(() =>
+      validateNotificationChannelMetadata({ ...metadata, type: "sms" }, metadata.name),
+    ).toThrow("type must be email");
     expect(() =>
       validateNotificationChannelMetadata(
         { ...metadata, verificationStatus: "UNVERIFIED" },

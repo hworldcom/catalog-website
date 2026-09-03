@@ -1,0 +1,3372 @@
+{
+  "schemaVersion": 1,
+  "publicRuntimeConfigurationKeys": [
+    "environment",
+    "supabaseUrl",
+    "supabasePublishableKey",
+    "classifierAssistedUploadEnabled",
+    "canonicalSiteOrigin",
+    "googleSignInEnabled"
+  ],
+  "environmentVariables": [
+    {
+      "name": "BAZORIA_ADMIN_PRODUCT_DRAFTS_ENABLED",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "true",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-draft-admin-gate.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/**",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "true", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_BUILD_ID",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "continuous_integration",
+          "environments": ["continuous_integration"],
+          "presence": "required",
+          "suppliedBy": "container"
+        }
+      ],
+      "validationSources": [
+        "Dockerfile",
+        "src/features/runtime/server/runtime-identity.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        "Dockerfile",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_BROWSER_OUTPUT_SIGNED_URL_SENTINEL",
+      "scope": "continuous_integration_tool",
+      "valueClass": "server_secret",
+      "consumers": [
+        {
+          "role": "continuous_integration",
+          "environments": ["local", "continuous_integration"],
+          "presence": "required",
+          "suppliedBy": "command"
+        }
+      ],
+      "validationSources": ["scripts/deployment/browser-output-contract.mjs"],
+      "permittedSourcePathPatterns": [
+        "scripts/deployment/browser-output-contract.mjs",
+        "scripts/deployment/browser-output-contract.test.ts"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "redacted",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_API_BASE_URL",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/classifier-import.config.ts",
+        "src/features/seller-classifier/server/seller-classifier-batch.config.ts"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/classifier-*",
+        "src/features/seller-classifier/server/**",
+        "src/features/runtime/server/*.test.ts",
+        "src/lib/runtime-public-config.test.ts",
+        "scripts/terraform/runtime-contract.mjs"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "synthetic", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_API_KEY",
+      "scope": "application_runtime",
+      "valueClass": "server_secret",
+      "consumers": [
+        {
+          "role": "disabled_classifier",
+          "environments": ["uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "absent",
+          "suppliedBy": "terraform_validation"
+        }
+      ],
+      "validationSources": ["scripts/terraform/runtime-contract.mjs"],
+      "permittedSourcePathPatterns": ["scripts/terraform/runtime-contract.mjs"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "redacted",
+        "terraformPlans": "sensitive",
+        "releaseRecords": "redacted"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_APPROVED_GROUPS_TIMEOUT_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/classifier-import.config.ts"],
+      "permittedSourcePathPatterns": ["src/features/admin/server/classifier-*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_ASSISTED_UPLOAD_ENABLED",
+      "scope": "application_runtime",
+      "valueClass": "browser_safe",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "false",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/classifier-release/server/classifier-assisted-upload-gate.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "allowed",
+        "browserConfigurationKey": "classifierAssistedUploadEnabled",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "false", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_BATCH_CREATE_TIMEOUT_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/seller-classifier/server/seller-classifier-batch.config.ts"
+      ],
+      "permittedSourcePathPatterns": ["src/features/seller-classifier/server/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_COMMAND_TIMEOUT_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/seller-classifier/server/seller-classifier-batch.config.ts"
+      ],
+      "permittedSourcePathPatterns": ["src/features/seller-classifier/server/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_IMAGE_READ_TIMEOUT_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/classifier-import.config.ts"],
+      "permittedSourcePathPatterns": ["src/features/admin/server/classifier-*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_IMPORT_DISPATCH_MODE",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "fixed",
+          "fixedValue": "local",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/classifier-import.config.ts"],
+      "permittedSourcePathPatterns": [".env.example", "src/features/admin/server/classifier-*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "local", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_IMPORT_RUN_LEASE_TIMEOUT_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/classifier-import.config.ts"],
+      "permittedSourcePathPatterns": ["src/features/admin/server/classifier-*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CLASSIFIER_IMPORT_WORKER_POLL_INTERVAL_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/classifier-import.config.ts"],
+      "permittedSourcePathPatterns": ["src/features/admin/server/classifier-*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_CONTAINER_QA_IMAGE",
+      "scope": "continuous_integration_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "continuous_integration",
+          "environments": ["local", "continuous_integration"],
+          "presence": "optional",
+          "suppliedBy": "command"
+        }
+      ],
+      "validationSources": ["scripts/qa-container-runtime.mjs"],
+      "permittedSourcePathPatterns": ["scripts/qa-container-runtime.mjs"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_DEFAULT_CLASSIFIER_ORGANIZATION_ID",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/classifier-import.config.ts",
+        "src/features/seller-classifier/server/seller-classifier-batch.config.ts"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/classifier-*",
+        "src/features/seller-classifier/server/**",
+        "src/features/classifier-release/**",
+        "src/features/runtime/server/*.test.ts",
+        "src/lib/runtime-public-config.test.ts",
+        "scripts/terraform/runtime-contract.mjs"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "synthetic", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_DEFAULT_SELLER_ID",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "disabled_classifier",
+          "environments": ["uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "absent",
+          "suppliedBy": "terraform_validation"
+        }
+      ],
+      "validationSources": ["scripts/terraform/runtime-contract.mjs"],
+      "permittedSourcePathPatterns": [
+        "scripts/terraform/runtime-contract.mjs",
+        "src/features/classifier-release/**",
+        "src/lib/runtime-public-config.test.ts"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_DELEGATED_ADMIN_ACTION_LEASE_TIMEOUT_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/delegated-administrator-action.config.ts"],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/delegated-administrator-action.config*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_DELEGATED_ADMIN_ACTION_TIMEOUT_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/delegated-administrator-action.config.ts"],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/delegated-administrator-action.config*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_DEPLOYMENT_ENVIRONMENT",
+      "scope": "application_runtime",
+      "valueClass": "browser_safe",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "fixed",
+          "fixedValue": "uat",
+          "suppliedBy": "github_variable"
+        }
+      ],
+      "validationSources": [
+        "src/lib/runtime-public-config.server.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "allowed",
+        "browserConfigurationKey": "environment",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "local", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_DESCRIPTION_GENERATION_MODEL",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/product-draft-description-generation/server/product-draft-description-generation.config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/product-draft-description-generation/server/**",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": {
+        "policy": "fixed",
+        "fixedValue": "gpt-5.4-nano",
+        "paths": [".env.example"]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_ENVIRONMENT",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "workflow_input"
+        }
+      ],
+      "validationSources": [".github/workflows/terraform-environment.yml"],
+      "permittedSourcePathPatterns": [".github/workflows/terraform-environment.yml"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_ARTIFACT_SERVICE_ACCOUNT",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "github_variable"
+        }
+      ],
+      "validationSources": [".github/workflows/artifact-release.yml"],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/artifact-release.yml",
+        ".github/workflows/terraform-environment.yml"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "github_variable"
+        }
+      ],
+      "validationSources": [".github/workflows/artifact-release.yml"],
+      "permittedSourcePathPatterns": [".github/workflows/artifact-release.yml"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_SIGN_IN_ENABLED",
+      "scope": "application_runtime",
+      "valueClass": "browser_safe",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "false",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/lib/runtime-public-config.server.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "allowed",
+        "browserConfigurationKey": "googleSignInEnabled",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "false", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_TERRAFORM_SERVICE_ACCOUNT",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "github_variable"
+        }
+      ],
+      "validationSources": [".github/workflows/terraform-environment.yml"],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/artifact-release.yml",
+        ".github/workflows/terraform-environment.yml"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_TERRAFORM_WORKLOAD_IDENTITY_PROVIDER",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "github_variable"
+        }
+      ],
+      "validationSources": [".github/workflows/terraform-environment.yml"],
+      "permittedSourcePathPatterns": [".github/workflows/terraform-environment.yml"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_IMAGE_PROMOTION_CLAIM_TIMEOUT_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "local_classifier",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/classifier-import.config.ts"],
+      "permittedSourcePathPatterns": ["src/features/admin/server/classifier-*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_IMAGE_STORAGE_HEAD_TIMEOUT_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/legacy-product-draft-image-cutover.config.ts"
+      ],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/classifier-*",
+        "src/features/admin/server/legacy-product-draft-image-cutover.config*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_IMAGE_STORAGE_WRITE_TIMEOUT_SECONDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/legacy-product-draft-image-cutover.config.ts"
+      ],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/classifier-*",
+        "src/features/admin/server/legacy-product-draft-image-cutover.config*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_ACTIVATION_RECONCILIATION_BATCH_SIZE",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation-reconciliation.config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation-reconciliation.config*",
+        "src/features/runtime/server/**",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "100", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_ACTIVATION_RECONCILIATION_DEADLINE_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation-reconciliation.config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation-reconciliation.config*",
+        "src/features/runtime/server/**",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "60", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_ACTIVATION_RECOVERY_BATCH_SIZE",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/product-activation.config.ts"],
+      "permittedSourcePathPatterns": ["src/features/admin/server/product-activation.config*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_ACTIVATION_RECOVERY_INTERVAL_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/product-activation.config.ts"],
+      "permittedSourcePathPatterns": ["src/features/admin/server/product-activation.config*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_CLAIM_TIMEOUT_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/seller/server/product-publication.config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/product-activation*",
+        "src/features/seller/server/product-publication*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "scripts/terraform/runtime-contract.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_DISPATCH_MODE",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "cloud_tasks",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "cloud_tasks",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "fixed",
+          "fixedValue": "local",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/seller/server/product-publication.config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/seller/server/product-publication*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "local", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_ITEM_CONCURRENCY",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.worker-config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/product-activation*",
+        "src/features/seller/server/product-publication*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_ITEM_TIMEOUT_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.worker-config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/product-activation*",
+        "src/features/seller/server/product-publication*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_MAXIMUM_IMAGE_COUNT",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.worker-config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/product-activation*",
+        "src/features/seller/server/product-publication*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/seller/server/product-publication*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "blank", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_TASK_CLIENT_TIMEOUT_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "10", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_TASK_DISPATCH_DEADLINE_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "270", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_TASK_LOCATION",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "blank", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.worker-config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "scripts/terraform/runtime-contract.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_TASK_MAX_RETRY_DURATION_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "420", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_TASK_QUEUE",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "blank", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "blank", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_WORKER_DEADLINE_SECONDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.worker-config.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        "src/features/admin/server/product-activation*",
+        "src/features/seller/server/product-publication*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_PUBLICATION_WORKER_URL",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "blank", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PRODUCT_RESET_QA_USER_IDS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "migration",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/product-data-reset.config.ts"],
+      "permittedSourcePathPatterns": ["src/features/admin/server/product-data-reset.config*"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PROTOTYPE_ADMIN_USER_IDS",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/prototype-administrator-access.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/**",
+        "src/features/seller/server/*.test.ts",
+        "infrastructure/google-cloud/**",
+        "supabase/environments/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "name_only"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          ".env.example",
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_PUBLIC_SITE_URL",
+      "scope": "application_runtime",
+      "valueClass": "browser_safe",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/lib/public-site-origin.ts",
+        "infrastructure/google-cloud/runtime-catalog.json"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "allowed",
+        "browserConfigurationKey": "canonicalSiteOrigin",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "synthetic", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_RELEASE_COMMIT",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "continuous_integration",
+          "environments": ["continuous_integration"],
+          "presence": "required",
+          "suppliedBy": "container"
+        }
+      ],
+      "validationSources": [
+        "Dockerfile",
+        "src/features/runtime/server/runtime-identity.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        "Dockerfile",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_SUPABASE_BACKUP_RETENTION",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "local_environment_file"
+        }
+      ],
+      "validationSources": [
+        "supabase/environments/uat.env.example",
+        "supabase/environments/production.env.example"
+      ],
+      "permittedSourcePathPatterns": ["supabase/environments/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_SUPABASE_DATABASE_URL",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_secret",
+      "consumers": [
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        },
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "temporary_file"
+        }
+      ],
+      "validationSources": [
+        "scripts/supabase/database-tooling.mjs",
+        "supabase/environments/uat.env.example"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "scripts/supabase/**",
+        "src/lib/supabase/*.test.ts",
+        "supabase/environments/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "redacted",
+        "terraformPlans": "sensitive",
+        "releaseRecords": "redacted"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_SUPABASE_MANAGED_BACKUPS",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "local_environment_file"
+        }
+      ],
+      "validationSources": [
+        "supabase/environments/uat.env.example",
+        "supabase/environments/production.env.example"
+      ],
+      "permittedSourcePathPatterns": ["supabase/environments/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_SUPABASE_ORGANIZATION_ID",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "local_environment_file"
+        }
+      ],
+      "validationSources": [
+        "supabase/environments/uat.env.example",
+        "supabase/environments/production.env.example"
+      ],
+      "permittedSourcePathPatterns": ["supabase/environments/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_SUPABASE_PLAN",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "local_environment_file"
+        }
+      ],
+      "validationSources": [
+        "supabase/environments/uat.env.example",
+        "supabase/environments/production.env.example"
+      ],
+      "permittedSourcePathPatterns": ["supabase/environments/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_SUPABASE_POINT_IN_TIME_RECOVERY",
+      "scope": "local_tool",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "local_environment_file"
+        }
+      ],
+      "validationSources": [
+        "supabase/environments/uat.env.example",
+        "supabase/environments/production.env.example"
+      ],
+      "permittedSourcePathPatterns": ["supabase/environments/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_SUPABASE_PROJECT_REF",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        },
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "temporary_file"
+        }
+      ],
+      "validationSources": [
+        "scripts/supabase/database-tooling.mjs",
+        "supabase/environments/uat.env.example"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "scripts/supabase/**",
+        "src/lib/supabase/*.test.ts",
+        "supabase/environments/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_DATABASE_URL",
+      "scope": "fixture_workflow",
+      "valueClass": "fixture_only_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "github_secret"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.config.ts",
+        ".github/workflows/uat-marketplace-fixtures.yml"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*",
+        "scripts/terraform/runtime-contract.mjs"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "redacted",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "redacted"
+      },
+      "localExample": { "policy": "blank", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_ADMIN_USER_ID",
+      "scope": "fixture_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "github_variable"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.config.ts",
+        ".github/workflows/uat-marketplace-fixtures.yml"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_ASSET_DIR",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["local", "uat"],
+          "presence": "optional",
+          "suppliedBy": "local"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/uat-marketplace-fixtures.config.ts"],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "synthetic", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_PROJECT_REF",
+      "scope": "fixture_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "github_variable"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.config.ts",
+        ".github/workflows/uat-marketplace-fixtures.yml"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_RESET_CONFIRMATION",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "optional",
+          "suppliedBy": "workflow_input"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.workflow.ts",
+        ".github/workflows/uat-marketplace-fixtures.yml"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_RESET_RESULT_PATH",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "optional",
+          "suppliedBy": "workflow"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.workflow-command.ts"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_RESULT_PATH",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "workflow"
+        }
+      ],
+      "validationSources": ["src/features/admin/server/uat-marketplace-fixtures.command.ts"],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_SUMMARY_JSON_PATH",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "workflow"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.workflow-command.ts"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_SUMMARY_MARKDOWN_PATH",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "workflow"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.workflow-command.ts"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_USER_PASSWORD",
+      "scope": "fixture_workflow",
+      "valueClass": "fixture_only_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "github_secret"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.config.ts",
+        ".github/workflows/uat-marketplace-fixtures.yml"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*",
+        "scripts/terraform/runtime-contract.mjs"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "redacted",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "redacted"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_VERIFY_RESULT_PATH",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "workflow"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.workflow-command.ts"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_WORKFLOW_COMMIT",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "workflow_input"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.workflow.ts",
+        ".github/workflows/uat-marketplace-fixtures.yml"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_WORKFLOW_EXPECTED_PROJECT_REF",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "workflow_input"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.workflow.ts",
+        ".github/workflows/uat-marketplace-fixtures.yml"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "BAZORIA_UAT_FIXTURE_WORKFLOW_OPERATION",
+      "scope": "fixture_workflow",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "workflow_input"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/uat-marketplace-fixtures.workflow.ts",
+        ".github/workflows/uat-marketplace-fixtures.yml"
+      ],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/features/admin/server/uat-marketplace-fixtures*"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "GOOGLE_CLOUD_PROJECT",
+      "scope": "application_runtime",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "blank", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "HOST",
+      "scope": "platform_provided",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local", "uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "0.0.0.0",
+          "suppliedBy": "container"
+        }
+      ],
+      "validationSources": ["Dockerfile"],
+      "permittedSourcePathPatterns": ["Dockerfile"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "K_REVISION",
+      "scope": "platform_provided",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "optional",
+          "suppliedBy": "platform"
+        }
+      ],
+      "validationSources": ["src/features/runtime/server/runtime-identity.ts"],
+      "permittedSourcePathPatterns": ["src/features/runtime/server/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+    {
+      "name": "NODE_ENV",
+      "scope": "platform_provided",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local", "uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "production",
+          "suppliedBy": "container"
+        }
+      ],
+      "validationSources": ["Dockerfile"],
+      "permittedSourcePathPatterns": [
+        "Dockerfile",
+        ".env.example",
+        "src/features/seller/server/product-publication.config.test.ts"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "development", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "OPENAI_API_KEY",
+      "scope": "application_runtime",
+      "valueClass": "server_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/product-draft-description-generation/server/product-draft-description-generation.config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/product-draft-description-generation/server/**",
+        "scripts/deployment/browser-output-contract.mjs",
+        "scripts/qa-container-runtime.mjs",
+        "scripts/terraform/monitoring-contract.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "redacted",
+        "terraformPlans": "sensitive",
+        "releaseRecords": "redacted"
+      },
+      "localExample": { "policy": "blank", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "PORT",
+      "scope": "platform_provided",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local", "uat", "production"],
+          "presence": "optional",
+          "suppliedBy": "platform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "fixed",
+          "fixedValue": "8080",
+          "suppliedBy": "terraform"
+        }
+      ],
+      "validationSources": [
+        "src/features/admin/server/product-activation.worker-config.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/features/admin/server/product-activation.worker-config*",
+        "src/features/runtime/server/**",
+        "scripts/qa-container-runtime.mjs",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "fixed", "fixedValue": "8080", "paths": [".env.example"] },
+      "status": "active"
+    },
+    {
+      "name": "SUPABASE_PUBLISHABLE_KEY",
+      "scope": "application_runtime",
+      "valueClass": "browser_safe",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": [
+        "src/lib/runtime-public-config.server.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        "src/**",
+        "scripts/**",
+        "infrastructure/google-cloud/**",
+        "supabase/environments/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "allowed",
+        "browserConfigurationKey": "supabasePublishableKey",
+        "browserAssets": "allowed",
+        "logs": "name_only",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "redacted"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          ".env.example",
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "scope": "application_runtime",
+      "valueClass": "server_secret",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        },
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "github_secret"
+        }
+      ],
+      "validationSources": [
+        "src/lib/supabase/client.server.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/**/server/**",
+        "src/**/*.server.ts",
+        "src/**/*.test.ts",
+        "scripts/**",
+        "infrastructure/google-cloud/**",
+        "supabase/environments/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "redacted",
+        "terraformPlans": "sensitive",
+        "releaseRecords": "redacted"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          ".env.example",
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "SUPABASE_URL",
+      "scope": "application_runtime",
+      "valueClass": "browser_safe",
+      "consumers": [
+        {
+          "role": "website",
+          "environments": ["local"],
+          "presence": "required",
+          "suppliedBy": "local"
+        },
+        {
+          "role": "website",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "activation_worker",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "reconciliation_job",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "terraform"
+        },
+        {
+          "role": "migration",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        },
+        {
+          "role": "uat_fixture",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "github_variable"
+        }
+      ],
+      "validationSources": [
+        "src/lib/runtime-public-config.server.ts",
+        "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
+      ],
+      "permittedSourcePathPatterns": [
+        ".env.example",
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        "src/**",
+        "scripts/**",
+        "infrastructure/google-cloud/**",
+        "supabase/environments/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "allowed",
+        "browserConfigurationKey": "supabaseUrl",
+        "browserAssets": "allowed",
+        "logs": "name_only",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "name_only"
+      },
+      "localExample": {
+        "policy": "blank",
+        "paths": [
+          ".env.example",
+          "supabase/environments/uat.env.example",
+          "supabase/environments/production.env.example"
+        ]
+      },
+      "status": "active"
+    },
+    {
+      "name": "npm_config_package_lock_only",
+      "scope": "platform_provided",
+      "valueClass": "server_non_secret",
+      "consumers": [
+        {
+          "role": "continuous_integration",
+          "environments": ["local", "continuous_integration"],
+          "presence": "optional",
+          "suppliedBy": "npm"
+        }
+      ],
+      "validationSources": ["scripts/check-rolldown-binding.cjs"],
+      "permittedSourcePathPatterns": ["scripts/check-rolldown-binding.cjs"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "not_applicable"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "active"
+    },
+
+    {
+      "name": "BAZORIA_SUPABASE_SERVICE_ROLE_SECRET_VERSION",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "valueFormat": "positive_decimal",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/secret-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f3"
+    },
+    {
+      "name": "BAZORIA_OPENAI_API_KEY_SECRET_VERSION",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "valueFormat": "positive_decimal",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/secret-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f3"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_PROJECT_ID",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/inventory/reviewed-environments.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f2"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_REGION",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/runtime-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f2"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/inventory/reviewed-identity-access.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f2"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/inventory/reviewed-identity-access.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f2"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_WEBSITE_SERVICE_NAME",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/runtime-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f3"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_ACTIVATION_WORKER_SERVICE_NAME",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/runtime-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f3"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_RECONCILIATION_JOB_NAME",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/runtime-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f3"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_ACTIVATION_QUEUE_NAME",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/runtime-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f3"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_RECONCILIATION_SCHEDULER_NAME",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/runtime-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f3"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_OBSERVE_SERVICE_ACCOUNT",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "infrastructure_observation",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/identity-catalog.json"],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/terraform-drift.yml",
+        "scripts/deployment/**",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f6"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_OBSERVE_WORKLOAD_IDENTITY_PROVIDER",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "infrastructure_observation",
+          "environments": ["uat", "production"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/identity-catalog.json"],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/terraform-drift.yml",
+        "scripts/deployment/**",
+        "infrastructure/google-cloud/**"
+      ],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "name_only",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "name_only"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f6"
+    }
+  ],
+  "sourceConstants": [
+    {
+      "name": "BAZORIA_FALLBACK_SOCIAL_IMAGE_PATH",
+      "sourcePath": "src/features/marketplace/social-sharing.ts",
+      "owningRole": "website",
+      "validationSource": "src/features/marketplace/social-sharing.ts",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": "/assets/social/bazoria-default.jpg"
+    },
+    {
+      "name": "PRODUCT_DESCRIPTION_PIPELINE_VERSION",
+      "sourcePath": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "owningRole": "website",
+      "validationSource": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": "product-description-v3"
+    },
+    {
+      "name": "PRODUCT_DESCRIPTION_PROVIDER_TIMEOUT_MS",
+      "sourcePath": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "owningRole": "website",
+      "validationSource": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": 45000
+    },
+    {
+      "name": "PRODUCT_DESCRIPTION_OPERATION_TIMEOUT_MS",
+      "sourcePath": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "owningRole": "website",
+      "validationSource": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": 60000
+    },
+    {
+      "name": "PRODUCT_DESCRIPTION_CLAIM_EXPIRY_SECONDS",
+      "sourcePath": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "owningRole": "website",
+      "validationSource": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": 180
+    },
+    {
+      "name": "PRODUCT_DESCRIPTION_MAX_OUTPUT_TOKENS",
+      "sourcePath": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "owningRole": "website",
+      "validationSource": "src/features/product-draft-description-generation/product-draft-description-generation.types.ts",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": 6000
+    },
+    {
+      "name": "PRODUCT_DESCRIPTION_COVER_MAX_BYTES",
+      "sourcePath": "src/features/product-draft-description-generation/product-description-cover-image.gateway.ts",
+      "owningRole": "website",
+      "validationSource": "src/features/product-draft-description-generation/product-description-cover-image.gateway.ts",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": 20971520
+    },
+    {
+      "name": "PRODUCT_DESCRIPTION_COVER_TIMEOUT_MS",
+      "sourcePath": "src/features/product-draft-description-generation/product-description-cover-image.gateway.ts",
+      "owningRole": "website",
+      "validationSource": "src/features/product-draft-description-generation/product-description-cover-image.gateway.ts",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": 10000
+    },
+    {
+      "name": "BAZORIA_UPTIME_MARKER",
+      "sourcePath": "src/routes/__root.tsx",
+      "owningRole": "website",
+      "validationSource": "src/routes/__root.tsx",
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "allowed",
+        "logs": "value_allowed",
+        "terraformPlans": "not_applicable",
+        "releaseRecords": "value_allowed"
+      },
+      "expectedValue": "bazoria-public-catalog-v1"
+    }
+  ]
+}
