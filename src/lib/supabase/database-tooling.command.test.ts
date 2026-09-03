@@ -9,6 +9,7 @@ import {
   assertEnvironmentCurrent,
   assertSupportedRuntime,
   classifyMigrationHistory,
+  ensureLocalSupabaseStarted,
   normalizeGeneratedTypes,
   parseEnvironmentArguments,
   parseEnvironmentFile,
@@ -16,6 +17,7 @@ import {
   repositoryRoot,
   runEnvironmentMigration,
   runEnvironmentPreflight,
+  runLocalDatabaseAction,
   validateEnvironmentTarget,
 } from "../../../scripts/supabase/database-tooling.mjs";
 
@@ -242,5 +244,91 @@ describe("database tooling error safety", () => {
       name: "DatabaseToolingError",
       reason: "stable_reason",
     });
+  });
+});
+
+describe("local database verification", () => {
+  it("does not expose local credentials when starting Supabase", () => {
+    const runCommand = vi.fn();
+
+    ensureLocalSupabaseStarted({
+      ensureDocker: vi.fn(),
+      spawnCommand: vi.fn(() => ({ status: 1 })),
+      runCommand,
+    });
+
+    expect(runCommand).toHaveBeenCalledWith(["start"], {
+      capture: true,
+      reason: "supabase_local_start_failed",
+    });
+  });
+
+  it("starts, resets, lints, tests once, and checks generated types in order", async () => {
+    const operations: string[] = [];
+    const runCommand = vi.fn((args: string[]) => operations.push(args.join(" ")));
+
+    await runLocalDatabaseAction("verify", {
+      assertRuntime: () => operations.push("runtime"),
+      ensureStarted: () => operations.push("start"),
+      runCommand,
+      checkGeneratedTypes: () => operations.push("types"),
+    });
+
+    expect(operations).toEqual([
+      "runtime",
+      "start",
+      "db reset --local --no-seed",
+      "db lint --local --level warning --fail-on error",
+      "test db --local",
+      "types",
+    ]);
+    expect(runCommand).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    ["db reset", "supabase_local_migration_failed"],
+    ["db lint", "supabase_local_lint_failed"],
+    ["test db", "supabase_sql_contract_test_failed"],
+  ])("preserves the %s failure code and stops later operations", async (command, reason) => {
+    const operations: string[] = [];
+
+    await expect(
+      runLocalDatabaseAction("verify", {
+        assertRuntime: vi.fn(),
+        ensureStarted: () => operations.push("start"),
+        runCommand: (args: string[], options: { reason: string }) => {
+          const current = args.slice(0, 2).join(" ");
+          operations.push(current);
+          if (current === command) throw new DatabaseToolingError(options.reason);
+        },
+        checkGeneratedTypes: () => operations.push("types"),
+      }),
+    ).rejects.toMatchObject({ reason });
+
+    const failureIndex = operations.indexOf(command);
+    expect(failureIndex).toBeGreaterThan(-1);
+    expect(operations.slice(failureIndex + 1)).toEqual([]);
+  });
+
+  it("preserves startup and generated-type failure codes", async () => {
+    await expect(
+      runLocalDatabaseAction("verify", {
+        assertRuntime: vi.fn(),
+        ensureStarted: () => {
+          throw new DatabaseToolingError("supabase_local_start_failed");
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "supabase_local_start_failed" });
+
+    await expect(
+      runLocalDatabaseAction("verify", {
+        assertRuntime: vi.fn(),
+        ensureStarted: vi.fn(),
+        runCommand: vi.fn(),
+        checkGeneratedTypes: () => {
+          throw new DatabaseToolingError("supabase_generated_type_drift");
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "supabase_generated_type_drift" });
   });
 });

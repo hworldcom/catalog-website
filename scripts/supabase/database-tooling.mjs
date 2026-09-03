@@ -374,58 +374,69 @@ export function ensureDockerRuntime() {
   }
 }
 
-export function ensureLocalSupabaseStarted() {
-  ensureDockerRuntime();
-  const status = spawnSync(supabaseExecutable, ["status", "--output", "env"], {
+export function ensureLocalSupabaseStarted(dependencies = {}) {
+  const ensureDocker = dependencies.ensureDocker ?? ensureDockerRuntime;
+  const spawnCommand = dependencies.spawnCommand ?? spawnSync;
+  const runCommand = dependencies.runCommand ?? runSupabase;
+
+  ensureDocker();
+  const status = spawnCommand(supabaseExecutable, ["status", "--output", "env"], {
     cwd: repositoryRoot,
     encoding: "utf8",
     stdio: "pipe",
   });
   if (status.status !== 0) {
-    runSupabase(["start"], {
-      capture: false,
+    runCommand(["start"], {
+      capture: true,
       reason: "supabase_local_start_failed",
     });
   }
 }
 
-export function runLocalDatabaseAction(action) {
-  assertSupportedRuntime();
+export async function runLocalDatabaseAction(action, dependencies = {}) {
+  const assertRuntime = dependencies.assertRuntime ?? assertSupportedRuntime;
+  const ensureDocker = dependencies.ensureDocker ?? ensureDockerRuntime;
+  const ensureStarted = dependencies.ensureStarted ?? ensureLocalSupabaseStarted;
+  const runCommand = dependencies.runCommand ?? runSupabase;
+  const checkGeneratedTypes = dependencies.checkGeneratedTypes ?? checkLocalGeneratedTypes;
+
+  assertRuntime();
   if (action === "start") {
-    ensureLocalSupabaseStarted();
+    await ensureStarted();
     return;
   }
 
-  ensureDockerRuntime();
   if (action === "reset") {
-    runSupabase(["db", "reset", "--local", "--no-seed"], {
+    ensureDocker();
+    runCommand(["db", "reset", "--local", "--no-seed"], {
       capture: false,
       reason: "supabase_local_migration_failed",
     });
     return;
   }
   if (action === "test") {
-    runSupabase(["test", "db", "--local"], {
+    ensureDocker();
+    runCommand(["test", "db", "--local"], {
       capture: false,
       reason: "supabase_sql_contract_test_failed",
     });
     return;
   }
   if (action === "verify") {
-    ensureLocalSupabaseStarted();
-    runSupabase(["db", "reset", "--local", "--no-seed"], {
+    await ensureStarted();
+    runCommand(["db", "reset", "--local", "--no-seed"], {
       capture: false,
       reason: "supabase_local_migration_failed",
     });
-    runSupabase(["test", "db", "--local"], {
+    runCommand(["db", "lint", "--local", "--level", "warning", "--fail-on", "error"], {
+      capture: false,
+      reason: "supabase_local_lint_failed",
+    });
+    runCommand(["test", "db", "--local"], {
       capture: false,
       reason: "supabase_sql_contract_test_failed",
     });
-    runSupabase(["test", "db", "--local", "supabase/tests/0038c1_deployment_foundation.test.sql"], {
-      capture: false,
-      reason: "supabase_deployment_foundation_failed",
-    });
-    return checkLocalGeneratedTypes();
+    return checkGeneratedTypes();
   }
   throw new DatabaseToolingError(
     "supabase_local_action_invalid",

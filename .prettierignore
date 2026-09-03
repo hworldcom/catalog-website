@@ -6,3 +6,6 @@ pnpm-lock.yaml
 package-lock.json
 bun.lock
 routeTree.gen.ts
+infrastructure/google-cloud/inventory/applied-foundation.json
+supabase/tests/helpers/*.inc
+tickets/

@@ -1,0 +1,184 @@
+name: Bazoria continuous integration workflow
+
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: continuous-integration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  configuration-and-secrets:
+    name: Configuration and secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out complete source history
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Pin and verify npm
+        run: |
+          npm install --global npm@10.9.2
+          test "$(node --version)" = "v22.13.0"
+          test "$(npm --version)" = "10.9.2"
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate configuration and workflow contracts
+        run: |
+          npm run deployment:configuration:check
+          npm run deployment:github-actions:check
+          npm run deployment:continuous-integration:check
+          npm run deployment:gitleaks:check
+      - name: Scan current source and introduced commits
+        env:
+          SCAN_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          SCAN_EVENT: ${{ github.event_name }}
+          SCAN_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          npm run deployment:gitleaks:scan --
+          --event "$SCAN_EVENT"
+          --base "$SCAN_BASE"
+          --head "$SCAN_HEAD"
+
+  application:
+    name: Application
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Pin and verify npm
+        run: |
+          npm install --global npm@10.9.2
+          test "$(node --version)" = "v22.13.0"
+          test "$(npm --version)" = "10.9.2"
+      - name: Install dependencies
+        run: npm ci
+      - name: Check formatting
+        run: npm run format:check
+      - name: Lint source
+        run: npm run lint
+      - name: Run complete application test suite
+        run: npm run test
+      - name: Build and audit browser output
+        run: npm run deployment:browser-output:check
+
+  container:
+    name: Container
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Pin and verify npm
+        run: |
+          npm install --global npm@10.9.2
+          test "$(node --version)" = "v22.13.0"
+          test "$(npm --version)" = "10.9.2"
+      - name: Install dependencies
+        run: npm ci
+      - name: Build and validate all container roles
+        run: npm run qa:container-runtime
+
+  database:
+    name: Database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Pin and verify npm
+        run: |
+          npm install --global npm@10.9.2
+          test "$(node --version)" = "v22.13.0"
+          test "$(npm --version)" = "10.9.2"
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify local database from migrations
+        run: npm run db:local:verify
+
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Pin and verify npm
+        run: |
+          npm install --global npm@10.9.2
+          test "$(node --version)" = "v22.13.0"
+          test "$(npm --version)" = "10.9.2"
+      - name: Install dependencies
+        run: npm ci
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+      - name: Run Terraform JavaScript contract tests
+        run: npm run test -- scripts/terraform
+      - name: Validate every Terraform root
+        run: npm run infra:terraform:validate
+
+  required:
+    name: Bazoria continuous integration
+    if: ${{ always() }}
+    needs:
+      - configuration-and-secrets
+      - application
+      - container
+      - database
+      - terraform
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation job to succeed
+        env:
+          VALIDATION_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          jq --exit-status '
+            (keys | length) == 5 and
+            ([.[] | .result] | all(. == "success"))
+          ' <<< "$VALIDATION_RESULTS" > /dev/null

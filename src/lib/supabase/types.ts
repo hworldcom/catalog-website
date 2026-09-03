@@ -4265,6 +4265,13 @@ export type Database = {
           seller_id: string;
         }[];
       };
+      read_product_activation_dispatch_health: {
+        Args: never;
+        Returns: {
+          oldest_pending_created_at: string;
+          pending_count: number;
+        }[];
+      };
       read_product_moderation_action_identity: {
         Args: {
           p_product_id: string;
@@ -4276,13 +4283,6 @@ export type Database = {
           product_owned: boolean;
           run_owned: boolean;
           submission_owned: boolean;
-        }[];
-      };
-      read_product_activation_dispatch_health: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          oldest_pending_created_at: string | null;
-          pending_count: number;
         }[];
       };
       read_product_moderation_edit_state: {

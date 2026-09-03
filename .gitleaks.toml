@@ -1,0 +1,11 @@
+title = "Bazoria repository secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Synthetic provider keys in focused configuration tests"
+paths = [
+  '''(^|/)src/features/product-draft-description-generation/server/product-draft-description-generation\.config\.test\.ts$''',
+  '''(^|/)src/features/product-draft-description-generation/server/openai-product-description-generation\.provider\.test\.ts$''',
+]

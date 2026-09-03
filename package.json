@@ -59,6 +59,10 @@
     "qa:container-runtime": "node ./scripts/qa-container-runtime.mjs",
     "deployment:configuration:check": "node ./scripts/deployment/configuration-contract.mjs",
     "deployment:browser-output:check": "node ./scripts/deployment/browser-output-contract.mjs",
+    "deployment:github-actions:check": "node ./scripts/deployment/github-actions-contract.mjs",
+    "deployment:gitleaks:check": "node ./scripts/deployment/gitleaks-contract.mjs check",
+    "deployment:gitleaks:scan": "node ./scripts/deployment/gitleaks-contract.mjs scan",
+    "deployment:continuous-integration:check": "node ./scripts/deployment/continuous-integration-contract.mjs",
     "infra:foundation:check": "node ./scripts/terraform/foundation-contract.mjs && node ./scripts/terraform/identity-contract.mjs && node ./scripts/terraform/secret-contract.mjs && node ./scripts/terraform/artifact-contract.mjs && node ./scripts/terraform/runtime-contract.mjs && node ./scripts/terraform/edge-contract.mjs && node ./scripts/terraform/monitoring-contract.mjs && node ./scripts/terraform/budget-contract.mjs",
     "infra:foundation:plan:check": "node ./scripts/terraform/foundation-plan-contract.mjs",
     "infra:identity:check": "node ./scripts/terraform/identity-contract.mjs",
@@ -81,7 +85,8 @@
     "db:environment:migrate": "node ./scripts/supabase/environment-command.mjs migrate",
     "db:environment:verify": "node ./scripts/supabase/deployment-command.mjs verify",
     "db:environment:storage-smoke": "node ./scripts/supabase/deployment-command.mjs storage-smoke",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@fontsource/bodoni-moda": "^5.3.0",
