@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -58,11 +58,7 @@ export function verifyArchiveChecksum(contents, expected = GITLEAKS_RELEASE.chec
 }
 
 export async function runGitleaksScan(options) {
-  if (process.platform !== "linux" || process.arch !== "x64") {
-    fail("the continuous integration scanner requires Linux x64");
-  }
-  if (!existsSync(configPath)) fail(".gitleaks.toml is missing");
-  validateGitleaksConfiguration(readFileSync(configPath, "utf8"));
+  assertScannerRuntime();
   const range = resolveIntroducedCommitRange(options);
   assertCommitAvailable(options.head);
   if (range) assertCommitAvailable(options.base);
@@ -89,6 +85,30 @@ export async function runGitleaksScan(options) {
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+}
+
+export async function runGitleaksDirectoryScan(target) {
+  assertScannerRuntime();
+  const directoryTarget = resolve(target);
+  if (!existsSync(directoryTarget) || !statSync(directoryTarget).isDirectory()) {
+    fail("scan directory is unavailable");
+  }
+  const directory = await mkdtemp(join(tmpdir(), "bazoria-gitleaks-directory-"));
+  try {
+    const executable = await installGitleaks(directory);
+    run(executable, scannerArguments("dir", directoryTarget));
+    return { path: directoryTarget, version: GITLEAKS_RELEASE.version };
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+function assertScannerRuntime() {
+  if (process.platform !== "linux" || process.arch !== "x64") {
+    fail("the continuous integration scanner requires Linux x64");
+  }
+  if (!existsSync(configPath)) fail(".gitleaks.toml is missing");
+  validateGitleaksConfiguration(readFileSync(configPath, "utf8"));
 }
 
 async function installGitleaks(directory) {
@@ -150,6 +170,13 @@ function parseArguments(argv) {
   return values;
 }
 
+export function parseDirectoryScanArgument(argv) {
+  if (argv.length !== 2 || argv[0] !== "--path" || !argv[1]) {
+    fail("expected one --path argument");
+  }
+  return argv[1];
+}
+
 function isDirectExecution() {
   return process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 }
@@ -163,8 +190,13 @@ if (isDirectExecution()) {
     } else if (action === "scan") {
       const result = await runGitleaksScan(parseArguments(process.argv.slice(3)));
       process.stdout.write(`${JSON.stringify({ status: "passed", ...result })}\n`);
+    } else if (action === "scan-directory") {
+      const result = await runGitleaksDirectoryScan(
+        parseDirectoryScanArgument(process.argv.slice(3)),
+      );
+      process.stdout.write(`${JSON.stringify({ status: "passed", ...result })}\n`);
     } else {
-      fail("expected check or scan action");
+      fail("expected check, scan, or scan-directory action");
     }
   } catch (error) {
     process.stderr.write(

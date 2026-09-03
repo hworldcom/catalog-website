@@ -42,6 +42,7 @@ jobs:
           npm run deployment:github-actions:check
           npm run deployment:continuous-integration:check
           npm run deployment:gitleaks:check
+          npm run deployment:release-artifact:check
       - name: Scan current source and introduced commits
         env:
           SCAN_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}

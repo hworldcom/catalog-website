@@ -1,15 +1,28 @@
-name: Artifact release identity verification
+name: Artifact release
 
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: Artifact operation to perform
+        required: true
+        default: verify-identity
+        type: choice
+        options:
+          - verify-identity
+          - publish
       environment:
-        description: Protected environment to verify
+        description: Protected environment to use
         required: true
         type: choice
         options:
           - uat
           - production
+      git_commit:
+        description: Exact main-branch commit required only for UAT publication
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -20,23 +33,56 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify:
-    name: Verify ${{ inputs.environment }} artifact identity
-    environment: ${{ inputs.environment }}
-    runs-on: ubuntu-latest
+  validate-request:
+    name: Validate artifact request
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
+    steps:
+      - name: Require the trusted workflow branch
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+        run: test "${WORKFLOW_REF}" = "refs/heads/main"
+      - name: Check out complete trusted source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Pin and verify npm
+        run: |
+          npm install --global npm@10.9.2
+          test "$(node --version)" = "v22.13.0"
+          test "$(npm --version)" = "10.9.2"
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate release source and request
+        run: |
+          npm run deployment:release-artifact:check
+          npm run deployment:release-artifact:preflight -- \
+            --operation "${{ inputs.operation }}" \
+            --environment "${{ inputs.environment }}" \
+            --git-commit "${{ inputs.git_commit }}"
 
+  verify-identity:
+    name: Verify ${{ inputs.environment }} artifact identity
+    if: ${{ inputs.operation == 'verify-identity' }}
+    needs: validate-request
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Check out source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-
       - name: Install ORAS
         uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d
         with:
           version: 1.3.3
-
       - name: Select the reviewed repository
         shell: bash
         run: |
@@ -83,7 +129,6 @@ jobs:
             printf 'REPOSITORY_NAME=%s\n' "${repository_name}"
             printf 'REPOSITORY_PATH=%s\n' "${repository_path}"
           } >> "${GITHUB_ENV}"
-
       - name: Authenticate as the artifact-release identity
         id: artifact-auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
@@ -93,7 +138,6 @@ jobs:
           create_credentials_file: false
           token_format: access_token
           access_token_lifetime: 300s
-
       - name: Attempt forbidden Terraform-role impersonation
         id: forbidden-terraform-role
         continue-on-error: true
@@ -104,25 +148,19 @@ jobs:
           create_credentials_file: false
           token_format: access_token
           access_token_lifetime: 300s
-
       - name: Assert cross-role impersonation was denied
         env:
           FORBIDDEN_OUTCOME: ${{ steps.forbidden-terraform-role.outcome }}
-        shell: bash
         run: |
-          set -euo pipefail
           if [[ "${FORBIDDEN_OUTCOME}" != "failure" ]]; then
             printf 'Artifact provider unexpectedly impersonated the Terraform account.\n' >&2
             exit 1
           fi
-
       - name: Assert opposite-environment write permissions are absent
         env:
           ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
-        shell: bash
         run: |
           set -euo pipefail
-
           request_path="projects/${OTHER_PROJECT_ID}/locations/${REGION}/repositories/${OTHER_REPOSITORY_ID}"
           response_path="${RUNNER_TEMP}/opposite-repository-permissions.json"
           curl --fail-with-body --silent --show-error \
@@ -132,30 +170,23 @@ jobs:
             --data '{"permissions":["artifactregistry.files.upload","artifactregistry.repositories.uploadArtifacts","artifactregistry.tags.create","artifactregistry.tags.update"]}' \
             "https://artifactregistry.googleapis.com/v1/${request_path}:testIamPermissions" \
             > "${response_path}"
-
           if [[ "$(jq '.permissions // [] | length' "${response_path}")" != "0" ]]; then
             printf 'Artifact identity has write access to the opposite environment repository.\n' >&2
             exit 1
           fi
-
       - name: Authenticate ORAS to the matching registry
         env:
           ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
-        shell: bash
         run: |
-          set -euo pipefail
           printf '%s' "${ACCESS_TOKEN}" | oras login "${REGISTRY_HOST}" \
             --username oauth2accesstoken \
             --password-stdin \
             --registry-config "${ORAS_REGISTRY_CONFIG}"
-
       - name: Publish and verify the permission-smoke artifact
         env:
           ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
-        shell: bash
         run: |
           set -euo pipefail
-
           push_result="${RUNNER_TEMP}/permission-smoke-push.json"
           oras push "${IMAGE_REFERENCE}" \
             --artifact-type "${ARTIFACT_TYPE}" \
@@ -163,27 +194,23 @@ jobs:
             --registry-config "${ORAS_REGISTRY_CONFIG}" \
             "${FIXTURE_PATH}:${MEDIA_TYPE}" \
             > "${push_result}"
-
           digest="$(jq -er '.digest' "${push_result}")"
           if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
             printf 'ORAS returned an invalid artifact digest.\n' >&2
             exit 1
           fi
-
           resolved_digest="$(oras resolve "${IMAGE_REFERENCE}" \
             --registry-config "${ORAS_REGISTRY_CONFIG}")"
           if [[ "${resolved_digest}" != "${digest}" ]]; then
             printf 'The tagged artifact does not resolve to the pushed digest.\n' >&2
             exit 1
           fi
-
           encoded_image="$(jq -rn --arg value "${IMAGE_PATH}@${digest}" '$value | @uri')"
           metadata_path="${RUNNER_TEMP}/permission-smoke-metadata.json"
           curl --fail-with-body --silent --show-error \
             --header "Authorization: Bearer ${ACCESS_TOKEN}" \
             "https://artifactregistry.googleapis.com/v1/${REPOSITORY_NAME}/dockerImages/${encoded_image}" \
             > "${metadata_path}"
-
           expected_name="${REPOSITORY_NAME}/dockerImages/${IMAGE_PATH}@${digest}"
           expected_uri="${REPOSITORY_PATH}/${IMAGE_PATH}@${digest}"
           jq --exit-status \
@@ -191,13 +218,294 @@ jobs:
             --arg expected_uri "${expected_uri}" \
             '.name == $expected_name and .uri == $expected_uri' \
             "${metadata_path}" > /dev/null
-
       - name: Remove temporary registry credentials
         if: always()
-        shell: bash
         run: |
           if [[ -n "${REGISTRY_HOST:-}" && -n "${ORAS_REGISTRY_CONFIG:-}" ]]; then
             oras logout "${REGISTRY_HOST}" \
               --registry-config "${ORAS_REGISTRY_CONFIG}" >/dev/null 2>&1 || true
             rm -f "${ORAS_REGISTRY_CONFIG}"
           fi
+
+  publish-uat:
+    name: Publish immutable UAT release
+    if: ${{ inputs.operation == 'publish' }}
+    needs: validate-request
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the selected commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ inputs.git_commit }}
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Pin and verify npm
+        run: |
+          npm install --global npm@10.9.2
+          test "$(node --version)" = "v22.13.0"
+          test "$(npm --version)" = "10.9.2"
+      - name: Install dependencies
+        run: npm ci
+      - name: Revalidate the selected commit
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ inputs.git_commit }}"
+          npm run deployment:release-artifact:preflight -- \
+            --operation publish \
+            --environment uat \
+            --git-commit "${{ inputs.git_commit }}"
+      - name: Set up pinned Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+        with:
+          version: v0.34.1
+      - name: Define bounded release paths
+        run: |
+          set -euo pipefail
+          release_commit="${{ inputs.git_commit }}"
+          build_id="release-${release_commit}"
+          release_tag="release-${release_commit}"
+          source_date_epoch="$(git show -s --format=%ct "${release_commit}")"
+          handoff_directory="${RUNNER_TEMP}/uat-release-${release_commit}"
+          mkdir -p "${handoff_directory}"
+          {
+            printf 'BUILD_ID=%s\n' "${build_id}"
+            printf 'BUILD_METADATA=%s/build-metadata.json\n' "${RUNNER_TEMP}"
+            printf 'CONTAINER_SCAN_DIRECTORY=%s/container-scan\n' "${RUNNER_TEMP}"
+            printf 'HANDOFF_DIRECTORY=%s\n' "${handoff_directory}"
+            printf 'IMAGE_REFERENCE=europe-west3-docker.pkg.dev/bazoria-uat-lnlabs/bazoria-uat-containers/bazoria-web:%s\n' "${release_tag}"
+            printf 'LOCAL_IMAGE=bazoria-web-local:%s-%s\n' "${release_commit}" "${build_id}"
+            printf 'REGISTRY_HOST=europe-west3-docker.pkg.dev\n'
+            printf 'RELEASE_COMMIT=%s\n' "${release_commit}"
+            printf 'REPOSITORY_NAME=projects/bazoria-uat-lnlabs/locations/europe-west3/repositories/bazoria-uat-containers\n'
+            printf 'SOURCE_DATE_EPOCH=%s\n' "${source_date_epoch}"
+          } >> "${GITHUB_ENV}"
+      - name: Build the release image once
+        env:
+          SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --load \
+            --metadata-file "${BUILD_METADATA}" \
+            --build-arg "BAZORIA_RELEASE_COMMIT=${RELEASE_COMMIT}" \
+            --build-arg "BAZORIA_BUILD_ID=${BUILD_ID}" \
+            --tag "${LOCAL_IMAGE}" \
+            .
+          local_digest="$(jq -er '."containerimage.digest"' "${BUILD_METADATA}")"
+          if [[ ! "${local_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            printf 'Buildx returned an invalid local manifest digest.\n' >&2
+            exit 1
+          fi
+          printf 'LOCAL_DIGEST=%s\n' "${local_digest}" >> "${GITHUB_ENV}"
+      - name: Validate every container role
+        run: |
+          npm run qa:container-runtime -- \
+            --skip-build \
+            --image "${LOCAL_IMAGE}" \
+            --expected-release-commit "${RELEASE_COMMIT}" \
+            --expected-build-id "${BUILD_ID}"
+          printf '{"status":"passed","platform":"linux/amd64","roles":3}\n' \
+            > "${HANDOFF_DIRECTORY}/container-health.json"
+      - name: Scan container history and browser assets for secrets
+        run: |
+          set -euo pipefail
+          mkdir -p "${CONTAINER_SCAN_DIRECTORY}/public"
+          docker history --no-trunc "${LOCAL_IMAGE}" \
+            > "${CONTAINER_SCAN_DIRECTORY}/history.txt"
+          container_id="$(docker create "${LOCAL_IMAGE}")"
+          trap 'docker rm --force "${container_id}" >/dev/null 2>&1 || true' EXIT
+          docker cp "${container_id}:/app/.output/public/." \
+            "${CONTAINER_SCAN_DIRECTORY}/public"
+          docker rm "${container_id}" >/dev/null
+          trap - EXIT
+          npm run deployment:gitleaks:scan-directory -- \
+            --path "${CONTAINER_SCAN_DIRECTORY}"
+      - name: Install checksummed inventory and vulnerability tools
+        run: |
+          tools_directory="${RUNNER_TEMP}/release-tools"
+          npm run deployment:release-artifact:install-tools -- \
+            --directory "${tools_directory}"
+          printf '%s\n' "${tools_directory}" >> "${GITHUB_PATH}"
+      - name: Generate the software inventory and vulnerability report
+        run: |
+          syft "${LOCAL_IMAGE}" \
+            --output "spdx-json=${HANDOFF_DIRECTORY}/software-bill-of-materials.spdx.json"
+          grype "sbom:${HANDOFF_DIRECTORY}/software-bill-of-materials.spdx.json" \
+            --output json \
+            --file "${HANDOFF_DIRECTORY}/vulnerability-report.json"
+          npm run deployment:release-artifact:vulnerabilities -- \
+            --report "${HANDOFF_DIRECTORY}/vulnerability-report.json" \
+            --exceptions deployment/vulnerability-exceptions.json \
+            --as-of "$(date -u +%F)" \
+            --output "${HANDOFF_DIRECTORY}/vulnerability-result.json"
+          cp deployment/vulnerability-exceptions.json \
+            "${HANDOFF_DIRECTORY}/reviewed-vulnerability-exceptions.json"
+      - name: Authenticate as the UAT artifact-release identity
+        id: artifact-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_SERVICE_ACCOUNT }}
+          create_credentials_file: false
+          token_format: access_token
+          access_token_lifetime: 1200s
+      - name: Attempt forbidden Terraform-role impersonation
+        id: forbidden-terraform-role
+        continue-on-error: true
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.BAZORIA_GOOGLE_TERRAFORM_SERVICE_ACCOUNT }}
+          create_credentials_file: false
+          token_format: access_token
+          access_token_lifetime: 300s
+      - name: Prove Terraform and production writes are denied
+        env:
+          ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
+          FORBIDDEN_OUTCOME: ${{ steps.forbidden-terraform-role.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "${FORBIDDEN_OUTCOME}" != "failure" ]]; then
+            printf 'Artifact provider unexpectedly impersonated the Terraform account.\n' >&2
+            exit 1
+          fi
+          response_path="${RUNNER_TEMP}/production-repository-permissions.json"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --data '{"permissions":["artifactregistry.files.upload","artifactregistry.repositories.uploadArtifacts","artifactregistry.tags.create","artifactregistry.tags.update"]}' \
+            "https://artifactregistry.googleapis.com/v1/projects/bazoria-prod-lnlabs/locations/europe-west3/repositories/bazoria-prod-containers:testIamPermissions" \
+            > "${response_path}"
+          if [[ "$(jq '.permissions // [] | length' "${response_path}")" != "0" ]]; then
+            printf 'UAT artifact identity has production write access.\n' >&2
+            exit 1
+          fi
+      - name: Authenticate Docker to the UAT registry
+        env:
+          ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
+        run: |
+          printf '%s' "${ACCESS_TOKEN}" | docker login "${REGISTRY_HOST}" \
+            --username oauth2accesstoken \
+            --password-stdin
+      - name: Publish or verify the immutable release tag
+        id: publish
+        run: |
+          set -euo pipefail
+          existing_output="${RUNNER_TEMP}/existing-image.txt"
+          existing_error="${RUNNER_TEMP}/existing-image-error.txt"
+          replay=false
+          if docker buildx imagetools inspect "${IMAGE_REFERENCE}" \
+            > "${existing_output}" 2> "${existing_error}"; then
+            existing_digest="$(sed -n 's/^Digest:[[:space:]]*//p' "${existing_output}" | head -n 1)"
+            if [[ "${existing_digest}" != "${LOCAL_DIGEST}" ]]; then
+              printf 'release_artifact_conflict\n' >&2
+              exit 1
+            fi
+            replay=true
+          elif ! grep --extended-regexp --ignore-case --quiet \
+            'manifest unknown|name unknown|not found' "${existing_error}"; then
+            printf 'The existing UAT release tag could not be resolved safely.\n' >&2
+            exit 1
+          fi
+
+          if [[ "${replay}" = "false" ]]; then
+            docker tag "${LOCAL_IMAGE}" "${IMAGE_REFERENCE}"
+            docker push "${IMAGE_REFERENCE}" > "${RUNNER_TEMP}/docker-push.txt" 2>&1
+          fi
+
+          docker buildx imagetools inspect "${IMAGE_REFERENCE}" \
+            > "${RUNNER_TEMP}/published-image.txt"
+          remote_digest="$(sed -n 's/^Digest:[[:space:]]*//p' \
+            "${RUNNER_TEMP}/published-image.txt" | head -n 1)"
+          if [[ "${remote_digest}" != "${LOCAL_DIGEST}" ]]; then
+            printf 'Published release digest differs from the validated build.\n' >&2
+            exit 1
+          fi
+          docker buildx imagetools inspect "${IMAGE_REFERENCE}" \
+            --format '{{json .Image}}' > "${RUNNER_TEMP}/published-image-config.json"
+          jq --exit-status \
+            '.os == "linux" and .architecture == "amd64"' \
+            "${RUNNER_TEMP}/published-image-config.json" > /dev/null
+          {
+            printf 'digest=%s\n' "${remote_digest}"
+            printf 'replay=%s\n' "${replay}"
+          } >> "${GITHUB_OUTPUT}"
+      - name: Verify Artifact Registry metadata and production denial again
+        env:
+          ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
+          PUBLISHED_DIGEST: ${{ steps.publish.outputs.digest }}
+          REPLAY: ${{ steps.publish.outputs.replay }}
+        run: |
+          set -euo pipefail
+          encoded_image="$(jq -rn \
+            --arg value "bazoria-web@${PUBLISHED_DIGEST}" '$value | @uri')"
+          metadata_path="${HANDOFF_DIRECTORY}/registry-metadata.json"
+          curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+            "https://artifactregistry.googleapis.com/v1/${REPOSITORY_NAME}/dockerImages/${encoded_image}" \
+            > "${metadata_path}"
+          expected_name="${REPOSITORY_NAME}/dockerImages/bazoria-web@${PUBLISHED_DIGEST}"
+          expected_uri="europe-west3-docker.pkg.dev/bazoria-uat-lnlabs/bazoria-uat-containers/bazoria-web@${PUBLISHED_DIGEST}"
+          jq --exit-status \
+            --arg expected_name "${expected_name}" \
+            --arg expected_uri "${expected_uri}" \
+            '.name == $expected_name and .uri == $expected_uri' \
+            "${metadata_path}" > /dev/null
+          response_path="${RUNNER_TEMP}/production-repository-permissions-after.json"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --data '{"permissions":["artifactregistry.files.upload","artifactregistry.repositories.uploadArtifacts","artifactregistry.tags.create","artifactregistry.tags.update"]}' \
+            "https://artifactregistry.googleapis.com/v1/projects/bazoria-prod-lnlabs/locations/europe-west3/repositories/bazoria-prod-containers:testIamPermissions" \
+            > "${response_path}"
+          if [[ "$(jq '.permissions // [] | length' "${response_path}")" != "0" ]]; then
+            printf 'UAT artifact identity gained production write access.\n' >&2
+            exit 1
+          fi
+          jq -n \
+            --arg digest "${PUBLISHED_DIGEST}" \
+            --argjson replay "${REPLAY}" \
+            '{status:"passed", digest:$digest, replay:$replay, platform:"linux/amd64", productionWritePermissions:[]}' \
+            > "${HANDOFF_DIRECTORY}/registry-verification.json"
+      - name: Create the release handoff
+        env:
+          PUBLISHED_DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          npm run deployment:release-artifact:handoff -- \
+            --commit "${RELEASE_COMMIT}" \
+            --digest "${PUBLISHED_DIGEST}" \
+            --image-reference "${IMAGE_REFERENCE}" \
+            --build-id "${BUILD_ID}" \
+            --workflow-run-id "${GITHUB_RUN_ID}" \
+            --dockerfile Dockerfile \
+            --lockfile package-lock.json \
+            --sbom "${HANDOFF_DIRECTORY}/software-bill-of-materials.spdx.json" \
+            --vulnerability-result "${HANDOFF_DIRECTORY}/vulnerability-result.json" \
+            --container-result "${HANDOFF_DIRECTORY}/container-health.json" \
+            --registry-result "${HANDOFF_DIRECTORY}/registry-verification.json" \
+            --output "${HANDOFF_DIRECTORY}/release-handoff.json"
+          maximum_artifact_bytes=52428800
+          artifact_bytes="$(find "${HANDOFF_DIRECTORY}" -type f -printf '%s\n' \
+            | awk '{ total += $1 } END { print total + 0 }')"
+          if (( artifact_bytes > maximum_artifact_bytes )); then
+            printf 'Release handoff exceeds its size limit.\n' >&2
+            exit 1
+          fi
+      - name: Upload the protected release handoff
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: uat-release-${{ inputs.git_commit }}
+          path: ${{ env.HANDOFF_DIRECTORY }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove temporary registry credentials
+        if: always()
+        run: docker logout "${REGISTRY_HOST:-europe-west3-docker.pkg.dev}" >/dev/null 2>&1 || true

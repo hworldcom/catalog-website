@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "workflowPath": ".github/workflows/artifact-release.yml",
+  "environment": "uat",
+  "image": {
+    "platform": "linux/amd64",
+    "repository": "europe-west3-docker.pkg.dev/bazoria-uat-lnlabs/bazoria-uat-containers/bazoria-web",
+    "productionRepository": "europe-west3-docker.pkg.dev/bazoria-prod-lnlabs/bazoria-prod-containers/bazoria-web",
+    "tagPrefix": "release-"
+  },
+  "buildx": {
+    "setupAction": "docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+    "version": "v0.34.1"
+  },
+  "tools": {
+    "syft": {
+      "version": "1.50.0",
+      "archive": "syft_1.50.0_linux_amd64.tar.gz",
+      "checksum": "bf7b29ff57f06da30918266a0e1c2885a8f99784798d1bdb1628886aa015d788",
+      "repository": "anchore/syft"
+    },
+    "grype": {
+      "version": "0.116.1",
+      "archive": "grype_0.116.1_linux_amd64.tar.gz",
+      "checksum": "0122df7b655981abe547ad3d2190d65551dac6a2bfc80b4dc2a989b5d0587458",
+      "repository": "anchore/grype"
+    }
+  },
+  "vulnerabilities": {
+    "exceptionCatalog": "deployment/vulnerability-exceptions.json",
+    "maximumReportBytes": 20971520,
+    "blockingSeverity": "Critical"
+  },
+  "handoff": {
+    "artifactPrefix": "uat-release-",
+    "retentionDays": 7,
+    "maximumSoftwareBillOfMaterialsBytes": 20971520,
+    "maximumArtifactBytes": 52428800
+  }
+}

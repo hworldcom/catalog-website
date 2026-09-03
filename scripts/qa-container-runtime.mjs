@@ -2,7 +2,8 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 
-const image = process.env.BAZORIA_CONTAINER_QA_IMAGE ?? "bazoria-web:0038a-qa";
+const options = parseArguments(process.argv.slice(2));
+const image = options.image ?? process.env.BAZORIA_CONTAINER_QA_IMAGE ?? "bazoria-web:0038a-qa";
 const containerPrefix = `bazoria-web-0038a-qa-${process.pid}`;
 const configurationCatalog = JSON.parse(
   readFileSync("deployment/configuration-catalog.json", "utf8"),
@@ -10,18 +11,22 @@ const configurationCatalog = JSON.parse(
 
 try {
   assertFixtureBundleExcludedFromBuildContext();
-  run("docker", [
-    "build",
-    "--platform",
-    "linux/amd64",
-    "--build-arg",
-    "BAZORIA_RELEASE_COMMIT=qa-commit",
-    "--build-arg",
-    "BAZORIA_BUILD_ID=qa-build",
-    "--tag",
-    image,
-    ".",
-  ]);
+  if (!options.skipBuild) {
+    run("docker", [
+      "build",
+      "--platform",
+      "linux/amd64",
+      "--build-arg",
+      `BAZORIA_RELEASE_COMMIT=${options.expectedReleaseCommit}`,
+      "--build-arg",
+      `BAZORIA_BUILD_ID=${options.expectedBuildId}`,
+      "--tag",
+      image,
+      ".",
+    ]);
+  }
+
+  assertImageReleaseIdentity();
 
   const user = capture("docker", ["image", "inspect", "--format", "{{.Config.User}}", image]);
   if (user !== "node") throw new Error(`Expected non-root image user node, received ${user}.`);
@@ -119,7 +124,14 @@ async function runWebContainer(label, { expectedConfig }) {
     await waitForStatus(`${baseUrl}/healthz`, 204);
     const version = await getJson(`${baseUrl}/version`);
     const runtimeConfig = await getJson(`${baseUrl}/api/runtime-config`);
-    assertEqual(version, { releaseCommit: "qa-commit", buildId: "qa-build" }, "version");
+    assertEqual(
+      version,
+      {
+        releaseCommit: options.expectedReleaseCommit,
+        buildId: options.expectedBuildId,
+      },
+      "version",
+    );
     assertEqual(runtimeConfig, expectedConfig, `${label} runtime configuration`);
     assertContainerBrowserBoundary(containerName, values);
     return { assetHash: browserAssetHash(containerName) };
@@ -184,6 +196,68 @@ function assertFixtureBundleExcludedFromBuildContext() {
   if (!patterns.includes("deployment/fixtures/uat")) {
     throw new Error("UAT fixture assets are not excluded from the container build context.");
   }
+}
+
+function assertImageReleaseIdentity() {
+  const values = JSON.parse(
+    capture("docker", ["image", "inspect", "--format", "{{json .Config.Env}}", image]),
+  );
+  const environment = Object.fromEntries(values.map((entry) => entry.split(/=(.*)/su).slice(0, 2)));
+  assertEqual(
+    {
+      releaseCommit: environment.BAZORIA_RELEASE_COMMIT,
+      buildId: environment.BAZORIA_BUILD_ID,
+    },
+    {
+      releaseCommit: options.expectedReleaseCommit,
+      buildId: options.expectedBuildId,
+    },
+    "image release identity",
+  );
+}
+
+function parseArguments(argv) {
+  const parsed = {
+    expectedBuildId: "qa-build",
+    expectedReleaseCommit: "qa-commit",
+    image: null,
+    providedExpectedBuildId: false,
+    providedExpectedReleaseCommit: false,
+    skipBuild: false,
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument === "--skip-build") {
+      parsed.skipBuild = true;
+      continue;
+    }
+    if (
+      argument === "--expected-release-commit" ||
+      argument === "--expected-build-id" ||
+      argument === "--image"
+    ) {
+      const value = argv[index + 1];
+      if (!value) throw new Error(`${argument} requires a value.`);
+      const key = {
+        "--expected-release-commit": "expectedReleaseCommit",
+        "--expected-build-id": "expectedBuildId",
+        "--image": "image",
+      }[argument];
+      parsed[key] = value;
+      if (key === "expectedReleaseCommit") parsed.providedExpectedReleaseCommit = true;
+      if (key === "expectedBuildId") parsed.providedExpectedBuildId = true;
+      index += 1;
+      continue;
+    }
+    throw new Error(`Unsupported container QA argument: ${argument}.`);
+  }
+  if (
+    parsed.skipBuild &&
+    (!parsed.image || !parsed.providedExpectedReleaseCommit || !parsed.providedExpectedBuildId)
+  ) {
+    throw new Error("Prebuilt container QA requires the expected release commit and build ID.");
+  }
+  return parsed;
 }
 
 function webEnvironment() {

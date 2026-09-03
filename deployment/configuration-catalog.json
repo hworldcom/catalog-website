@@ -75,15 +75,23 @@
           "environments": ["continuous_integration"],
           "presence": "required",
           "suppliedBy": "container"
+        },
+        {
+          "role": "release",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "container_build"
         }
       ],
       "validationSources": [
         "Dockerfile",
+        ".github/workflows/artifact-release.yml",
         "src/features/runtime/server/runtime-identity.ts",
         "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
       ],
       "permittedSourcePathPatterns": [
         "Dockerfile",
+        ".github/workflows/artifact-release.yml",
         "src/features/runtime/server/**",
         "scripts/qa-container-runtime.mjs",
         "infrastructure/google-cloud/**"
@@ -1796,15 +1804,23 @@
           "environments": ["continuous_integration"],
           "presence": "required",
           "suppliedBy": "container"
+        },
+        {
+          "role": "release",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "container_build"
         }
       ],
       "validationSources": [
         "Dockerfile",
+        ".github/workflows/artifact-release.yml",
         "src/features/runtime/server/runtime-identity.ts",
         "infrastructure/google-cloud/modules/runtime-activation-platform/main.tf"
       ],
       "permittedSourcePathPatterns": [
         "Dockerfile",
+        ".github/workflows/artifact-release.yml",
         "src/features/runtime/server/**",
         "scripts/qa-container-runtime.mjs",
         "infrastructure/google-cloud/**"

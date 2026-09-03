@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   GITLEAKS_RELEASE,
+  parseDirectoryScanArgument,
   resolveIntroducedCommitRange,
   validateGitleaksConfiguration,
   verifyArchiveChecksum,
@@ -50,5 +51,15 @@ describe("Gitleaks contract", () => {
       ),
     ).toBe("0eb3e36bfb24dcd9bb1d1bece1531216b59539a8fde17ee80224af0653c92aa3");
     expect(GITLEAKS_RELEASE.version).toBe("8.30.1");
+  });
+
+  it("requires one explicit directory scan path", () => {
+    expect(parseDirectoryScanArgument(["--path", "/tmp/container-output"])).toBe(
+      "/tmp/container-output",
+    );
+    expect(() => parseDirectoryScanArgument([])).toThrow("expected one --path argument");
+    expect(() => parseDirectoryScanArgument(["--path", "a", "--path", "b"])).toThrow(
+      "expected one --path argument",
+    );
   });
 });

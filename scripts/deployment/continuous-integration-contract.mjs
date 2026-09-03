@@ -104,6 +104,12 @@ export function validateContinuousIntegrationWorkflow(source) {
   ) {
     fail("aggregate job does not fail closed");
   }
+  const configurationCommands = jobs["configuration-and-secrets"].steps
+    .map((step) => step.run ?? "")
+    .join("\n");
+  if (!configurationCommands.includes("npm run deployment:release-artifact:check")) {
+    fail("configuration job does not validate the release artifact contract");
+  }
   return { jobs: expectedJobs.length, validationJobs: validationJobs.length };
 }
 
