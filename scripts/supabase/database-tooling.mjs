@@ -282,7 +282,11 @@ export async function runEnvironmentPreflight(target, dependencies = {}) {
   if (state !== "unknown_history") {
     const dryRunOutput = runSupabaseCommand(
       ["db", "push", "--db-url", target.databaseUrl, "--dry-run", "--yes"],
-      { capture: true, reason: "supabase_remote_preflight_failed" },
+      {
+        allowNoop: true,
+        capture: true,
+        reason: "supabase_remote_preflight_failed",
+      },
     );
     writeSanitizedCommandOutput(dryRunOutput, output);
   }
@@ -615,6 +619,10 @@ function runExecutable(executable, args, options = {}) {
     env: { ...process.env, ...options.env },
     stdio: capture ? "pipe" : "inherit",
   });
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  if (options.allowNoop && result.status !== 0 && /remote database is up to date/iu.test(output)) {
+    return capture ? result.stdout : "";
+  }
   if (result.error || result.status !== 0) {
     throw new DatabaseToolingError(
       options.reason ?? "database_tooling_command_failed",
