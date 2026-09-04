@@ -15,9 +15,8 @@ variable "edge_contract" {
       https = number
     })
     backend = object({
-      protocol       = string
-      enableCdn      = bool
-      timeoutSeconds = number
+      protocol  = string
+      enableCdn = bool
     })
     certificate = object({
       location          = string

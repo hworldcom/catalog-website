@@ -23,8 +23,7 @@ export function validateEdgeCatalog(catalog) {
     "edge listener ports differ",
   );
   assertEdge(
-    JSON.stringify(catalog.backend) ===
-      JSON.stringify({ protocol: "HTTP", enableCdn: false, timeoutSeconds: 120 }),
+    JSON.stringify(catalog.backend) === JSON.stringify({ protocol: "HTTP", enableCdn: false }),
     "edge backend differs",
   );
   assertEdge(
@@ -132,9 +131,8 @@ function validateSource() {
     "checked-in environment variables must not activate edge infrastructure",
   );
   assertEdge(
-    runtimeModuleSource.includes(
-      'ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"',
-    ) && !runtimeModuleSource.includes('ingress             = "INGRESS_TRAFFIC_ALL"'),
+    /ingress\s*=\s*"INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"/.test(runtimeModuleSource) &&
+      !/ingress\s*=\s*"INGRESS_TRAFFIC_ALL"/.test(runtimeModuleSource),
     "the website must reject direct public Cloud Run ingress",
   );
 }

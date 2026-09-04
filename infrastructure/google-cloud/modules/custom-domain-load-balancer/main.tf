@@ -39,7 +39,6 @@ check "edge_catalog" {
       var.edge_contract.ports.https == 443 &&
       var.edge_contract.backend.protocol == "HTTP" &&
       var.edge_contract.backend.enableCdn == false &&
-      var.edge_contract.backend.timeoutSeconds == 120 &&
       var.edge_contract.certificate.location == "global" &&
       var.edge_contract.certificate.authorizationType == "PER_PROJECT_RECORD" &&
       var.edge_contract.certificate.scope == "DEFAULT" &&
@@ -103,7 +102,6 @@ resource "google_compute_backend_service" "website" {
   protocol              = var.edge_contract.backend.protocol
   load_balancing_scheme = var.edge_contract.loadBalancingScheme
   enable_cdn            = var.edge_contract.backend.enableCdn
-  timeout_sec           = var.edge_contract.backend.timeoutSeconds
 
   backend {
     group = google_compute_region_network_endpoint_group.website.id

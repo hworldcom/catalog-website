@@ -9,8 +9,7 @@
   },
   "backend": {
     "protocol": "HTTP",
-    "enableCdn": false,
-    "timeoutSeconds": 120
+    "enableCdn": false
   },
   "certificate": {
     "location": "global",
