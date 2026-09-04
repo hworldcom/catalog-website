@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 
@@ -29,7 +30,9 @@ try {
   assertImageReleaseIdentity();
 
   const user = capture("docker", ["image", "inspect", "--format", "{{.Config.User}}", image]);
-  if (user !== "node") throw new Error(`Expected non-root image user node, received ${user}.`);
+  if (user !== "65532") {
+    throw new Error(`Expected Distroless non-root image user 65532, received ${user}.`);
+  }
   const architecture = capture("docker", [
     "image",
     "inspect",
@@ -46,9 +49,8 @@ try {
     "--platform",
     "linux/amd64",
     image,
-    "sh",
-    "-c",
-    "test ! -d node_modules/vitest && test ! -d node_modules/eslint",
+    "-e",
+    "const{existsSync}=require('node:fs');if(existsSync('node_modules/vitest')||existsSync('node_modules/eslint'))process.exit(1)",
   ]);
   run("docker", [
     "run",
@@ -56,9 +58,22 @@ try {
     "--platform",
     "linux/amd64",
     image,
-    "sh",
-    "-c",
-    "test ! -e deployment/fixtures/uat && test -z \"$(find /app -name manifest.json -path '*/0038d/assets/*' -print -quit)\"",
+    "-e",
+    `
+      const { existsSync, readdirSync } = require("node:fs");
+      const { join } = require("node:path");
+      if (existsSync("deployment/fixtures/uat")) process.exit(1);
+      const visit = (root) => {
+        for (const entry of readdirSync(root, { withFileTypes: true })) {
+          const path = join(root, entry.name);
+          if (entry.isDirectory()) visit(path);
+          else if (entry.isFile() && entry.name === "manifest.json" && path.includes("/0038d/assets/")) {
+            process.exit(1);
+          }
+        }
+      };
+      visit("/app");
+    `,
   ]);
   run("docker", [
     "run",
@@ -66,7 +81,6 @@ try {
     "--platform",
     "linux/amd64",
     image,
-    "node",
     "-e",
     "require('sharp')({create:{width:1,height:1,channels:4,background:'#000'}}).png().toBuffer().then((buffer)=>{if(buffer.length===0)process.exit(1)})",
   ]);
@@ -157,11 +171,10 @@ async function runWorkerContainer() {
     BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT: "task@example.com",
     PORT: "8080",
   };
-  runDetachedContainer(containerName, port, values, [
-    "npm",
-    "run",
-    "start:product-activation-worker",
-  ]);
+  runDetachedContainer(containerName, port, values, {
+    entrypoint: "/nodejs/bin/node",
+    args: [".output/commands/product-activation-worker.mjs"],
+  });
   try {
     const baseUrl = `http://127.0.0.1:${port}`;
     await waitForStatus(`${baseUrl}/health`, 204);
@@ -179,10 +192,10 @@ function assertReconciliationRejectsInvalidConfiguration() {
     "linux/amd64",
     "--env",
     "BAZORIA_DEPLOYMENT_ENVIRONMENT=uat",
+    "--entrypoint",
+    "/nodejs/bin/node",
     image,
-    "npm",
-    "run",
-    "start:product-activation-reconciliation",
+    ".output/commands/product-activation-reconciliation.mjs",
   ]);
   if (result.status === 0) {
     throw new Error("Reconciliation accepted an incomplete role configuration.");
@@ -296,7 +309,7 @@ function assertContainerBrowserBoundary(containerName, values) {
   const result = execFileSyncWithStatus("docker", [
     "exec",
     containerName,
-    "node",
+    "/nodejs/bin/node",
     "-e",
     `
       const { readdirSync, readFileSync } = require("node:fs");
@@ -325,7 +338,7 @@ function assertContainerBrowserBoundary(containerName, values) {
   }
 }
 
-function runDetachedContainer(containerName, port, values, command = []) {
+function runDetachedContainer(containerName, port, values, options = {}) {
   run("docker", [
     "run",
     "--detach",
@@ -337,8 +350,9 @@ function runDetachedContainer(containerName, port, values, command = []) {
     "--publish",
     `127.0.0.1:${port}:8080`,
     ...environmentArguments(values),
+    ...(options.entrypoint ? ["--entrypoint", options.entrypoint] : []),
     image,
-    ...command,
+    ...(options.args ?? []),
   ]);
 }
 
@@ -347,13 +361,32 @@ function environmentArguments(values) {
 }
 
 function browserAssetHash(containerName) {
-  return capture("docker", [
+  const manifest = capture("docker", [
     "exec",
     containerName,
-    "sh",
-    "-c",
-    "find .output/public/assets -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1",
+    "/nodejs/bin/node",
+    "-e",
+    `
+      const { createHash } = require("node:crypto");
+      const { readdirSync, readFileSync } = require("node:fs");
+      const { join } = require("node:path");
+      const files = [];
+      const visit = (root) => {
+        for (const entry of readdirSync(root, { withFileTypes: true })) {
+          const path = join(root, entry.name);
+          if (entry.isDirectory()) visit(path);
+          else if (entry.isFile()) files.push(path);
+        }
+      };
+      visit(".output/public/assets");
+      const result = files.sort().map((path) => ({
+        path,
+        digest: createHash("sha256").update(readFileSync(path)).digest("hex"),
+      }));
+      process.stdout.write(JSON.stringify(result));
+    `,
   ]);
+  return createHash("sha256").update(manifest).digest("hex");
 }
 
 async function availablePort() {

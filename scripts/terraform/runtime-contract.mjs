@@ -51,8 +51,8 @@ export function validateRuntimeCatalog(catalog) {
         maximumInstances: 10,
         timeoutSeconds: 300,
         healthPath: "/health",
-        command: ["npm"],
-        args: ["run", "start:product-activation-worker"],
+        command: ["/nodejs/bin/node"],
+        args: [".output/commands/product-activation-worker.mjs"],
       }),
     "worker runtime contract differs",
   );
@@ -67,8 +67,8 @@ export function validateRuntimeCatalog(catalog) {
         timeoutSeconds: 120,
         applicationDeadlineSeconds: 60,
         batchSize: 100,
-        command: ["npm"],
-        args: ["run", "start:product-activation-reconciliation"],
+        command: ["/nodejs/bin/node"],
+        args: [".output/commands/product-activation-reconciliation.mjs"],
       }),
     "reconciliation runtime contract differs",
   );

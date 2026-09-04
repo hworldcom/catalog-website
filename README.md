@@ -164,9 +164,10 @@ User Acceptance Testing and production run one bounded server-only pass to
 recover activation runs committed before their deterministic Cloud Task was
 confirmed:
 
-The compiled production command is
-`npm run start:product-activation-reconciliation`. Local engineering checks may
-continue to use `npm run reconcile:product-activation-dispatches`.
+The deployed production command is
+`/nodejs/bin/node .output/commands/product-activation-reconciliation.mjs`.
+Local engineering checks may continue to use
+`npm run reconcile:product-activation-dispatches`.
 
 The command requires cloud dispatch mode, the same Cloud Tasks and server-side
 Supabase configuration as the website dispatcher, and the reconciliation batch
@@ -186,8 +187,10 @@ npm run start:product-activation-worker
 npm run start:product-activation-reconciliation
 ```
 
-The checked-in multi-stage `Dockerfile` packages those entries into one
-non-root Node.js 22.13.1 image. Build the tested architecture explicitly:
+The checked-in multi-stage `Dockerfile` builds those entries with pinned Node.js
+22.23.2 on Debian 13 and packages them into one pinned, non-root Distroless
+Node.js 22 runtime image. The runtime contains neither npm nor a shell. Build
+the tested architecture explicitly:
 
 ```bash
 docker build \
@@ -197,11 +200,12 @@ docker build \
   --tag bazoria-web:local .
 ```
 
-Cloud Run selects a role by overriding the image command; it does not rebuild
-the image. The web role exposes database-free `GET /healthz`, build identity at
-`GET /version`, and runtime browser configuration at
-`GET /api/runtime-config`. Run `npm run qa:container-runtime` for the local
-container health and configuration smoke test.
+Cloud Run selects a role by invoking the corresponding compiled JavaScript
+entry point with `/nodejs/bin/node`; it does not rebuild the image. The web role
+exposes database-free `GET /healthz`, build identity at `GET /version`, and
+runtime browser configuration at `GET /api/runtime-config`. Run
+`npm run qa:container-runtime` for the local container health and configuration
+smoke test.
 
 ## Database Tooling
 

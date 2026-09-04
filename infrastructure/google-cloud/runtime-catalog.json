@@ -32,8 +32,8 @@
     "maximumInstances": 10,
     "timeoutSeconds": 300,
     "healthPath": "/health",
-    "command": ["npm"],
-    "args": ["run", "start:product-activation-worker"]
+    "command": ["/nodejs/bin/node"],
+    "args": [".output/commands/product-activation-worker.mjs"]
   },
   "reconciliation": {
     "cpu": "1",
@@ -44,8 +44,8 @@
     "timeoutSeconds": 120,
     "applicationDeadlineSeconds": 60,
     "batchSize": 100,
-    "command": ["npm"],
-    "args": ["run", "start:product-activation-reconciliation"]
+    "command": ["/nodejs/bin/node"],
+    "args": [".output/commands/product-activation-reconciliation.mjs"]
   },
   "publication": {
     "maximumImageCount": 20,
