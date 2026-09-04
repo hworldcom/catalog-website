@@ -255,6 +255,12 @@ resource "google_logging_metric" "pending_age" {
     value_type  = "DISTRIBUTION"
     unit        = "ms"
   }
+
+  bucket_options {
+    explicit_buckets {
+      bounds = [300000, 900000]
+    }
+  }
 }
 
 resource "google_monitoring_alert_policy" "website_5xx" {
