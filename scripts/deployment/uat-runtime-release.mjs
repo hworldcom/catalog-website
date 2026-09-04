@@ -5,6 +5,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 const digestPattern = /^sha256:[0-9a-f]{64}$/u;
 const commitPattern = /^[0-9a-f]{40}$/u;
 const allowedResourcePrefixes = [
+  "module.project_contract.terraform_data.verified_project",
+  "module.secret_foundation.google_secret_manager_secret.secrets",
+  "module.secret_foundation.google_secret_manager_secret_iam_member.accessors",
   "module.runtime_activation_platform",
   "module.custom_domain_load_balancer",
   "module.operational_monitoring",

@@ -123,4 +123,22 @@ describe("UAT runtime release plan fingerprint", () => {
       }),
     ).not.toThrow();
   });
+
+  it("accepts reviewed project and secret foundation changes", () => {
+    expect(() =>
+      validatePlan({
+        resource_changes: [
+          {
+            address: "module.project_contract.terraform_data.verified_project",
+            change: { actions: ["no-op"] },
+          },
+          {
+            address:
+              'module.secret_foundation.google_secret_manager_secret.secrets["supabaseServiceRole"]',
+            change: { actions: ["create"] },
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
 });
