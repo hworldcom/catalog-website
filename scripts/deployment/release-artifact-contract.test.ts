@@ -183,10 +183,22 @@ describe("release artifact contract", () => {
     });
   });
 
-  it("keeps the initial vulnerability exception catalog empty", () => {
+  it("keeps the reviewed vulnerability exception catalog exact and current", () => {
     expect(JSON.parse(readFileSync("deployment/vulnerability-exceptions.json", "utf8"))).toEqual({
       schemaVersion: 1,
-      exceptions: [],
+      exceptions: [
+        {
+          id: "CVE-2026-5450",
+          package: "libc6",
+          installedVersion: "2.41-12+deb13u3",
+          justification:
+            "Debian 13 classifies the scanf %mc issue as minor and has no stable fix; " +
+            "Bazoria does not invoke the affected native format path. Remove when Debian " +
+            "publishes a fixed libc6 package.",
+          owner: "platform",
+          removalDate: "2026-09-18",
+        },
+      ],
     });
   });
 });
