@@ -196,7 +196,7 @@ jobs:
           umask 077
           [[ "${BAZORIA_SUPABASE_SERVICE_ROLE_SECRET_VERSION}" =~ ^[1-9][0-9]*$ ]]
           [[ "${BAZORIA_OPENAI_API_KEY_SECRET_VERSION}" =~ ^[1-9][0-9]*$ ]]
-          jq -n \
+          jq \
             --arg project "${BAZORIA_GOOGLE_PROJECT_ID}" \
             --arg region "${BAZORIA_GOOGLE_REGION}" \
             --arg digest "${RELEASE_IMAGE_DIGEST}" \
