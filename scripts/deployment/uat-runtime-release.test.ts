@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { fingerprint, migrationTarget, normalizedPlan, validatePlan } from "./uat-runtime-release.mjs";
+import {
+  fingerprint,
+  migrationTarget,
+  normalizedPlan,
+  validatePlan,
+} from "./uat-runtime-release.mjs";
 
 const inputs = {
   commit: "a".repeat(40),
@@ -13,11 +18,11 @@ describe("UAT runtime release plan fingerprint", () => {
       format_version: "1.2",
       resource_changes: [
         {
-          address: "module.runtime_activation_platform[\"enabled\"].z_resource",
+          address: 'module.runtime_activation_platform["enabled"].z_resource',
           change: { actions: ["create"] },
         },
         {
-          address: "module.runtime_activation_platform[\"enabled\"].a_resource",
+          address: 'module.runtime_activation_platform["enabled"].a_resource',
           change: { actions: ["update"] },
         },
       ],
@@ -61,7 +66,8 @@ describe("UAT runtime release plan fingerprint", () => {
       validatePlan({
         resource_changes: [
           {
-            address: "module.runtime_activation_platform[\"enabled\"].google_cloud_run_v2_service.website",
+            address:
+              'module.runtime_activation_platform["enabled"].google_cloud_run_v2_service.website',
             change: { actions: ["delete", "create"] },
           },
         ],

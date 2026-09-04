@@ -109,7 +109,8 @@ export function main(argv = process.argv) {
   const plan = JSON.parse(readFileSync(planPath, "utf8"));
   const migrationTargetPath = argument(argv, "--migration-target");
   const configPath = argument(argv, "--config");
-  if (migrationTargetPath) inputs.migrationTarget = JSON.parse(readFileSync(migrationTargetPath, "utf8"));
+  if (migrationTargetPath)
+    inputs.migrationTarget = JSON.parse(readFileSync(migrationTargetPath, "utf8"));
   if (configPath) {
     const config = JSON.parse(readFileSync(configPath, "utf8"));
     inputs.configurationNames = Object.keys(config.runtime_configuration ?? {}).sort();
