@@ -1,0 +1,254 @@
+name: UAT runtime release
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: UAT release operation
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - verify-edge
+      git_commit:
+        description: Exact 40-character commit used for the published image
+        required: true
+        type: string
+      image_digest:
+        description: Exact sha256 digest from the successful 0038f2 handoff
+        required: true
+        type: string
+      plan_fingerprint:
+        description: Required for apply; fingerprint returned by plan
+        required: false
+        type: string
+      expected_uat_project_ref:
+        description: Explicit UAT Supabase project confirmation
+        required: true
+        default: mekobnkujzpzeiwmecyy
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: uat-runtime-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: UAT ${{ inputs.operation }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: uat
+    env:
+      BAZORIA_ENVIRONMENT: uat
+      RELEASE_COMMIT: ${{ inputs.git_commit }}
+      RELEASE_IMAGE_DIGEST: ${{ inputs.image_digest }}
+      EXPECTED_PROJECT_REF: ${{ inputs.expected_uat_project_ref }}
+      BAZORIA_GOOGLE_PROJECT_ID: ${{ vars.BAZORIA_GOOGLE_PROJECT_ID }}
+      BAZORIA_GOOGLE_REGION: ${{ vars.BAZORIA_GOOGLE_REGION }}
+      BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST }}
+      BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+      BAZORIA_SUPABASE_SERVICE_ROLE_SECRET_VERSION: ${{ vars.BAZORIA_SUPABASE_SERVICE_ROLE_SECRET_VERSION }}
+      BAZORIA_OPENAI_API_KEY_SECRET_VERSION: ${{ vars.BAZORIA_OPENAI_API_KEY_SECRET_VERSION }}
+      BAZORIA_PROTOTYPE_ADMIN_USER_IDS: ${{ vars.BAZORIA_PROTOTYPE_ADMIN_USER_IDS }}
+      BAZORIA_PUBLIC_SITE_URL: ${{ vars.BAZORIA_PUBLIC_SITE_URL }}
+      BAZORIA_GOOGLE_MONITORING_NOTIFICATION_CHANNEL_NAMES: ${{ vars.BAZORIA_GOOGLE_MONITORING_NOTIFICATION_CHANNEL_NAMES }}
+      BAZORIA_UAT_DATABASE_URL: ${{ secrets.BAZORIA_UAT_DATABASE_URL }}
+
+    steps:
+      - name: Check out deployment source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify release request
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${RELEASE_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${RELEASE_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "${EXPECTED_PROJECT_REF}" == "mekobnkujzpzeiwmecyy" ]]
+          git cat-file -e "${RELEASE_COMMIT}^{commit}"
+          git merge-base --is-ancestor "${RELEASE_COMMIT}" "origin/${GITHUB_REF_NAME}"
+          expected_image="${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}/bazoria-web@${RELEASE_IMAGE_DIGEST}"
+          printf 'release_commit=%s\nimage=%s\n' "${RELEASE_COMMIT}" "${expected_image}" >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Set up pinned Node.js
+        if: inputs.operation != 'verify-edge'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Install pinned npm and dependencies
+        if: inputs.operation != 'verify-edge'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.2
+          test "$(node --version)" = "v22.13.0"
+          test "$(npm --version)" = "10.9.2"
+          npm ci
+
+      - name: Authenticate as the artifact identity
+        id: artifact-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Verify published immutable artifact
+        env:
+          ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}/bazoria-web:release-${RELEASE_COMMIT}"
+          encoded_image="$(jq -rn --arg value "bazoria-web@${RELEASE_IMAGE_DIGEST}" '$value | @uri')"
+          metadata_path="${RUNNER_TEMP}/release-image-metadata.json"
+          curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+            "https://artifactregistry.googleapis.com/v1/projects/${BAZORIA_GOOGLE_PROJECT_ID}/locations/${BAZORIA_GOOGLE_REGION}/repositories/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}/dockerImages/${encoded_image}" \
+            > "${metadata_path}"
+          jq --exit-status \
+            --arg expected_uri "${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}/bazoria-web@${RELEASE_IMAGE_DIGEST}" \
+            '.uri == $expected_uri' "${metadata_path}" > /dev/null
+          docker login "${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}" --username oauth2accesstoken --password-stdin <<< "${ACCESS_TOKEN}"
+          resolved_digest="$(docker buildx imagetools inspect "${image}" | sed -n 's/^Digest:[[:space:]]*//p' | head -n 1)"
+          test "${resolved_digest}" = "${RELEASE_IMAGE_DIGEST}"
+          docker buildx imagetools inspect --raw "${image}" > "${RUNNER_TEMP}/release-image-manifest.json"
+          jq --exit-status '.architecture == "amd64" and .os == "linux"' \
+            "${RUNNER_TEMP}/release-image-manifest.json" > /dev/null
+
+      - name: Set up Terraform
+        if: inputs.operation != 'verify-edge'
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Authenticate as the Terraform identity
+        if: inputs.operation != 'verify-edge'
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_TERRAFORM_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.BAZORIA_GOOGLE_TERRAFORM_SERVICE_ACCOUNT }}
+
+      - name: Prepare temporary UAT database target
+        if: inputs.operation != 'verify-edge'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          printf 'BAZORIA_SUPABASE_PROJECT_REF=%s\nSUPABASE_URL=%s\nBAZORIA_SUPABASE_DATABASE_URL=%s\n' \
+            "${EXPECTED_PROJECT_REF}" "${SUPABASE_URL}" "${BAZORIA_UAT_DATABASE_URL}" \
+            > "${RUNNER_TEMP}/.env.supabase.uat.local"
+          cp "${RUNNER_TEMP}/.env.supabase.uat.local" .env.supabase.uat.local
+
+      - name: Run UAT database preflight
+        if: inputs.operation == 'plan'
+        run: npm run db:environment:preflight -- --environment uat
+
+      - name: Prepare UAT Terraform variables
+        if: inputs.operation != 'verify-edge'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          jq -n \
+            --arg project "${BAZORIA_GOOGLE_PROJECT_ID}" \
+            --arg region "${BAZORIA_GOOGLE_REGION}" \
+            --arg digest "${RELEASE_IMAGE_DIGEST}" \
+            --arg commit "${RELEASE_COMMIT}" \
+            --arg supabase_url "${SUPABASE_URL}" \
+            --arg publishable_key "${SUPABASE_PUBLISHABLE_KEY}" \
+            --arg supabase_secret "projects/${BAZORIA_GOOGLE_PROJECT_ID}/secrets/bazoria-uat-supabase-service-role/versions/${BAZORIA_SUPABASE_SERVICE_ROLE_SECRET_VERSION}" \
+            --arg openai_secret "projects/${BAZORIA_GOOGLE_PROJECT_ID}/secrets/bazoria-uat-openai-api-key/versions/${BAZORIA_OPENAI_API_KEY_SECRET_VERSION}" \
+            --arg origin "${BAZORIA_PUBLIC_SITE_URL}" \
+            --arg admin_ids "${BAZORIA_PROTOTYPE_ADMIN_USER_IDS}" \
+            --arg channels "${BAZORIA_GOOGLE_MONITORING_NOTIFICATION_CHANNEL_NAMES}" \
+            '. + {
+              runtime_configuration: {
+                image_reference: ("europe-west3-docker.pkg.dev/" + $project + "/bazoria-uat-containers/bazoria-web@" + $digest),
+                release_commit: $commit,
+                build_id: ("release-" + $commit),
+                supabase_url: $supabase_url,
+                supabase_publishable_key: $publishable_key,
+                supabase_service_role_secret_version: $supabase_secret,
+                openai_api_key_secret_version: $openai_secret,
+                canonical_origin: $origin,
+                prototype_administrator_user_ids: $admin_ids,
+                description_generation_model: "gpt-5.4-nano"
+              },
+              monitoring_configuration: {
+                alerting_enabled: true,
+                notification_channel_names: ($channels | split(",") | map(select(length > 0)))
+              }
+            }' infrastructure/google-cloud/environments/uat/platform.tfvars.json \
+            > "${RUNNER_TEMP}/uat-platform.tfvars.json"
+
+      - name: Initialize Terraform and create reviewed plan
+        if: inputs.operation != 'verify-edge'
+        env:
+          TF_DATA_DIR: ${{ runner.temp }}/terraform-platform-uat
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir=infrastructure/google-cloud/platform init \
+            -input=false -backend-config="../environments/uat/platform.gcs.tfbackend"
+          terraform -chdir=infrastructure/google-cloud/platform plan \
+            -input=false -lock-timeout=60s \
+            -var-file="${RUNNER_TEMP}/uat-platform.tfvars.json" \
+            -out="${RUNNER_TEMP}/uat-platform.tfplan"
+          terraform -chdir=infrastructure/google-cloud/platform show -json \
+            "${RUNNER_TEMP}/uat-platform.tfplan" > "${RUNNER_TEMP}/uat-platform.tfplan.json"
+          node scripts/deployment/uat-runtime-release.mjs fingerprint \
+            --plan "${RUNNER_TEMP}/uat-platform.tfplan.json" \
+            --commit "${RELEASE_COMMIT}" \
+            --digest "${RELEASE_IMAGE_DIGEST}" \
+            --output "${RUNNER_TEMP}/uat-plan-fingerprint.txt"
+          printf 'plan_fingerprint=%s\n' "$(<"${RUNNER_TEMP}/uat-plan-fingerprint.txt")" >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Apply reviewed database migrations and Terraform plan
+        if: inputs.operation == 'apply'
+        env:
+          TF_DATA_DIR: ${{ runner.temp }}/terraform-platform-uat
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "${{ inputs.plan_fingerprint }}" ]]
+          node scripts/deployment/uat-runtime-release.mjs assert-fingerprint \
+            --plan "${RUNNER_TEMP}/uat-platform.tfplan.json" \
+            --commit "${RELEASE_COMMIT}" \
+            --digest "${RELEASE_IMAGE_DIGEST}" \
+            --expected "${{ inputs.plan_fingerprint }}"
+          npm run db:environment:migrate -- --environment uat --confirm-project "${EXPECTED_PROJECT_REF}"
+          terraform -chdir=infrastructure/google-cloud/platform apply \
+            -input=false "${RUNNER_TEMP}/uat-platform.tfplan"
+
+      - name: Verify UAT edge
+        if: inputs.operation == 'verify-edge'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud certificate-manager certificates list \
+            --project "${BAZORIA_GOOGLE_PROJECT_ID}" --location=global
+          gcloud compute forwarding-rules list \
+            --project "${BAZORIA_GOOGLE_PROJECT_ID}" --global
+          curl --fail-with-body --silent --show-error \
+            --location "${BAZORIA_PUBLIC_SITE_URL}/healthz" > "${RUNNER_TEMP}/uat-healthz.txt"
+
+      - name: Remove temporary credentials and plans
+        if: always()
+        shell: bash
+        run: |
+          rm -f .env.supabase.uat.local
+          docker logout "${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST:-europe-west3-docker.pkg.dev}" >/dev/null 2>&1 || true

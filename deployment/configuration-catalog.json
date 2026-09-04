@@ -589,6 +589,7 @@
       "permittedSourcePathPatterns": [
         ".env.example",
         ".github/workflows/uat-marketplace-fixtures.yml",
+        ".github/workflows/uat-runtime-release.yml",
         "src/**",
         "scripts/qa-container-runtime.mjs",
         "infrastructure/google-cloud/**"
@@ -658,7 +659,10 @@
         }
       ],
       "validationSources": [".github/workflows/terraform-environment.yml"],
-      "permittedSourcePathPatterns": [".github/workflows/terraform-environment.yml"],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/terraform-environment.yml",
+        ".github/workflows/uat-runtime-release.yml"
+      ],
       "exposure": {
         "browserConfiguration": "forbidden",
         "browserAssets": "forbidden",
@@ -684,6 +688,7 @@
       "validationSources": [".github/workflows/artifact-release.yml"],
       "permittedSourcePathPatterns": [
         ".github/workflows/artifact-release.yml",
+        ".github/workflows/uat-runtime-release.yml",
         ".github/workflows/terraform-environment.yml"
       ],
       "exposure": {
@@ -709,7 +714,10 @@
         }
       ],
       "validationSources": [".github/workflows/artifact-release.yml"],
-      "permittedSourcePathPatterns": [".github/workflows/artifact-release.yml"],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/artifact-release.yml",
+        ".github/workflows/uat-runtime-release.yml"
+      ],
       "exposure": {
         "browserConfiguration": "forbidden",
         "browserAssets": "forbidden",
@@ -775,6 +783,7 @@
       "validationSources": [".github/workflows/terraform-environment.yml"],
       "permittedSourcePathPatterns": [
         ".github/workflows/artifact-release.yml",
+        ".github/workflows/uat-runtime-release.yml",
         ".github/workflows/terraform-environment.yml"
       ],
       "exposure": {
@@ -800,7 +809,10 @@
         }
       ],
       "validationSources": [".github/workflows/terraform-environment.yml"],
-      "permittedSourcePathPatterns": [".github/workflows/terraform-environment.yml"],
+      "permittedSourcePathPatterns": [
+        ".github/workflows/terraform-environment.yml",
+        ".github/workflows/uat-runtime-release.yml"
+      ],
       "exposure": {
         "browserConfiguration": "forbidden",
         "browserAssets": "forbidden",
@@ -1715,6 +1727,7 @@
       ],
       "permittedSourcePathPatterns": [
         ".env.example",
+        ".github/workflows/uat-runtime-release.yml",
         "src/features/admin/server/**",
         "src/features/seller/server/*.test.ts",
         "infrastructure/google-cloud/**",
@@ -1761,6 +1774,7 @@
       ],
       "permittedSourcePathPatterns": [
         ".env.example",
+        ".github/workflows/uat-runtime-release.yml",
         "src/**",
         "scripts/qa-container-runtime.mjs",
         "infrastructure/google-cloud/**"
@@ -1892,6 +1906,7 @@
       ],
       "permittedSourcePathPatterns": [
         ".github/workflows/uat-marketplace-fixtures.yml",
+        ".github/workflows/uat-runtime-release.yml",
         "scripts/supabase/**",
         "src/lib/supabase/*.test.ts",
         "supabase/environments/**"
@@ -2068,6 +2083,7 @@
       ],
       "permittedSourcePathPatterns": [
         ".github/workflows/uat-marketplace-fixtures.yml",
+        ".github/workflows/uat-runtime-release.yml",
         "scripts/supabase/**",
         "src/lib/supabase/*.test.ts",
         "supabase/environments/**"
@@ -2098,15 +2114,23 @@
           "environments": ["uat"],
           "presence": "required",
           "suppliedBy": "github_secret"
+        },
+        {
+          "role": "release",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
         }
       ],
       "validationSources": [
         "src/features/admin/server/uat-marketplace-fixtures.config.ts",
-        ".github/workflows/uat-marketplace-fixtures.yml"
+        ".github/workflows/uat-marketplace-fixtures.yml",
+        ".github/workflows/uat-runtime-release.yml"
       ],
       "permittedSourcePathPatterns": [
         ".env.example",
         ".github/workflows/uat-marketplace-fixtures.yml",
+        ".github/workflows/uat-runtime-release.yml",
         "src/features/admin/server/uat-marketplace-fixtures*",
         "scripts/terraform/runtime-contract.mjs"
       ],
@@ -2728,6 +2752,7 @@
       ],
       "permittedSourcePathPatterns": [
         ".env.example",
+        ".github/workflows/uat-runtime-release.yml",
         "src/**",
         "scripts/**",
         "infrastructure/google-cloud/**",
@@ -2873,6 +2898,7 @@
       "permittedSourcePathPatterns": [
         ".env.example",
         ".github/workflows/uat-marketplace-fixtures.yml",
+        ".github/workflows/uat-runtime-release.yml",
         "src/**",
         "scripts/**",
         "infrastructure/google-cloud/**",
@@ -2962,6 +2988,31 @@
       ],
       "validationSources": ["infrastructure/google-cloud/secret-catalog.json"],
       "permittedSourcePathPatterns": [".github/workflows/**", "scripts/deployment/**"],
+      "exposure": {
+        "browserConfiguration": "forbidden",
+        "browserAssets": "forbidden",
+        "logs": "value_allowed",
+        "terraformPlans": "value_allowed",
+        "releaseRecords": "value_allowed"
+      },
+      "localExample": { "policy": "omitted", "paths": [] },
+      "status": "reserved",
+      "ownerTicket": "0038f3"
+    },
+    {
+      "name": "BAZORIA_GOOGLE_MONITORING_NOTIFICATION_CHANNEL_NAMES",
+      "scope": "release_workflow",
+      "valueClass": "protected_github_variable",
+      "consumers": [
+        {
+          "role": "release",
+          "environments": ["uat"],
+          "presence": "required",
+          "suppliedBy": "protected_environment"
+        }
+      ],
+      "validationSources": ["infrastructure/google-cloud/monitoring-catalog.json"],
+      "permittedSourcePathPatterns": [".github/workflows/uat-runtime-release.yml"],
       "exposure": {
         "browserConfiguration": "forbidden",
         "browserAssets": "forbidden",
