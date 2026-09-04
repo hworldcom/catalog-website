@@ -109,4 +109,18 @@ describe("UAT runtime release plan fingerprint", () => {
       }),
     ).not.toThrow();
   });
+
+  it("accepts reviewed platform service activation", () => {
+    expect(() =>
+      validatePlan({
+        resource_changes: [
+          {
+            address:
+              'module.platform_services.google_project_service.enabled["artifactregistry.googleapis.com"]',
+            change: { actions: ["create"] },
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
 });

@@ -13,6 +13,11 @@ const allowedResourcePrefixes = [
 const allowedResourcePatterns = [
   /^module\.artifact_registry_foundation\.google_artifact_registry_repository_iam_member\.(readers|writers)\["serviceAccount:baz-uat-(terraform|artifact-release)@bazoria-uat-lnlabs\.iam\.gserviceaccount\.com"\]$/u,
 ];
+const platformServiceAddresses = new Set(
+  JSON.parse(readFileSync("infrastructure/google-cloud/service-catalog.json", "utf8")).platform.map(
+    (service) => `module.platform_services.google_project_service.enabled["${service}"]`,
+  ),
+);
 
 function argument(argv, name) {
   const index = argv.indexOf(name);
@@ -56,6 +61,7 @@ export function validatePlan(plan) {
     const actions = change.change?.actions ?? [];
     if (
       !allowedResourcePrefixes.some((prefix) => change.address.startsWith(prefix)) &&
+      !platformServiceAddresses.has(change.address) &&
       !allowedResourcePatterns.some((pattern) => pattern.test(change.address))
     ) {
       throw new Error(`uat_runtime_release_unreviewed_resource: ${change.address}`);
