@@ -289,6 +289,7 @@ jobs:
         env:
           SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
         run: |
+          docker buildx prune --all --force
           docker buildx build \
             --platform linux/amd64 \
             --load \
@@ -422,7 +423,8 @@ jobs:
               exit 1
             fi
             if [[ "${existing_config_digest}" != "${BUILD_CONFIG_DIGEST}" ]]; then
-              printf 'release_artifact_conflict\n' >&2
+              printf 'release_artifact_conflict existing_config_digest=%s build_config_digest=%s\n' \
+                "${existing_config_digest}" "${BUILD_CONFIG_DIGEST}" >&2
               exit 1
             fi
             replay=true
