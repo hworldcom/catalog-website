@@ -33,6 +33,11 @@ run "uat_monitoring_matches_the_reviewed_contract" {
   }
 
   assert {
+    condition     = google_logging_metric.pending_age.metric_descriptor[0].value_type == "DISTRIBUTION"
+    error_message = "The pending-age metric must use a distribution value type for its value extractor."
+  }
+
+  assert {
     condition     = length(google_monitoring_uptime_check_config.public) == 2
     error_message = "The public health and catalog uptime checks must exist."
   }

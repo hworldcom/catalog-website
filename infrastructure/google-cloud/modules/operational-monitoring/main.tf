@@ -252,7 +252,7 @@ resource "google_logging_metric" "pending_age" {
 
   metric_descriptor {
     metric_kind = "DELTA"
-    value_type  = "DOUBLE"
+    value_type  = "DISTRIBUTION"
     unit        = "ms"
   }
 }
