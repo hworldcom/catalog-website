@@ -159,7 +159,7 @@ export function validateIdentityCatalog(catalog) {
         providerId: value.providerId,
         deploymentRole: value.deploymentRole,
         serviceAccountKey: value.serviceAccountKey,
-        workflowFile: value.workflowFile,
+        workflowFiles: value.workflowFiles,
       },
     ]),
   );
@@ -170,13 +170,13 @@ export function validateIdentityCatalog(catalog) {
           providerId: "artifact-main",
           deploymentRole: "artifact",
           serviceAccountKey: "artifactRelease",
-          workflowFile: "artifact-release.yml",
+          workflowFiles: ["artifact-release.yml"],
         },
         terraform: {
           providerId: "terraform-main",
           deploymentRole: "terraform",
           serviceAccountKey: "terraform",
-          workflowFile: "terraform-environment.yml",
+          workflowFiles: ["terraform-environment.yml", "uat-runtime-release.yml"],
         },
       }),
     "federation provider contract differs",
@@ -311,7 +311,7 @@ export function buildIdentityAccessMatrix({
           roles: ["roles/iam.workloadIdentityUser"],
           resources: [accounts[provider.serviceAccountKey].name],
           ownerTicket: "0038e2a",
-          reason: `Allow only the reviewed ${provider.workflowFile} provider role to impersonate its account.`,
+        reason: `Allow only the reviewed ${provider.workflowFiles.join(", ")} provider role to impersonate its account.`,
         }),
       ),
       binding({
@@ -449,6 +449,10 @@ function validateSource() {
   validateWorkflow(
     join(repositoryRoot, ".github/workflows/artifact-release.yml"),
     "environment: ${{ inputs.environment }}",
+  );
+  validateWorkflow(
+    join(repositoryRoot, ".github/workflows/uat-runtime-release.yml"),
+    "environment: uat",
   );
 
   for (const path of [join(repositoryRoot, ".gitignore"), join(repositoryRoot, ".dockerignore")]) {

@@ -54,7 +54,7 @@ module "identity_foundation" {
       provider_id         = value.providerId
       deployment_role     = value.deploymentRole
       service_account_key = value.serviceAccountKey
-      workflow_file       = value.workflowFile
+      workflow_files      = toset(value.workflowFiles)
     }
   }
   github_accepted_events = toset(local.identity_catalog.github.acceptedEvents)

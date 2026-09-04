@@ -98,17 +98,17 @@ jobs:
           test "$(npm --version)" = "10.9.2"
           npm ci
 
-      - name: Authenticate as the artifact identity
-        id: artifact-auth
+      - name: Authenticate as the Terraform identity
+        id: terraform-auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
-          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.BAZORIA_GOOGLE_ARTIFACT_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_TERRAFORM_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.BAZORIA_GOOGLE_TERRAFORM_SERVICE_ACCOUNT }}
           token_format: access_token
 
       - name: Verify published immutable artifact
         env:
-          ACCESS_TOKEN: ${{ steps.artifact-auth.outputs.access_token }}
+          ACCESS_TOKEN: ${{ steps.terraform-auth.outputs.access_token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -154,12 +154,6 @@ jobs:
         with:
           terraform_version: 1.15.9
           terraform_wrapper: false
-
-      - name: Authenticate as the Terraform identity
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
-        with:
-          workload_identity_provider: ${{ vars.BAZORIA_GOOGLE_TERRAFORM_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.BAZORIA_GOOGLE_TERRAFORM_SERVICE_ACCOUNT }}
 
       - name: Prepare temporary UAT database target
         if: inputs.operation != 'verify-edge'

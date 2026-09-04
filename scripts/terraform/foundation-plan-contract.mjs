@@ -459,8 +459,8 @@ export function validateFoundationPlan({
         reviewed.githubOwnerId,
         environment,
         "refs/heads/main",
-        provider.workflowFile,
         expectedIdentity.subject,
+        ...provider.workflowFiles,
       ]) {
         assertPlan(
           after.attribute_condition.includes(expectedValue),

@@ -38,7 +38,7 @@ const identityCatalog = {
       terraform: {
         providerId: "terraform-main",
         deploymentRole: "terraform",
-        workflowFile: "terraform-environment.yml",
+        workflowFiles: ["terraform-environment.yml", "uat-runtime-release.yml"],
       },
     },
   },
@@ -357,7 +357,7 @@ describe("Terraform foundation plan contract", () => {
             project: "bazoria-uat-lnlabs",
             workload_identity_pool_provider_id: "terraform-main",
             attribute_condition:
-              "assertion.repository == 'hworldcom/catalog-website' && assertion.repository_id == '1313750742' && assertion.repository_owner == 'hworldcom' && assertion.repository_owner_id == '144285964' && assertion.environment == 'uat' && assertion.sub == 'repo:hworldcom@144285964/catalog-website@1313750742:environment:uat' && assertion.ref == 'refs/heads/main' && assertion.workflow_ref == 'hworldcom/catalog-website/.github/workflows/terraform-environment.yml@refs/heads/main'",
+              "assertion.repository == 'hworldcom/catalog-website' && assertion.repository_id == '1313750742' && assertion.repository_owner == 'hworldcom' && assertion.repository_owner_id == '144285964' && assertion.environment == 'uat' && assertion.sub == 'repo:hworldcom@144285964/catalog-website@1313750742:environment:uat' && assertion.ref == 'refs/heads/main' && assertion.workflow_ref in ['hworldcom/catalog-website/.github/workflows/terraform-environment.yml@refs/heads/main', 'hworldcom/catalog-website/.github/workflows/uat-runtime-release.yml@refs/heads/main']",
             attribute_mapping: {
               "attribute.deployment_role": "'terraform'",
             },
@@ -438,7 +438,7 @@ describe("Terraform foundation plan contract", () => {
           after: {
             ...sharedProvider,
             attribute_condition:
-              "assertion.repository == 'hworldcom/catalog-website' && assertion.repository_id == '1313750742' && assertion.repository_owner == 'hworldcom' && assertion.repository_owner_id == '144285964' && assertion.environment == 'uat' && assertion.sub == 'repo:hworldcom@144285964/catalog-website@1313750742:environment:uat' && assertion.ref == 'refs/heads/main' && assertion.workflow_ref == 'hworldcom/catalog-website/.github/workflows/terraform-environment.yml@refs/heads/main'",
+              "assertion.repository == 'hworldcom/catalog-website' && assertion.repository_id == '1313750742' && assertion.repository_owner == 'hworldcom' && assertion.repository_owner_id == '144285964' && assertion.environment == 'uat' && assertion.sub == 'repo:hworldcom@144285964/catalog-website@1313750742:environment:uat' && assertion.ref == 'refs/heads/main' && assertion.workflow_ref in ['hworldcom/catalog-website/.github/workflows/terraform-environment.yml@refs/heads/main', 'hworldcom/catalog-website/.github/workflows/uat-runtime-release.yml@refs/heads/main']",
           },
         },
       },

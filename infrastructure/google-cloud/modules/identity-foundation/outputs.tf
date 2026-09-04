@@ -19,7 +19,7 @@ output "federation" {
       for key, provider in var.federation_providers : key => {
         deployment_role = provider.deployment_role
         name            = "projects/${var.project_number}/locations/global/workloadIdentityPools/${local.pool_id}/providers/${provider.provider_id}"
-        workflow_file   = provider.workflow_file
+        workflow_files  = sort(tolist(provider.workflow_files))
       }
     }
   }

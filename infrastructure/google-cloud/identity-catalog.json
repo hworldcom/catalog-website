@@ -14,13 +14,13 @@
         "providerId": "artifact-main",
         "deploymentRole": "artifact",
         "serviceAccountKey": "artifactRelease",
-        "workflowFile": "artifact-release.yml"
+        "workflowFiles": ["artifact-release.yml"]
       },
       "terraform": {
         "providerId": "terraform-main",
         "deploymentRole": "terraform",
         "serviceAccountKey": "terraform",
-        "workflowFile": "terraform-environment.yml"
+        "workflowFiles": ["terraform-environment.yml", "uat-runtime-release.yml"]
       }
     }
   },

@@ -100,7 +100,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = each.value.provider_id
   display_name                       = "Bazoria ${upper(local.environment_abbreviation)} ${title(each.key)}"
-  description                        = "Trusts only the reviewed ${each.value.workflow_file} workflow."
+  description                        = "Trusts only the reviewed workflow files."
   disabled                           = false
 
   attribute_mapping = {
@@ -125,7 +125,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "assertion.sub == '${local.github_subject}'",
     "assertion.ref == '${var.github_branch_ref}'",
     "assertion.event_name in [${join(", ", [for event in sort(tolist(var.github_accepted_events)) : "'${event}'"])}]",
-    "assertion.workflow_ref == '${var.github_repository}/.github/workflows/${each.value.workflow_file}@${var.github_branch_ref}'",
+    "assertion.workflow_ref in [${join(", ", [for workflow_file in sort(tolist(each.value.workflow_files)) : "'${var.github_repository}/.github/workflows/${workflow_file}@${var.github_branch_ref}'"])}]",
   ])
 
   oidc {

@@ -24,7 +24,7 @@ variable "federation_providers" {
     provider_id         = string
     deployment_role     = string
     service_account_key = string
-    workflow_file       = string
+    workflow_files      = set(string)
   }))
 }
 
