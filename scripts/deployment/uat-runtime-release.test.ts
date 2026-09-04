@@ -81,4 +81,18 @@ describe("UAT runtime release plan fingerprint", () => {
       }),
     ).toThrow("uat_runtime_release_unreviewed_resource");
   });
+
+  it("accepts the reviewed Artifact Registry repository change", () => {
+    expect(() =>
+      validatePlan({
+        resource_changes: [
+          {
+            address:
+              "module.artifact_registry_foundation.google_artifact_registry_repository.containers",
+            change: { actions: ["update"] },
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
 });

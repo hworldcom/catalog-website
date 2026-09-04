@@ -8,6 +8,7 @@ const allowedResourcePrefixes = [
   "module.runtime_activation_platform",
   "module.custom_domain_load_balancer",
   "module.operational_monitoring",
+  "module.artifact_registry_foundation.google_artifact_registry_repository.containers",
 ];
 
 function argument(argv, name) {
