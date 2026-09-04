@@ -85,7 +85,6 @@ locals {
       BAZORIA_PRODUCT_PUBLICATION_TASK_AUDIENCE         = local.worker_url
       BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS = tostring(var.runtime_contract.queue.maximumAttempts)
       BAZORIA_PRODUCT_PUBLICATION_TASK_SERVICE_ACCOUNT  = var.service_account_emails.task_invoker
-      PORT                                              = "8080"
     },
   )
   reconciliation_plain_environment = merge(
@@ -226,12 +225,13 @@ check "runtime_time_budgets" {
 }
 
 resource "google_cloud_run_v2_service" "website" {
-  project             = var.project_id
-  location            = var.region
-  name                = local.website_name
-  description         = "Public Bazoria ${var.environment} website."
-  ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
-  deletion_protection = true
+  project              = var.project_id
+  location             = var.region
+  name                 = local.website_name
+  description          = "Public Bazoria ${var.environment} website."
+  ingress              = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  invoker_iam_disabled = true
+  deletion_protection  = true
 
   labels = local.resource_labels.website
 
@@ -308,14 +308,6 @@ resource "google_cloud_run_v2_service" "website" {
       }
     }
   }
-}
-
-resource "google_cloud_run_v2_service_iam_member" "website_public" {
-  project  = var.project_id
-  location = google_cloud_run_v2_service.website.location
-  name     = google_cloud_run_v2_service.website.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
 }
 
 resource "google_cloud_run_v2_service" "worker" {

@@ -51,8 +51,8 @@ run "uat_runtime_plan_matches_reviewed_contract" {
   }
 
   assert {
-    condition     = google_cloud_run_v2_service_iam_member.website_public.member == "allUsers"
-    error_message = "The load-balancer-restricted website must permit anonymous invocation."
+    condition     = google_cloud_run_v2_service.website.invoker_iam_disabled
+    error_message = "The load-balancer-restricted website must disable the Cloud Run invoker IAM check."
   }
 
   assert {

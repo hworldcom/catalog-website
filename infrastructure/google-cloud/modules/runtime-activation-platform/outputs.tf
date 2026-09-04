@@ -7,7 +7,7 @@ output "runtime_inventory" {
       location        = google_cloud_run_v2_service.website.location
       service_account = var.service_account_emails.website
       ingress         = google_cloud_run_v2_service.website.ingress
-      public_invoker  = google_cloud_run_v2_service_iam_member.website_public.member
+      public_invoker  = google_cloud_run_v2_service.website.invoker_iam_disabled
     }
     worker = {
       name            = google_cloud_run_v2_service.worker.name

@@ -192,7 +192,7 @@ function validateSource() {
     'role     = "roles/run.invoker"',
     '"roles/cloudtasks.enqueuer"',
     '"roles/cloudtasks.viewer"',
-    'member   = "allUsers"',
+    "invoker_iam_disabled = true",
     'ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"',
     'uri_override_enforce_mode = "ALWAYS"',
     "BAZORIA_PRODUCT_PUBLICATION_TASK_MAXIMUM_ATTEMPTS = tostring(var.runtime_contract.queue.maximumAttempts)",
@@ -216,8 +216,8 @@ function validateSource() {
     assertRuntime(!moduleSource.includes(forbidden), `runtime module contains ${forbidden}`);
   }
   assertRuntime(
-    (moduleSource.match(/member\s*=\s*"allUsers"/g) ?? []).length === 1,
-    "only the website may have an anonymous invoker",
+    !(moduleSource.match(/member\s*=\s*"allUsers"/g) ?? []).length,
+    "public access must use the Cloud Run invoker IAM check setting",
   );
   assertRuntime(
     platformSource.includes('module "runtime_activation_platform"') &&
