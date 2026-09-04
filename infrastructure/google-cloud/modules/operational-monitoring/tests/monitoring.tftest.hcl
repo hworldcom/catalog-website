@@ -37,7 +37,8 @@ run "uat_monitoring_matches_the_reviewed_contract" {
       google_logging_metric.pending_age.metric_descriptor[0].value_type == "DISTRIBUTION" &&
       length(google_logging_metric.pending_age.bucket_options[0].explicit_buckets[0].bounds) == 2 &&
       google_logging_metric.pending_age.bucket_options[0].explicit_buckets[0].bounds[0] == 300000 &&
-      google_logging_metric.pending_age.bucket_options[0].explicit_buckets[0].bounds[1] == 900000
+      google_logging_metric.pending_age.bucket_options[0].explicit_buckets[0].bounds[1] == 900000 &&
+      google_monitoring_alert_policy.pending_age["warning"].conditions[0].condition_threshold[0].aggregations[0].per_series_aligner == "ALIGN_PERCENTILE_99"
     )
     error_message = "The pending-age distribution metric must define the reviewed age buckets."
   }

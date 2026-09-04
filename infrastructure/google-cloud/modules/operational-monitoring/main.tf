@@ -399,7 +399,7 @@ resource "google_monitoring_alert_policy" "pending_age" {
 
       aggregations {
         alignment_period     = "${var.monitoring_contract.pendingAge.alignmentWindowSeconds}s"
-        per_series_aligner   = "ALIGN_MAX"
+        per_series_aligner   = "ALIGN_PERCENTILE_99"
         cross_series_reducer = "REDUCE_MAX"
         group_by_fields = [
           "resource.label.project_id",
