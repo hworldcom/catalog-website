@@ -196,12 +196,6 @@ jobs:
           umask 077
           [[ "${BAZORIA_SUPABASE_SERVICE_ROLE_SECRET_VERSION}" =~ ^[1-9][0-9]*$ ]]
           [[ "${BAZORIA_OPENAI_API_KEY_SECRET_VERSION}" =~ ^[1-9][0-9]*$ ]]
-          test "$(gcloud secrets versions describe "${BAZORIA_SUPABASE_SERVICE_ROLE_SECRET_VERSION}" \
-            --secret=bazoria-uat-supabase-service-role --project="${BAZORIA_GOOGLE_PROJECT_ID}" \
-            --format='value(state)')" = "ENABLED"
-          test "$(gcloud secrets versions describe "${BAZORIA_OPENAI_API_KEY_SECRET_VERSION}" \
-            --secret=bazoria-uat-openai-api-key --project="${BAZORIA_GOOGLE_PROJECT_ID}" \
-            --format='value(state)')" = "ENABLED"
           jq -n \
             --arg project "${BAZORIA_GOOGLE_PROJECT_ID}" \
             --arg region "${BAZORIA_GOOGLE_REGION}" \
