@@ -122,7 +122,13 @@ function expectedArtifactValues(environment, reviewed, identityCatalog, artifact
   };
 }
 
-function isReviewedProviderSubjectUpdate(resource, environment, reviewed, expectedIdentity) {
+function isReviewedProviderSubjectUpdate(
+  resource,
+  environment,
+  reviewed,
+  expectedIdentity,
+  identityCatalog,
+) {
   if (
     resource.change?.actions?.length !== 1 ||
     resource.change.actions[0] !== "update" ||
@@ -140,14 +146,27 @@ function isReviewedProviderSubjectUpdate(resource, environment, reviewed, expect
   delete before.attribute_condition;
   delete after.attribute_condition;
 
+  const providerKey = resource.address.match(/\["(artifact|terraform)"\]$/)?.[1];
+  const provider = identityCatalog.github.providers[providerKey];
+  const reviewedWorkflowRefs = provider.workflowFiles.map(
+    (workflowFile) =>
+      `${reviewed.githubRepository}/.github/workflows/${workflowFile}@refs/heads/main`,
+  );
+
   const legacySubject = `repo:${reviewed.githubRepository}:environment:${environment}`;
-  return (
+  const isSubjectMigration =
     typeof beforeCondition === "string" &&
     beforeCondition.includes(legacySubject) &&
-    !beforeCondition.includes(expectedIdentity.subject) &&
+    !beforeCondition.includes(expectedIdentity.subject);
+  const isWorkflowExpansion =
+    typeof beforeCondition === "string" &&
+    !reviewedWorkflowRefs.every((workflowRef) => beforeCondition.includes(workflowRef));
+  return (
+    typeof beforeCondition === "string" &&
     typeof afterCondition === "string" &&
     afterCondition.includes(expectedIdentity.subject) &&
-    !afterCondition.includes(legacySubject) &&
+    reviewedWorkflowRefs.every((workflowRef) => afterCondition.includes(workflowRef)) &&
+    (isSubjectMigration || isWorkflowExpansion) &&
     isDeepStrictEqual(before, after)
   );
 }
@@ -231,6 +250,7 @@ export function validateFoundationPlan({
       environment,
       reviewed,
       expectedIdentity,
+      identityCatalog,
     );
     const reviewedArtifactCleanupUpdate =
       root === "platform" && isReviewedArtifactCleanupUpdate(resource, expectedArtifactCleanup);

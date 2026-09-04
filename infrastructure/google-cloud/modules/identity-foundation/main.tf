@@ -19,6 +19,17 @@ locals {
     for key, value in var.service_accounts : key => value
     if value.can_act_as_task_invoker
   }
+
+  workflow_conditions = {
+    for key, provider in var.federation_providers : key => length(provider.workflow_files) == 1
+    ? "assertion.workflow_ref == '${var.github_repository}/.github/workflows/${one(provider.workflow_files)}@${var.github_branch_ref}'"
+    : "assertion.workflow_ref in [${join(", ", [for workflow_file in sort(tolist(provider.workflow_files)) : "'${var.github_repository}/.github/workflows/${workflow_file}@${var.github_branch_ref}'"])}]"
+  }
+
+  provider_descriptions = {
+    artifact  = "Trusts only the reviewed artifact-release.yml workflow."
+    terraform = "Trusts only the reviewed terraform-environment.yml workflow."
+  }
 }
 
 resource "google_service_account" "accounts" {
@@ -100,7 +111,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = each.value.provider_id
   display_name                       = "Bazoria ${upper(local.environment_abbreviation)} ${title(each.key)}"
-  description                        = "Trusts only the reviewed workflow files."
+  description                        = local.provider_descriptions[each.key]
   disabled                           = false
 
   attribute_mapping = {
@@ -125,7 +136,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "assertion.sub == '${local.github_subject}'",
     "assertion.ref == '${var.github_branch_ref}'",
     "assertion.event_name in [${join(", ", [for event in sort(tolist(var.github_accepted_events)) : "'${event}'"])}]",
-    "assertion.workflow_ref in [${join(", ", [for workflow_file in sort(tolist(each.value.workflow_files)) : "'${var.github_repository}/.github/workflows/${workflow_file}@${var.github_branch_ref}'"])}]",
+    local.workflow_conditions[each.key],
   ])
 
   oidc {
