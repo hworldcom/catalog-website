@@ -95,4 +95,18 @@ describe("UAT runtime release plan fingerprint", () => {
       }),
     ).not.toThrow();
   });
+
+  it("accepts reviewed UAT Artifact Registry access changes", () => {
+    expect(() =>
+      validatePlan({
+        resource_changes: [
+          {
+            address:
+              'module.artifact_registry_foundation.google_artifact_registry_repository_iam_member.readers["serviceAccount:baz-uat-terraform@bazoria-uat-lnlabs.iam.gserviceaccount.com"]',
+            change: { actions: ["create"] },
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
 });

@@ -10,6 +10,9 @@ const allowedResourcePrefixes = [
   "module.operational_monitoring",
   "module.artifact_registry_foundation.google_artifact_registry_repository.containers",
 ];
+const allowedResourcePatterns = [
+  /^module\.artifact_registry_foundation\.google_artifact_registry_repository_iam_member\.(readers|writers)\["serviceAccount:baz-uat-(terraform|artifact-release)@bazoria-uat-lnlabs\.iam\.gserviceaccount\.com"\]$/u,
+];
 
 function argument(argv, name) {
   const index = argv.indexOf(name);
@@ -51,7 +54,10 @@ export function normalizedPlan(plan, inputs) {
 export function validatePlan(plan) {
   for (const change of plan.resource_changes ?? []) {
     const actions = change.change?.actions ?? [];
-    if (!allowedResourcePrefixes.some((prefix) => change.address.startsWith(prefix))) {
+    if (
+      !allowedResourcePrefixes.some((prefix) => change.address.startsWith(prefix)) &&
+      !allowedResourcePatterns.some((pattern) => pattern.test(change.address))
+    ) {
       throw new Error(`uat_runtime_release_unreviewed_resource: ${change.address}`);
     }
     if (actions.includes("delete") || actions.length > 1) {
