@@ -246,7 +246,7 @@ describe("MarketplaceNavigation", () => {
     expect(within(kesarLink).getByText("K")).toBeVisible();
   });
 
-  it("keeps the current route and language when the audience changes", async () => {
+  it("opens the selected audience home and preserves language", async () => {
     const user = userEvent.setup();
     render(<MarketplaceNavigation audience="women" />);
 
@@ -256,10 +256,28 @@ describe("MarketplaceNavigation", () => {
       to: string;
       search: (previous: Record<string, unknown>) => Record<string, unknown>;
     };
-    expect(request.to).toBe(".");
-    expect(request.search({ lang: "DE", audience: "women" })).toEqual({
+    expect(request.to).toBe("/");
+    expect(request.search({ lang: "DE", audience: "women", promotion: "old" })).toEqual({
       lang: "DE",
       audience: "men",
+    });
+  });
+
+  it("uses the active audience control to return to its marketplace home", async () => {
+    const user = userEvent.setup();
+    render(<MarketplaceNavigation audience="women" />);
+
+    await user.click(screen.getByRole("button", { name: "Women" }));
+
+    expect(mocks.navigate).toHaveBeenCalledOnce();
+    const request = mocks.navigate.mock.calls[0]?.[0] as {
+      to: string;
+      search: (previous: Record<string, unknown>) => Record<string, unknown>;
+    };
+    expect(request.to).toBe("/");
+    expect(request.search({ lang: "PL", audience: "women" })).toEqual({
+      lang: "PL",
+      audience: "women",
     });
   });
 

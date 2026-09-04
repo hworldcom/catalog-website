@@ -47,7 +47,8 @@ with `aria-expanded` and `aria-controls`; panels have stable accessible labels.
 ## Navigation Contract
 
 - Selecting an audience updates the normalized public `audience` search
-  parameter without discarding `lang`.
+  parameter without discarding `lang` and navigates to the marketplace home
+  route.
 - Category links preserve selected audience and language.
 - Seller links preserve selected audience and language.
 - Empty Clothing or Sellers results show a compact localized empty state rather
@@ -55,9 +56,11 @@ with `aria-expanded` and `aria-controls`; panels have stable accessible labels.
 - Audience, Clothing, Sellers, empty-state, and category labels use the shared
   localization contract from `0039b`; the canonical database category name is
   only a fallback.
-- Changing audience while already on a category or seller route keeps the route
-  and displays that audience's results, including a successful empty state when
-  there are no matches.
+- Audience controls are top-level marketplace destinations. Selecting Women,
+  Men, Kids, or All from a category, seller, or product route clears that route
+  context and opens the marketplace home for the selected audience. Selecting
+  the already-active audience has the same behavior, so it can be used to
+  return to that audience's marketplace home.
 
 ## Non-Goals
 
@@ -97,9 +100,9 @@ with `aria-expanded` and `aria-controls`; panels have stable accessible labels.
   generic error pages do not depend on catalog reads. The branded seller
   storefront header uses the same component so audience changes remain
   available on seller routes.
-- Added pointer, keyboard, click, touch, outside-press, Escape, focus-restoration,
-  empty-state, route-preservation, and failed-logo behavior. Missing or failed
-  seller logos render stable initials.
+- Added pointer, keyboard, click, touch, outside-press, Escape,
+  focus-restoration, empty-state, top-level audience navigation, and failed-logo
+  behavior. Missing or failed seller logos render stable initials.
 - Public homepage, category, seller, and product loaders prefetch the bounded
   audience-navigation snapshot alongside their page data.
 - Focused navigation and shell tests passed. The full website suite passed with

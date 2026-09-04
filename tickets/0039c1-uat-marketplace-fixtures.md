@@ -123,6 +123,10 @@ invariants with raw published-row insertion.
 
 - Generate original synthetic catalog photographs and seller branding for this
   fixture set. Do not hotlink third-party product images.
+- Each storefront cover must incorporate that fixture seller's own logo mark
+  and exact seller name as part of the showroom scene. Keep the left side clear
+  enough for the storefront's live heading and actions, and place the embedded
+  branding on the right so it remains distinct from the dynamic page content.
 - The repository has no dedicated seller-media bucket. Store generated UAT
   seller logos and covers in the existing public `product-images` bucket under
   `uat-marketplace-fixtures/sellers/{sellerSlug}/...`. This is a fixture-only
@@ -250,6 +254,8 @@ complete and is used after the guarded hosted UAT reset.
 - Added guarded reset, seed, and verify commands in `catalog-website`.
 - Generated and uploaded 28 original JPEG assets: four logos, four storefront
   covers, and twenty product-gallery images.
+- Updated fixture bundle `0038d-v2` with four branded storefront covers that
+  pair each seller's existing showroom scene with its own logo and exact name.
 - The first complete seed removed four disposable sellers and created the four
   fixture sellers, sixteen published products, and twenty public product-image
   rows.

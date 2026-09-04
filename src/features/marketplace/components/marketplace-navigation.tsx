@@ -121,12 +121,11 @@ export function MarketplaceNavigation({ audience }: { audience: PublicAudience }
   };
 
   const changeAudience = (nextAudience: PublicAudience) => {
-    if (nextAudience === audience) return;
     setOpenPanel(null);
     void navigate({
-      to: ".",
+      to: "/",
       search: (previous: Record<string, unknown>) => ({
-        ...previous,
+        lang: previous.lang,
         audience: nextAudience,
       }),
     });

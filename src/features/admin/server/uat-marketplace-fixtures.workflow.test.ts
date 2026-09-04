@@ -29,7 +29,7 @@ describe("UAT marketplace fixture workflow", () => {
 
     expect(result).toEqual({
       assetCount: 28,
-      bundleVersion: "0038d-v1",
+      bundleVersion: "0038d-v2",
       commit,
       operation: "verify",
       projectRef,
@@ -97,7 +97,7 @@ describe("UAT marketplace fixture workflow", () => {
     });
 
     expect(summary).toMatchObject({
-      bundleVersion: "0038d-v1",
+      bundleVersion: "0038d-v2",
       productCount: 16,
       publicImageCount: 20,
       sellerCount: 4,

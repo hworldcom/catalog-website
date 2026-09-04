@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "bundleVersion": "0038d-v1",
+  "bundleVersion": "0038d-v2",
   "provenance": {
     "synthetic": true,
     "containsCustomerData": false,
@@ -67,8 +67,8 @@
       "role": "seller_storefront_cover",
       "relativePath": "little-orbit-kids/storefront-cover.jpg",
       "mediaType": "image/jpeg",
-      "sizeBytes": 303021,
-      "sha256": "b2ad7de2232b3898f953982229b340a2b8580cda6fe16752be9cf56a935ee33f"
+      "sizeBytes": 371566,
+      "sha256": "ab27839275a9246d57e31471751b0fe63a769967f8a649f1adec57276e0fad8a"
     },
     {
       "sellerSlug": "luna-atelier",
@@ -130,8 +130,8 @@
       "role": "seller_storefront_cover",
       "relativePath": "luna-atelier/storefront-cover.jpg",
       "mediaType": "image/jpeg",
-      "sizeBytes": 259256,
-      "sha256": "3d8bb5d0362f59114b6ffbcce089b6387f38fee385d0b9da3d0e1898801ade28"
+      "sizeBytes": 406730,
+      "sha256": "98feb8dd8dfcd1dc3d11cca55eb581b316e6be0e9a9dafd6614b7114681c0c92"
     },
     {
       "sellerSlug": "northline-menswear",
@@ -157,8 +157,8 @@
       "role": "seller_storefront_cover",
       "relativePath": "northline-menswear/storefront-cover.jpg",
       "mediaType": "image/jpeg",
-      "sizeBytes": 286057,
-      "sha256": "ccacf1767b32e1cfb9e673b4a0ed096d4550e0559a500eefe2cb3e3cd9110594"
+      "sizeBytes": 406448,
+      "sha256": "392c3ee50b15e5c5e6debeaf0e9101c01bca53f543a1a4d22c4477e14e6b97bf"
     },
     {
       "sellerSlug": "northline-menswear",
@@ -256,8 +256,8 @@
       "role": "seller_storefront_cover",
       "relativePath": "vela-essentials/storefront-cover.jpg",
       "mediaType": "image/jpeg",
-      "sizeBytes": 284850,
-      "sha256": "463fb114d40e437596313d07228adf54f9bb428a5544116ad21f51d7e0e993de"
+      "sizeBytes": 396038,
+      "sha256": "714432dd4d2208ed0f08164e0ef0ff0680ac650e7988d9f7cb5cea7ba7fa2fe1"
     }
   ]
 }
