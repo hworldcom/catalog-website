@@ -10,6 +10,7 @@ import {
   validateDigest,
   validateDispatchInput,
   validateExceptionCatalog,
+  validateWorkflowSource,
   verifyBufferChecksum,
 } from "./release-artifact-contract.mjs";
 
@@ -25,6 +26,18 @@ describe("release artifact contract", () => {
       retentionDays: 7,
       tools: 2,
     });
+  });
+
+  it("rejects comparisons between registry and local wrapper manifest digests", () => {
+    const workflowSource = readFileSync(".github/workflows/artifact-release.yml", "utf8");
+    const regressedSource = workflowSource.replace(
+      'if [[ "${remote_config_digest}" != "${BUILD_CONFIG_DIGEST}" ]]; then',
+      'if [[ "${remote_digest}" != "${LOCAL_DIGEST}" ]]; then',
+    );
+
+    expect(() => validateWorkflowSource(regressedSource)).toThrow(
+      "artifact workflow compares incompatible manifest digests",
+    );
   });
 
   it("accepts identity checks and only exact UAT publication inputs", () => {

@@ -280,6 +280,10 @@ export function validateWorkflowSource(source, contract = readReleaseArtifactCon
     "npm run deployment:gitleaks:scan-directory",
     "--expected-release-commit",
     "--skip-build",
+    'build_config_digest="$(jq -er \'."containerimage.config.digest"\'',
+    "docker buildx imagetools inspect --raw",
+    'existing_config_digest}" != "${BUILD_CONFIG_DIGEST}',
+    'remote_config_digest}" != "${BUILD_CONFIG_DIGEST}',
     'build_id="release-${release_commit}"',
     "SOURCE_DATE_EPOCH",
     `maximum_artifact_bytes=${contract.handoff.maximumArtifactBytes}`,
@@ -287,6 +291,9 @@ export function validateWorkflowSource(source, contract = readReleaseArtifactCon
     ":testIamPermissions",
     "retention-days: 7",
   ];
+  if (source.includes('remote_digest}" != "${LOCAL_DIGEST}')) {
+    failReleaseArtifact("artifact workflow compares incompatible manifest digests");
+  }
   for (const required of requiredSource) {
     if (!source.includes(required)) failReleaseArtifact(`artifact workflow is missing ${required}`);
   }

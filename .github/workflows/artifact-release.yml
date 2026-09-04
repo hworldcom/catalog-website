@@ -297,12 +297,20 @@ jobs:
             --build-arg "BAZORIA_BUILD_ID=${BUILD_ID}" \
             --tag "${LOCAL_IMAGE}" \
             .
-          local_digest="$(jq -er '."containerimage.digest"' "${BUILD_METADATA}")"
-          if [[ ! "${local_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+          build_manifest_digest="$(jq -er '."containerimage.digest"' "${BUILD_METADATA}")"
+          build_config_digest="$(jq -er '."containerimage.config.digest"' "${BUILD_METADATA}")"
+          if [[ ! "${build_manifest_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
             printf 'Buildx returned an invalid local manifest digest.\n' >&2
             exit 1
           fi
-          printf 'LOCAL_DIGEST=%s\n' "${local_digest}" >> "${GITHUB_ENV}"
+          if [[ ! "${build_config_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            printf 'Buildx returned an invalid local configuration digest.\n' >&2
+            exit 1
+          fi
+          {
+            printf 'BUILD_MANIFEST_DIGEST=%s\n' "${build_manifest_digest}"
+            printf 'BUILD_CONFIG_DIGEST=%s\n' "${build_config_digest}"
+          } >> "${GITHUB_ENV}"
       - name: Validate every container role
         run: |
           npm run qa:container-runtime -- \
@@ -404,7 +412,16 @@ jobs:
           if docker buildx imagetools inspect "${IMAGE_REFERENCE}" \
             > "${existing_output}" 2> "${existing_error}"; then
             existing_digest="$(sed -n 's/^Digest:[[:space:]]*//p' "${existing_output}" | head -n 1)"
-            if [[ "${existing_digest}" != "${LOCAL_DIGEST}" ]]; then
+            docker buildx imagetools inspect --raw "${IMAGE_REFERENCE}" \
+              > "${RUNNER_TEMP}/existing-image-manifest.json"
+            existing_config_digest="$(jq -er '.config.digest' \
+              "${RUNNER_TEMP}/existing-image-manifest.json")"
+            if [[ ! "${existing_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || \
+              [[ ! "${existing_config_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              printf 'The existing UAT release identity is malformed.\n' >&2
+              exit 1
+            fi
+            if [[ "${existing_config_digest}" != "${BUILD_CONFIG_DIGEST}" ]]; then
               printf 'release_artifact_conflict\n' >&2
               exit 1
             fi
@@ -424,8 +441,17 @@ jobs:
             > "${RUNNER_TEMP}/published-image.txt"
           remote_digest="$(sed -n 's/^Digest:[[:space:]]*//p' \
             "${RUNNER_TEMP}/published-image.txt" | head -n 1)"
-          if [[ "${remote_digest}" != "${LOCAL_DIGEST}" ]]; then
-            printf 'Published release digest differs from the validated build.\n' >&2
+          docker buildx imagetools inspect --raw "${IMAGE_REFERENCE}" \
+            > "${RUNNER_TEMP}/published-image-manifest.json"
+          remote_config_digest="$(jq -er '.config.digest' \
+            "${RUNNER_TEMP}/published-image-manifest.json")"
+          if [[ ! "${remote_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || \
+            [[ ! "${remote_config_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            printf 'Published release identity is malformed.\n' >&2
+            exit 1
+          fi
+          if [[ "${remote_config_digest}" != "${BUILD_CONFIG_DIGEST}" ]]; then
+            printf 'Published release configuration differs from the validated build.\n' >&2
             exit 1
           fi
           docker buildx imagetools inspect "${IMAGE_REFERENCE}" \
