@@ -137,7 +137,7 @@ jobs:
         run: |
           set -euo pipefail
           artifact_name="uat-release-${RELEASE_COMMIT}"
-          run_id="$(gh --repo "${GITHUB_REPOSITORY}" api \
+          run_id="$(gh api \
             "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${artifact_name}&per_page=100" \
             --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id')"
           if [[ ! "${run_id}" =~ ^[0-9]+$ ]]; then
@@ -146,7 +146,7 @@ jobs:
           fi
           [[ "${run_id}" =~ ^[0-9]+$ ]]
           mkdir -p "${RUNNER_TEMP}/release-handoff"
-          gh --repo "${GITHUB_REPOSITORY}" run download "${run_id}" \
+          gh run download "${run_id}" \
             --name "${artifact_name}" --dir "${RUNNER_TEMP}/release-handoff"
           handoff="${RUNNER_TEMP}/release-handoff/release-handoff.json"
           jq --exit-status \
