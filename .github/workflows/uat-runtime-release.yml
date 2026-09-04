@@ -136,13 +136,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          run_id="$(gh run list --repo "${GITHUB_REPOSITORY}" \
-            --workflow artifact-release.yml --commit "${RELEASE_COMMIT}" --status success \
-            --limit 20 --json databaseId,headSha --jq '.[0].databaseId')"
+          artifact_name="uat-release-${RELEASE_COMMIT}"
+          run_id="$(gh api \
+            --repo "${GITHUB_REPOSITORY}" \
+            "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${artifact_name}&per_page=100" \
+            --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id')"
+          if [[ ! "${run_id}" =~ ^[0-9]+$ ]]; then
+            printf 'No active release handoff artifact found: %s\n' "${artifact_name}" >&2
+            exit 1
+          fi
           [[ "${run_id}" =~ ^[0-9]+$ ]]
           mkdir -p "${RUNNER_TEMP}/release-handoff"
           gh run download "${run_id}" --repo "${GITHUB_REPOSITORY}" \
-            --name "uat-release-${RELEASE_COMMIT}" --dir "${RUNNER_TEMP}/release-handoff"
+            --name "${artifact_name}" --dir "${RUNNER_TEMP}/release-handoff"
           handoff="${RUNNER_TEMP}/release-handoff/release-handoff.json"
           jq --exit-status \
             --arg commit "${RELEASE_COMMIT}" \
