@@ -142,7 +142,9 @@ async function runWebContainer(label, { expectedConfig }) {
       version,
       {
         releaseCommit: options.expectedReleaseCommit,
+        imageDigest: "unknown",
         buildId: options.expectedBuildId,
+        environment: expectedConfig.environment,
       },
       "version",
     );
