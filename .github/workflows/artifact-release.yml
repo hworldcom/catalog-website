@@ -61,11 +61,15 @@ jobs:
         run: npm ci
       - name: Validate release source and request
         run: |
+          preflight_args=(
+            --operation "${{ inputs.operation }}"
+            --environment "${{ inputs.environment }}"
+          )
+          if [[ "${{ inputs.operation }}" == "publish" ]]; then
+            preflight_args+=(--git-commit "${{ inputs.git_commit }}")
+          fi
           npm run deployment:release-artifact:check
-          npm run deployment:release-artifact:preflight -- \
-            --operation "${{ inputs.operation }}" \
-            --environment "${{ inputs.environment }}" \
-            --git-commit "${{ inputs.git_commit }}"
+          npm run deployment:release-artifact:preflight -- "${preflight_args[@]}"
 
   verify-identity:
     name: Verify ${{ inputs.environment }} artifact identity
