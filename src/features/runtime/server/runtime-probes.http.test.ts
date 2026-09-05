@@ -13,6 +13,7 @@ describe("runtime probes", () => {
   it("serves non-secret build identity", async () => {
     const response = handleGetVersion({
       BAZORIA_DEPLOYMENT_ENVIRONMENT: "uat",
+      BAZORIA_IMAGE_DIGEST: `sha256:${"b".repeat(64)}`,
       BAZORIA_RELEASE_COMMIT: "abcdef1234",
       BAZORIA_BUILD_ID: "build-42",
       K_REVISION: "bazoria-web-00042",
@@ -22,7 +23,9 @@ describe("runtime probes", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({
       releaseCommit: "abcdef1234",
+      imageDigest: `sha256:${"b".repeat(64)}`,
       buildId: "build-42",
+      environment: "uat",
     });
   });
 });

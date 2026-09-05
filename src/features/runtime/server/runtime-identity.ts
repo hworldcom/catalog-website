@@ -8,6 +8,7 @@ export type RuntimeIdentity = {
   role: RuntimeRole;
   environment: DeploymentEnvironment;
   releaseCommit: string;
+  imageDigest: string;
   buildId: string;
   cloudRunRevision: string | null;
 };
@@ -15,6 +16,7 @@ export type RuntimeIdentity = {
 const optionalMetadata = z.string().trim().min(1).max(200).optional();
 const identityEnvironmentSchema = z.object({
   BAZORIA_DEPLOYMENT_ENVIRONMENT: z.enum(["local", "uat", "production"]),
+  BAZORIA_IMAGE_DIGEST: optionalMetadata,
   BAZORIA_RELEASE_COMMIT: optionalMetadata,
   BAZORIA_BUILD_ID: optionalMetadata,
   K_REVISION: optionalMetadata,
@@ -36,6 +38,7 @@ export function readRuntimeIdentity(
     role,
     environment: parsed.data.BAZORIA_DEPLOYMENT_ENVIRONMENT,
     releaseCommit: parsed.data.BAZORIA_RELEASE_COMMIT ?? "unknown",
+    imageDigest: parsed.data.BAZORIA_IMAGE_DIGEST ?? "unknown",
     buildId: parsed.data.BAZORIA_BUILD_ID ?? "development",
     cloudRunRevision: parsed.data.K_REVISION ?? null,
   };

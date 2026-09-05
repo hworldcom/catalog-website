@@ -38,10 +38,12 @@ locals {
   supabase_secret_version = try(local.supabase_secret_parts[5], "")
   openai_secret_name      = try(join("/", slice(local.openai_secret_parts, 0, 4)), "")
   openai_secret_version   = try(local.openai_secret_parts[5], "")
+  image_digest            = element(split("@", var.runtime_configuration.image_reference), 1)
 
   common_plain_environment = {
     BAZORIA_BUILD_ID               = var.runtime_configuration.build_id
     BAZORIA_DEPLOYMENT_ENVIRONMENT = var.environment
+    BAZORIA_IMAGE_DIGEST           = local.image_digest
     BAZORIA_RELEASE_COMMIT         = var.runtime_configuration.release_commit
     SUPABASE_URL                   = var.runtime_configuration.supabase_url
   }

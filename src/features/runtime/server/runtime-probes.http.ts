@@ -14,7 +14,9 @@ export function handleGetVersion(
   return Response.json(
     {
       releaseCommit: identity.releaseCommit,
+      imageDigest: identity.imageDigest,
       buildId: identity.buildId,
+      environment: identity.environment,
     },
     {
       status: 200,

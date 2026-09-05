@@ -36,6 +36,15 @@ run "uat_runtime_plan_matches_reviewed_contract" {
   command = plan
 
   assert {
+    condition = one([
+      for environment_variable in google_cloud_run_v2_service.website.template[0].containers[0].env :
+      environment_variable.value
+      if environment_variable.name == "BAZORIA_IMAGE_DIGEST"
+    ]) == "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    error_message = "The website must expose the immutable image digest to the version probe."
+  }
+
+  assert {
     condition     = google_cloud_run_v2_service.website.ingress == "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
     error_message = "The website ingress differs."
   }
