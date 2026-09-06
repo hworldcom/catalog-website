@@ -510,9 +510,7 @@ jobs:
           {
             printf '## Published UAT image\n\n'
             printf -- '- Digest: `%s`\n' "${PUBLISHED_DIGEST}"
-            printf -- '- Immutable image: `%s/bazoria-web@%s`\n' \
-              "${REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}" \
-              "${PUBLISHED_DIGEST}"
+            printf -- '- Immutable image: `%s`\n' "${expected_uri}"
           } >> "${GITHUB_STEP_SUMMARY}"
       - name: Create the release handoff
         env:
