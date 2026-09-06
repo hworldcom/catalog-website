@@ -21,7 +21,7 @@ on:
         required: true
         type: string
       plan_fingerprint:
-        description: Required for apply; fingerprint returned by plan
+        description: Fingerprint returned by the latest UAT runtime release plan
         required: false
         type: string
       expected_uat_project_ref:
@@ -39,7 +39,7 @@ on:
         default: false
         type: boolean
       apply_result:
-        description: Exact UAT apply result identifier
+        description: Numeric GitHub Actions run ID from the successful UAT apply URL
         required: false
         type: string
 
@@ -296,6 +296,7 @@ jobs:
             "certificate_authorization_type=" + .dns_records.certificate_authorization.type,
             "certificate_authorization_value=" + .dns_records.certificate_authorization.home_pl_value
           ' "${RUNNER_TEMP}/uat-edge-inventory.json" >> "${GITHUB_STEP_SUMMARY}"
+          printf 'apply_result=%s\n' "${GITHUB_RUN_ID}" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Read deployed UAT edge inventory
         if: inputs.operation == 'verify-edge'
@@ -350,7 +351,7 @@ jobs:
           [[ "${GUIDED_CHECKLIST_CONFIRMED}" == "true" ]]
           [[ -n "${GUIDED_CHECKLIST_VERSION}" ]]
           [[ "${PLAN_FINGERPRINT}" =~ ^[0-9a-f]{64}$ ]]
-          [[ -n "${APPLY_RESULT}" ]]
+          [[ "${APPLY_RESULT}" =~ ^[0-9]+$ ]]
 
           node scripts/deployment/uat-runtime-release.mjs assert-fingerprint \
             --plan "${RUNNER_TEMP}/uat-platform.tfplan.json" \
@@ -389,7 +390,7 @@ jobs:
           fi
 
           record_input="${RUNNER_TEMP}/uat-release-record-input.json"
-          jq \
+          jq -n \
             --arg commit "${RELEASE_COMMIT}" \
             --arg digest "${RELEASE_IMAGE_DIGEST}" \
             --arg image "${image}" \
