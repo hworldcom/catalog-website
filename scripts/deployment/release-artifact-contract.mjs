@@ -289,6 +289,7 @@ export function validateWorkflowSource(source, contract = readReleaseArtifactCon
     `maximum_artifact_bytes=${contract.handoff.maximumArtifactBytes}`,
     "docker push",
     ":testIamPermissions",
+    "GITHUB_STEP_SUMMARY",
     "retention-days: 7",
   ];
   if (source.includes('remote_digest}" != "${LOCAL_DIGEST}')) {

@@ -40,6 +40,15 @@ describe("release artifact contract", () => {
     );
   });
 
+  it("requires the published registry digest in the job summary", () => {
+    const workflowSource = readFileSync(".github/workflows/artifact-release.yml", "utf8");
+    const regressedSource = workflowSource.replace("GITHUB_STEP_SUMMARY", "REMOVED_SUMMARY");
+
+    expect(() => validateWorkflowSource(regressedSource)).toThrow(
+      "artifact workflow is missing GITHUB_STEP_SUMMARY",
+    );
+  });
+
   it("accepts identity checks and only exact UAT publication inputs", () => {
     expect(
       validateDispatchInput({

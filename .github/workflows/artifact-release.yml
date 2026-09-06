@@ -507,6 +507,13 @@ jobs:
             --argjson replay "${REPLAY}" \
             '{status:"passed", digest:$digest, replay:$replay, platform:"linux/amd64", productionWritePermissions:[]}' \
             > "${HANDOFF_DIRECTORY}/registry-verification.json"
+          {
+            printf '## Published UAT image\n\n'
+            printf -- '- Digest: `%s`\n' "${PUBLISHED_DIGEST}"
+            printf -- '- Immutable image: `%s/bazoria-web@%s`\n' \
+              "${REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}" \
+              "${PUBLISHED_DIGEST}"
+          } >> "${GITHUB_STEP_SUMMARY}"
       - name: Create the release handoff
         env:
           PUBLISHED_DIGEST: ${{ steps.publish.outputs.digest }}
