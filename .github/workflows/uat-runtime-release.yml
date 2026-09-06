@@ -296,7 +296,10 @@ jobs:
             "certificate_authorization_type=" + .dns_records.certificate_authorization.type,
             "certificate_authorization_value=" + .dns_records.certificate_authorization.home_pl_value
           ' "${RUNNER_TEMP}/uat-edge-inventory.json" >> "${GITHUB_STEP_SUMMARY}"
-          printf 'apply_result=%s\n' "${GITHUB_RUN_ID}" >> "${GITHUB_STEP_SUMMARY}"
+          {
+            printf 'apply_result=%s\n' "${GITHUB_RUN_ID}"
+            printf 'For finalize, paste `%s` into the `apply_result` input.\n' "${GITHUB_RUN_ID}"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Read deployed UAT edge inventory
         if: inputs.operation == 'verify-edge'
