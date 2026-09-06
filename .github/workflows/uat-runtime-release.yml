@@ -386,10 +386,17 @@ jobs:
           image="${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}/bazoria-web"
           deployed_ref="${image}:deployed-uat"
           previous_digest=""
+          deployed_lookup_error="${RUNNER_TEMP}/uat-deployed-lookup-error.log"
           if previous_digest="$(gcloud artifacts docker images describe "${deployed_ref}" \
             --project="${BAZORIA_GOOGLE_PROJECT_ID}" \
-            --format='value(image_summary.digest)' 2>/dev/null)"; then
+            --format='value(image_summary.digest)' 2>"${deployed_lookup_error}")"; then
             [[ "${previous_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          elif grep --extended-regexp --ignore-case --quiet \
+            'not found|not_found|does not exist' "${deployed_lookup_error}"; then
+            previous_digest=""
+          else
+            cat "${deployed_lookup_error}" >&2
+            exit 1
           fi
 
           record_input="${RUNNER_TEMP}/uat-release-record-input.json"
@@ -443,17 +450,55 @@ jobs:
           printf '%s' "${ACCESS_TOKEN}" | oras login "${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}" \
             --username oauth2accesstoken --password-stdin \
             --registry-config "${ORAS_REGISTRY_CONFIG}"
-          record_repository="${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/bazoria-release-record"
+          record_repository="${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}/bazoria-release-record"
           record_tag="${record_repository}:uat-${RELEASE_COMMIT}"
-          if existing_record_digest="$(oras resolve "${record_tag}" --registry-config "${ORAS_REGISTRY_CONFIG}" 2>/dev/null)"; then
+          record_resolve_error="${RUNNER_TEMP}/uat-release-record-resolve-error.log"
+          if existing_record_digest="$(oras resolve "${record_tag}" \
+            --registry-config "${ORAS_REGISTRY_CONFIG}" 2>"${record_resolve_error}")"; then
             [[ "${existing_record_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
             record_digest="${existing_record_digest}"
+            existing_record_directory="${RUNNER_TEMP}/existing-uat-release-record"
+            mkdir -p "${existing_record_directory}"
+            oras pull "${record_tag}" --registry-config "${ORAS_REGISTRY_CONFIG}" \
+              --output "${existing_record_directory}"
+            existing_record_path="${existing_record_directory}/uat-release-record.json"
+            test -s "${existing_record_path}"
+            jq -S -c \
+              '{schemaVersion, environment, commit, digest, imageReference, buildId,
+                migrations, configurationNames, secretVersions, planFingerprint,
+                applyResult, automatedSmoke, guidedChecklist,
+                previousDeployedUatDigest}' "${existing_record_path}" \
+              > "${RUNNER_TEMP}/existing-uat-release-record-identity.json"
+            jq -S -c \
+              '{schemaVersion, environment, commit, digest, imageReference, buildId,
+                migrations, configurationNames, secretVersions, planFingerprint,
+                applyResult, automatedSmoke, guidedChecklist,
+                previousDeployedUatDigest}' "${record_path}" \
+              > "${RUNNER_TEMP}/current-uat-release-record-identity.json"
+            cmp -s \
+              "${RUNNER_TEMP}/existing-uat-release-record-identity.json" \
+              "${RUNNER_TEMP}/current-uat-release-record-identity.json" || {
+              printf 'Existing UAT release record conflicts with this finalization.\n' >&2
+              exit 1
+            }
+          elif grep --extended-regexp --ignore-case --quiet \
+            'manifest unknown|name unknown|not found|not_found' "${record_resolve_error}"; then
+            :
           else
+            cat "${record_resolve_error}" >&2
+            exit 1
+          fi
+          if [[ -z "${record_digest:-}" ]]; then
             temporary_record="${record_repository}:finalize-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-            record_digest="$(oras push "${temporary_record}" \
+            push_log="${RUNNER_TEMP}/uat-release-record-push.log"
+            if ! oras push "${temporary_record}" \
               --artifact-type application/vnd.bazoria.release-record.v1+json \
               --registry-config "${ORAS_REGISTRY_CONFIG}" \
-              "${record_path}:application/json" 2>&1 | sed -n 's/.*Digest: //p' | tail -n 1)"
+              "${record_path}:application/json" > "${push_log}" 2>&1; then
+              cat "${push_log}" >&2
+              exit 1
+            fi
+            record_digest="$(sed -n 's/.*Digest: //p' "${push_log}" | tail -n 1)"
             [[ "${record_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
             oras tag "${temporary_record}" "uat-${RELEASE_COMMIT}" \
               --registry-config "${ORAS_REGISTRY_CONFIG}"
@@ -478,14 +523,19 @@ jobs:
             fi
           }
           trap 'status=$?; if (( status != 0 )); then restore_tags || true; fi; exit "$status"' EXIT
+          promotion_error="${RUNNER_TEMP}/uat-promotion-lookup-error.log"
           if existing_promotion="$(gcloud artifacts docker images describe "${promotion_ref}" \
             --project="${BAZORIA_GOOGLE_PROJECT_ID}" \
-            --format='value(image_summary.digest)' 2>/dev/null)"; then
+            --format='value(image_summary.digest)' 2>"${promotion_error}")"; then
             [[ "${existing_promotion}" == "${RELEASE_IMAGE_DIGEST}" ]]
-          else
+          elif grep --extended-regexp --ignore-case --quiet \
+            'not found|not_found|does not exist' "${promotion_error}"; then
             gcloud artifacts docker tags add "${image}@${RELEASE_IMAGE_DIGEST}" "${promotion_ref}" \
               --project="${BAZORIA_GOOGLE_PROJECT_ID}"
             promotion_created=true
+          else
+            cat "${promotion_error}" >&2
+            exit 1
           fi
           deployed_changed=true
           gcloud artifacts docker tags add "${image}@${RELEASE_IMAGE_DIGEST}" "${deployed_ref}" \
