@@ -11,6 +11,7 @@ on:
           - plan
           - apply
           - verify-edge
+          - finalize
       git_commit:
         description: Exact 40-character commit used for the published image
         required: true
@@ -27,6 +28,19 @@ on:
         description: Explicit UAT Supabase project confirmation
         required: true
         default: mekobnkujzpzeiwmecyy
+        type: string
+      guided_checklist_version:
+        description: Version of the completed guided UAT checklist
+        required: false
+        type: string
+      guided_checklist_confirmed:
+        description: Confirm the guided UAT checklist was completed
+        required: false
+        default: false
+        type: boolean
+      apply_result:
+        description: Exact UAT apply result identifier
+        required: false
         type: string
 
 permissions:
@@ -315,9 +329,177 @@ jobs:
           test -s "${RUNNER_TEMP}/uat-certificate-map.txt"
           printf 'edge_state=verified\nuat_hostname=%s\n' "${hostname}" >> "${GITHUB_STEP_SUMMARY}"
 
+      - name: Install ORAS for release finalization
+        if: inputs.operation == 'finalize'
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d
+        with:
+          version: 1.3.3
+
+      - name: Finalize durable UAT release
+        if: inputs.operation == 'finalize'
+        env:
+          ACCESS_TOKEN: ${{ steps.terraform-auth.outputs.access_token }}
+          GUIDED_CHECKLIST_CONFIRMED: ${{ inputs.guided_checklist_confirmed }}
+          GUIDED_CHECKLIST_VERSION: ${{ inputs.guided_checklist_version }}
+          APPLY_RESULT: ${{ inputs.apply_result }}
+          PLAN_FINGERPRINT: ${{ inputs.plan_fingerprint }}
+          ORAS_REGISTRY_CONFIG: ${{ runner.temp }}/oras-config.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GUIDED_CHECKLIST_CONFIRMED}" == "true" ]]
+          [[ -n "${GUIDED_CHECKLIST_VERSION}" ]]
+          [[ "${PLAN_FINGERPRINT}" =~ ^[0-9a-f]{64}$ ]]
+          [[ -n "${APPLY_RESULT}" ]]
+
+          node scripts/deployment/uat-runtime-release.mjs assert-fingerprint \
+            --plan "${RUNNER_TEMP}/uat-platform.tfplan.json" \
+            --commit "${RELEASE_COMMIT}" \
+            --digest "${RELEASE_IMAGE_DIGEST}" \
+            --migration-target "${RUNNER_TEMP}/uat-migration-target.json" \
+            --config "${RUNNER_TEMP}/uat-platform.tfvars.json" \
+            --expected "${PLAN_FINGERPRINT}"
+
+          hostname="${BAZORIA_PUBLIC_SITE_URL#https://}"
+          hostname="${hostname%%/*}"
+          test "$(curl --fail-with-body --silent --show-error \
+            --output /dev/null --write-out '%{http_code}' "https://${hostname}/healthz")" = "204"
+          version_path="${RUNNER_TEMP}/uat-version.json"
+          curl --fail-with-body --silent --show-error "https://${hostname}/version" > "${version_path}"
+          jq --exit-status \
+            --arg commit "${RELEASE_COMMIT}" \
+            --arg digest "${RELEASE_IMAGE_DIGEST}" \
+            '.releaseCommit == $commit and .imageDigest == $digest and .buildId == ("release-" + $commit) and .environment == "uat"' \
+            "${version_path}" > /dev/null
+
+          handoff="${RUNNER_TEMP}/release-handoff/release-handoff.json"
+          jq --exit-status \
+            --arg commit "${RELEASE_COMMIT}" \
+            --arg digest "${RELEASE_IMAGE_DIGEST}" \
+            '.commit == $commit and .digest == $digest and .results.containerHealth.status == "passed" and .results.registryVerification.status == "passed"' \
+            "${handoff}" > /dev/null
+
+          image="${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/${BAZORIA_GOOGLE_ARTIFACT_REPOSITORY_ID}/bazoria-web"
+          deployed_ref="${image}:deployed-uat"
+          previous_digest=""
+          if previous_digest="$(gcloud artifacts docker images describe "${deployed_ref}" \
+            --project="${BAZORIA_GOOGLE_PROJECT_ID}" \
+            --format='value(image_summary.digest)' 2>/dev/null)"; then
+            [[ "${previous_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          fi
+
+          record_input="${RUNNER_TEMP}/uat-release-record-input.json"
+          jq \
+            --arg commit "${RELEASE_COMMIT}" \
+            --arg digest "${RELEASE_IMAGE_DIGEST}" \
+            --arg image "${image}" \
+            --arg build "release-${RELEASE_COMMIT}" \
+            --arg plan "${PLAN_FINGERPRINT}" \
+            --arg apply "${APPLY_RESULT}" \
+            --arg checklist "${GUIDED_CHECKLIST_VERSION}" \
+            --arg previous "${previous_digest}" \
+            --arg repository "${GITHUB_REPOSITORY}" \
+            --arg workflow "${GITHUB_WORKFLOW}" \
+            --arg run_id "${GITHUB_RUN_ID}" \
+            --arg run_attempt "${GITHUB_RUN_ATTEMPT}" \
+            --arg requester "${GITHUB_ACTOR}" \
+            --arg run_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg finalized_at "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" \
+            --slurpfile migration "${RUNNER_TEMP}/uat-migration-target.json" \
+            --slurpfile config "${RUNNER_TEMP}/uat-platform.tfvars.json" \
+            --slurpfile handoff_file "${handoff}" \
+            '{
+              commit: $commit,
+              digest: $digest,
+              planFingerprint: $plan,
+              guidedChecklistVersion: $checklist,
+              guidedChecklistConfirmed: true,
+              environment: "uat",
+              smokeStatus: "passed",
+              edgeStatus: "verified",
+              migrations: $migration[0].migrations,
+              configurationNames: ($config[0].runtime_configuration | keys),
+              secretVersions: [$config[0].runtime_configuration.supabase_service_role_secret_version, $config[0].runtime_configuration.openai_api_key_secret_version],
+              imageReference: $image,
+              buildId: $build,
+              applyResult: $apply,
+              repository: $repository,
+              workflow: $workflow,
+              runId: $run_id,
+              runAttempt: $run_attempt,
+              requester: $requester,
+              runUrl: $run_url,
+              previousDeployedUatDigest: (if $previous == "" then null else $previous end),
+              finalizedAt: $finalized_at,
+              handoff: $handoff_file[0]
+            }' > "${record_input}"
+          record_path="${RUNNER_TEMP}/uat-release-record.json"
+          node scripts/deployment/uat-release-finalize.mjs "${record_input}" "${record_path}"
+
+          printf '%s' "${ACCESS_TOKEN}" | oras login "${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}" \
+            --username oauth2accesstoken --password-stdin \
+            --registry-config "${ORAS_REGISTRY_CONFIG}"
+          record_repository="${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}/${BAZORIA_GOOGLE_PROJECT_ID}/bazoria-release-record"
+          record_tag="${record_repository}:uat-${RELEASE_COMMIT}"
+          if existing_record_digest="$(oras resolve "${record_tag}" --registry-config "${ORAS_REGISTRY_CONFIG}" 2>/dev/null)"; then
+            [[ "${existing_record_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
+            record_digest="${existing_record_digest}"
+          else
+            temporary_record="${record_repository}:finalize-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            record_digest="$(oras push "${temporary_record}" \
+              --artifact-type application/vnd.bazoria.release-record.v1+json \
+              --registry-config "${ORAS_REGISTRY_CONFIG}" \
+              "${record_path}:application/json" 2>&1 | sed -n 's/.*Digest: //p' | tail -n 1)"
+            [[ "${record_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
+            oras tag "${temporary_record}" "uat-${RELEASE_COMMIT}" \
+              --registry-config "${ORAS_REGISTRY_CONFIG}"
+          fi
+
+          promotion_ref="${image}:promotion-eligible-${RELEASE_COMMIT}"
+          promotion_created=false
+          deployed_changed=false
+          restore_tags() {
+            if [[ "${deployed_changed}" == "true" ]]; then
+              if [[ -n "${previous_digest}" ]]; then
+                gcloud artifacts docker tags add "${image}@${previous_digest}" "${deployed_ref}" \
+                  --project="${BAZORIA_GOOGLE_PROJECT_ID}" >/dev/null
+              else
+                gcloud artifacts docker tags delete "${deployed_ref}" \
+                  --project="${BAZORIA_GOOGLE_PROJECT_ID}" --quiet >/dev/null
+              fi
+            fi
+            if [[ "${promotion_created}" == "true" ]]; then
+              gcloud artifacts docker tags delete "${promotion_ref}" \
+                --project="${BAZORIA_GOOGLE_PROJECT_ID}" --quiet >/dev/null
+            fi
+          }
+          trap 'status=$?; if (( status != 0 )); then restore_tags || true; fi; exit "$status"' EXIT
+          if existing_promotion="$(gcloud artifacts docker images describe "${promotion_ref}" \
+            --project="${BAZORIA_GOOGLE_PROJECT_ID}" \
+            --format='value(image_summary.digest)' 2>/dev/null)"; then
+            [[ "${existing_promotion}" == "${RELEASE_IMAGE_DIGEST}" ]]
+          else
+            gcloud artifacts docker tags add "${image}@${RELEASE_IMAGE_DIGEST}" "${promotion_ref}" \
+              --project="${BAZORIA_GOOGLE_PROJECT_ID}"
+            promotion_created=true
+          fi
+          deployed_changed=true
+          gcloud artifacts docker tags add "${image}@${RELEASE_IMAGE_DIGEST}" "${deployed_ref}" \
+            --project="${BAZORIA_GOOGLE_PROJECT_ID}"
+          test "$(gcloud artifacts docker images describe "${promotion_ref}" --project="${BAZORIA_GOOGLE_PROJECT_ID}" --format='value(image_summary.digest)')" = "${RELEASE_IMAGE_DIGEST}"
+          test "$(gcloud artifacts docker images describe "${deployed_ref}" --project="${BAZORIA_GOOGLE_PROJECT_ID}" --format='value(image_summary.digest)')" = "${RELEASE_IMAGE_DIGEST}"
+          printf 'release_record_digest=%s\npromotion_eligible_digest=%s\ndeployed_uat_digest=%s\n' \
+            "${record_digest}" "${RELEASE_IMAGE_DIGEST}" "${RELEASE_IMAGE_DIGEST}" >> "${GITHUB_STEP_SUMMARY}"
+          trap - EXIT
+
       - name: Remove temporary credentials and plans
         if: always()
         shell: bash
         run: |
           rm -f .env.supabase.uat.local
           docker logout "${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST:-europe-west3-docker.pkg.dev}" >/dev/null 2>&1 || true
+          if [[ -n "${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST:-}" && -n "${ORAS_REGISTRY_CONFIG:-}" ]]; then
+            oras logout "${BAZORIA_GOOGLE_ARTIFACT_REGISTRY_HOST}" \
+              --registry-config "${ORAS_REGISTRY_CONFIG}" >/dev/null 2>&1 || true
+            rm -f "${ORAS_REGISTRY_CONFIG}"
+          fi
