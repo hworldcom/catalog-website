@@ -493,6 +493,7 @@ jobs:
             push_log="${RUNNER_TEMP}/uat-release-record-push.log"
             if ! oras push "${temporary_record}" \
               --artifact-type application/vnd.bazoria.release-record.v1+json \
+              --disable-path-validation \
               --registry-config "${ORAS_REGISTRY_CONFIG}" \
               "${record_path}:application/json" > "${push_log}" 2>&1; then
               cat "${push_log}" >&2
