@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 import { reportClientError } from "@/lib/client-error-reporting";
 import { marketplaceHomeSearch } from "@/features/marketplace/public-audience";
-import { t, tr } from "@/lib/i18n";
+import { t, tr, useLang } from "@/lib/i18n";
 
 import { PublicShell } from "./public-shell";
 
@@ -25,6 +25,7 @@ const S = {
 };
 
 export function PageError({ error, reset }: { error: Error; reset: () => void }) {
+  useLang();
   const router = useRouter();
   useEffect(() => {
     reportClientError(error, { boundary: "bazoria_page" });

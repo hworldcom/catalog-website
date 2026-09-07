@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { PublicShell } from "@/components/layout/public-shell";
+import { useLang } from "@/lib/i18n";
 
 import { MarketplaceCategoryDiscovery } from "../components/marketplace-category-discovery";
 import { MarketplaceHomeHero } from "../components/marketplace-home-hero";
@@ -12,6 +13,7 @@ import type { PublicAudience } from "../public-audience";
 import { audienceNavigationQueryOptions, marketplaceQueryOptions } from "../queries";
 
 export function MarketplaceHomeScreen({ audience }: { audience: PublicAudience }) {
+  useLang();
   const { data } = useSuspenseQuery(marketplaceQueryOptions(audience));
   const { data: navigation } = useSuspenseQuery(audienceNavigationQueryOptions(audience));
 

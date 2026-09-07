@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { MarketplaceNavigation } from "@/features/marketplace/components/marketplace-navigation";
 import { marketplaceHomeSearch, type PublicAudience } from "@/features/marketplace/public-audience";
-import { LanguageSwitcher, t, tr } from "@/lib/i18n";
+import { LanguageSwitcher, t, tr, useLang } from "@/lib/i18n";
 
 import { PublicContainer } from "./public-container";
 
@@ -36,6 +36,7 @@ export function PublicShell({
 }
 
 function TopNav({ marketplaceAudience }: { marketplaceAudience?: PublicAudience }) {
+  useLang();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => {
     let mounted = true;
@@ -106,6 +107,7 @@ function TopNav({ marketplaceAudience }: { marketplaceAudience?: PublicAudience 
 }
 
 function Footer() {
+  useLang();
   return (
     <footer className="mt-16 border-t border-border/60 bg-background">
       <PublicContainer className="flex flex-col gap-2 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">

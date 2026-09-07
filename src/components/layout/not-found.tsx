@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import { t, tr } from "@/lib/i18n";
+import { t, tr, useLang } from "@/lib/i18n";
 import { marketplaceHomeSearch } from "@/features/marketplace/public-audience";
 
 import { PublicShell } from "./public-shell";
@@ -22,6 +22,7 @@ const S = {
 };
 
 export function NotFound({ title, message }: { title?: string; message?: string }) {
+  useLang();
   return (
     <PublicShell>
       <div className="mx-auto max-w-2xl px-6 py-24 text-center">

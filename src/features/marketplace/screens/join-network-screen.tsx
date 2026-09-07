@@ -1,4 +1,5 @@
 import { PublicShell } from "@/components/layout/public-shell";
+import { useLang } from "@/lib/i18n";
 
 import { JoinAudienceDetails } from "../components/join-audience-details";
 import { JoinAudiencePanels } from "../components/join-audience-panels";
@@ -9,6 +10,7 @@ import { JoinTrustSection } from "../components/join-trust-section";
 import type { PublicAudience } from "../public-audience";
 
 export function JoinNetworkScreen({ audience }: { audience: PublicAudience }) {
+  useLang();
   return (
     <PublicShell marketplaceAudience={audience}>
       <JoinPageHero />

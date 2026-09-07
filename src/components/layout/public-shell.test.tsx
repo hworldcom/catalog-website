@@ -45,6 +45,7 @@ vi.mock("@/lib/i18n", () => ({
   ),
   t: (EN: string, PL: string, DE: string, VI: string) => ({ EN, PL, DE, VI }),
   tr: (value: { EN: string }) => value.EN,
+  useLang: () => "EN",
 }));
 
 vi.mock("@/lib/supabase/client", () => ({

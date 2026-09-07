@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PublicShell } from "@/components/layout/public-shell";
 import { formatPrice, getStockLabel } from "@/components/product/product-format";
 import { productCodeCopy } from "@/features/product-code/product-code.copy";
-import { pick, t, tr, type Lang } from "@/lib/i18n";
+import { pick, t, tr, useLang, type Lang } from "@/lib/i18n";
 
 import { InquiryForm } from "../components/inquiry-form";
 import { SocialShareMenu } from "../components/social-share-menu";
@@ -44,6 +44,7 @@ export function ProductDetailScreen({
   language: Lang;
   audience: PublicAudience;
 }) {
+  useLang();
   const { data } = useSuspenseQuery(productQueryOptions(productId, language, audience));
   const { product, seller, images, category, description } = data;
   if (!product || !seller) return null;
