@@ -145,8 +145,8 @@
   }
 }
 
-.storefront-dark {
-  /* Bright editorial palette — cream background, ink text, burnt-orange accent */
+.seller-workspace {
+  /* Keep the authenticated seller workspace palette separate from public pages. */
   --background: oklch(0.975 0.012 80);
   --foreground: oklch(0.22 0.015 60);
   --card: oklch(1 0 0);

@@ -141,7 +141,7 @@ export function SellerStorefrontScreen({
   };
 
   return (
-    <div className="storefront-dark min-h-screen bg-background text-foreground">
+    <div className="public-marketplace min-h-screen bg-background text-foreground">
       <SellerStorefrontHeader
         sellerName={seller.name}
         logoUrl={seller.logo_url}

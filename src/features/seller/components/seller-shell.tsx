@@ -16,7 +16,7 @@ export function SellerShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="storefront-dark min-h-screen bg-background text-foreground">
+    <div className="seller-workspace min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-2">
