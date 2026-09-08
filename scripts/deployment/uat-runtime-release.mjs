@@ -140,7 +140,9 @@ export function main(argv = process.argv) {
   if (operation === "fingerprint") {
     writeFileSync(requireValue(argument(argv, "--output"), "output"), value);
   } else if (value !== requireValue(argument(argv, "--expected"), "expected fingerprint")) {
-    throw new Error("uat_runtime_release_plan_fingerprint_mismatch");
+    throw new Error(
+      `uat_runtime_release_plan_fingerprint_mismatch expected=${argument(argv, "--expected")} actual=${value}`,
+    );
   }
 }
 
