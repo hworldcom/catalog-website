@@ -51,56 +51,58 @@ export function SellerStorefrontHeader({
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-card/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <a
-          href="#top"
-          className="min-w-0 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          aria-label={sellerName}
-        >
-          <SellerBrand name={sellerName} logoUrl={logoUrl} subtitle={tr(H.subtitle)} />
-        </a>
-
-        <nav className="hidden items-center gap-6 lg:flex" aria-label={tr(H.nav)}>
-          {navItems.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              {tr(item.label)}
-            </a>
-          ))}
-        </nav>
-
-        <div className="flex shrink-0 items-center gap-2">
-          <div className="hidden sm:block">
-            <LanguageSwitcher />
-          </div>
-          {whatsappUrl ? (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="hidden min-h-10 items-center gap-2 px-2 text-sm font-medium text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 md:inline-flex"
-            >
-              <MessageCircle className="h-4 w-4" aria-hidden />
-              {tr(H.whatsapp)}
-            </a>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-            className="inline-flex h-10 w-10 items-center justify-center border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 lg:hidden"
-            aria-expanded={mobileMenuOpen}
-            aria-controls="seller-storefront-mobile-menu"
-            aria-label={tr(mobileMenuOpen ? H.closeMenu : H.openMenu)}
+      <div className="border-b border-border bg-card/95">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <a
+            href="#top"
+            className="min-w-0 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            aria-label={sellerName}
           >
-            {mobileMenuOpen ? (
-              <X className="h-5 w-5" aria-hidden />
-            ) : (
-              <Menu className="h-5 w-5" aria-hidden />
-            )}
-          </button>
+            <SellerBrand name={sellerName} logoUrl={logoUrl} subtitle={tr(H.subtitle)} />
+          </a>
+
+          <nav className="hidden items-center gap-6 lg:flex" aria-label={tr(H.nav)}>
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              >
+                {tr(item.label)}
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden sm:block">
+              <LanguageSwitcher />
+            </div>
+            {whatsappUrl ? (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="hidden min-h-10 items-center gap-2 px-2 text-sm font-medium text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 md:inline-flex"
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden />
+                {tr(H.whatsapp)}
+              </a>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              className="inline-flex h-10 w-10 items-center justify-center border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 lg:hidden"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="seller-storefront-mobile-menu"
+              aria-label={tr(mobileMenuOpen ? H.closeMenu : H.openMenu)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" aria-hidden />
+              ) : (
+                <Menu className="h-5 w-5" aria-hidden />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

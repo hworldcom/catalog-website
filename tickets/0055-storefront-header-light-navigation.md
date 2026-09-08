@@ -11,6 +11,8 @@ page, including the header row containing `Categories`, `Catalog`, `About`, and
 - The complete storefront uses the main marketplace color tokens.
 - The sticky storefront navigation uses the same light card surface as the
   main marketplace header.
+- A visible divider separates the seller brand row from the audience tabs,
+  matching the main marketplace header structure.
 - The seller brand, section links, language switcher, WhatsApp action, and
   mobile menu remain unchanged.
 - Existing storefront layout, imagery, and editorial content structure remain
@@ -32,6 +34,8 @@ page, including the header row containing `Categories`, `Catalog`, `About`, and
 
 - Changed the sticky seller storefront header from `bg-background/95` to
   `bg-card/95`, matching the main marketplace header surface.
+- Added the missing divider and matching card surface to the seller brand row
+  above the audience tabs.
 - Replaced the public storefront root's `.storefront-dark` theme with
   `.public-marketplace`, so all public storefront utility classes resolve to
   the main marketplace palette.

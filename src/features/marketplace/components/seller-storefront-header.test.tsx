@@ -33,6 +33,7 @@ describe("SellerStorefrontHeader", () => {
     const header = screen.getByRole("banner");
     expect(header).toHaveClass("bg-card/95");
     expect(header).not.toHaveClass("bg-background/95");
+    expect(header.firstElementChild).toHaveClass("border-b", "border-border", "bg-card/95");
     expect(screen.getByRole("link", { name: "Categories" })).toHaveAttribute("href", "#categories");
     expect(screen.getByRole("link", { name: "Catalog" })).toHaveAttribute("href", "#catalog");
     expect(screen.getByRole("link", { name: "About" })).toHaveAttribute("href", "#about");
